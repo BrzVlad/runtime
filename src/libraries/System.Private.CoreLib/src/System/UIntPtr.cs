@@ -129,10 +129,12 @@ namespace System
         public static unsafe explicit operator ulong(UIntPtr value) =>
             (ulong)value._value;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [NonVersionable]
         public static unsafe bool operator ==(UIntPtr value1, UIntPtr value2) =>
             value1._value == value2._value;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [NonVersionable]
         public static unsafe bool operator !=(UIntPtr value1, UIntPtr value2) =>
             value1._value != value2._value;

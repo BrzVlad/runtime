@@ -135,10 +135,12 @@ namespace System
         public static unsafe explicit operator long(IntPtr value) =>
             (nint)value._value;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [NonVersionable]
         public static unsafe bool operator ==(IntPtr value1, IntPtr value2) =>
             value1._value == value2._value;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [NonVersionable]
         public static unsafe bool operator !=(IntPtr value1, IntPtr value2) =>
             value1._value != value2._value;
