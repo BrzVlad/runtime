@@ -329,9 +329,9 @@ int mono_interp_traceopt = 0;
 
 #endif
 
-#if defined(__GNUC__) && !defined(TARGET_WASM) && !COUNT_OPS && !DEBUG_INTERP && !ENABLE_CHECKED_BUILD
-#define USE_COMPUTED_GOTO 1
-#endif
+//#if defined(__GNUC__) && !defined(TARGET_WASM) && !COUNT_OPS && !DEBUG_INTERP && !ENABLE_CHECKED_BUILD
+//#define USE_COMPUTED_GOTO 1
+//#endif
 
 #if USE_COMPUTED_GOTO
 
@@ -3300,6 +3300,8 @@ method_entry (ThreadContext *context, InterpFrame *frame,
 	debug_enter (frame, out_tracing);
 #endif
 
+	frame->imethod->calls++;
+
 	*out_ex = NULL;
 	if (!G_UNLIKELY (frame->imethod->transformed)) {
 		slow = TRUE;
@@ -3356,6 +3358,8 @@ method_entry (ThreadContext *context, InterpFrame *frame,
 	sp = (stackval*)(vt_sp + (frame)->imethod->vt_stack_size); \
 	finally_ips = NULL; \
 	} while (0)
+
+long total_executed_opcodes;
 
 /*
  * If CLAUSE_ARGS is non-null, start executing from it.
@@ -3426,6 +3430,8 @@ main_loop:
 	 * but it may be useful for debug
 	 */
 	while (1) {
+		frame->imethod->opcounts++;
+		total_executed_opcodes++;
 		MintOpcode opcode;
 #ifdef ENABLE_CHECKED_BUILD
 		guchar *vt_start = (guchar*)frame->stack + frame->imethod->total_locals_size;
@@ -7758,6 +7764,25 @@ interp_print_op_count (void)
 	}
 }
 #endif
+
+static void
+print_method_count (gpointer method)
+{
+	InterpMethod *imethod = (InterpMethod*) method;
+	if (imethod->opcounts > 500000000)
+		printf ("Method %s, %d calls, %ld opcounts, imethod %p\n", mono_method_full_name (imethod->method, TRUE), imethod->calls, imethod->opcounts, imethod);
+}
+
+void
+interp_print_method_count (void)
+{
+	MonoDomain *domain = mono_get_root_domain ();
+	MonoJitDomainInfo *info = domain_jit_info (domain);
+
+	mono_domain_jit_code_hash_lock (domain);
+	mono_internal_hash_table_apply (&info->interp_code_hash, print_method_count);
+	mono_domain_jit_code_hash_unlock (domain);
+}
 
 static void
 interp_set_optimizations (guint32 opts)
