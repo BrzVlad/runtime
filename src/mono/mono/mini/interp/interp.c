@@ -3339,6 +3339,11 @@ method_entry (ThreadContext *context, InterpFrame *frame,
 	finally_ips = NULL; \
 	} while (0)
 
+static guint rotate_left (guint value, int offset)
+{
+	return (value << offset) | (value >> (32 - offset));
+}
+
 /*
  * If CLAUSE_ARGS is non-null, start executing from it.
  * The ERROR argument is used to avoid declaring an error object for every interp frame, its not used
@@ -5198,6 +5203,28 @@ call_newobj:
 			sp -= 2;
 			sp [0].data.p = (guint8*)sp [0].data.p + sp [1].data.nati;
 			sp ++;
+			++ip;
+			MINT_IN_BREAK;
+		}
+		MINT_IN_CASE(MINT_INTRINS_MARVIN_BLOCK) {
+			sp -= 2;
+			guint p0 = *(guint*)(sp [0].data.p);
+			guint p1 = *(guint*)(sp [1].data.p);
+
+			p1 ^= p0;
+			p0 = rotate_left (p0, 20);
+
+			p0 += p1;
+			p1 = rotate_left (p1, 9);
+
+			p1 ^= p0;
+			p0 = rotate_left (p0, 27);
+
+			p0 += p1;
+			p1 = rotate_left (p1, 19);
+
+			*(guint*)(sp [0].data.p) = p0;
+			*(guint*)(sp [1].data.p) = p1;
 			++ip;
 			MINT_IN_BREAK;
 		}
