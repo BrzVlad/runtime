@@ -197,7 +197,7 @@ typedef enum {
 static volatile int sweep_state = SWEEP_STATE_SWEPT;
 
 static gboolean concurrent_mark;
-static gboolean concurrent_sweep = DEFAULT_SWEEP_MODE;
+static const  gboolean concurrent_sweep = DEFAULT_SWEEP_MODE;
 
 static int sweep_pool_context = -1;
 
@@ -727,45 +727,7 @@ major_alloc_object (GCVTable vtable, size_t size, gboolean has_references)
 static GCObject*
 major_alloc_object_par (GCVTable vtable, size_t size, gboolean has_references)
 {
-	int size_index = MS_BLOCK_OBJ_SIZE_INDEX (size);
-	MSBlockInfo * volatile * free_blocks = FREE_BLOCKS (FALSE, has_references);
-	MSBlockInfo **free_blocks_local = FREE_BLOCKS_LOCAL (FALSE, has_references);
-	void *obj;
-
-	if (free_blocks_local [size_index]) {
-get_slot:
-		obj = unlink_slot_from_free_list_uncontested (free_blocks_local, size_index);
-	} else {
-		MSBlockInfo *block;
-get_block:
-		block = free_blocks [size_index];
-		if (!block) {
-			if (G_UNLIKELY (!ms_alloc_block (size_index, FALSE, has_references)))
-				return NULL;
-			goto get_block;
-		} else {
-			MSBlockInfo *next_free = block->next_free;
-			/*
-			 * Once a block is removed from the main list, it cannot return on the list until
-			 * all the workers are finished and sweep is starting. This means we don't need
-			 * to account for ABA problems.
-			 */
-			if (SGEN_CAS_PTR ((volatile gpointer *)&free_blocks [size_index], next_free, block) != block)
-				goto get_block;
-			block->next_free = free_blocks_local [size_index];
-			free_blocks_local [size_index] = block;
-
-			goto get_slot;
-		}
-	}
-
-	/* FIXME: assumes object layout */
-	*(GCVTable*)obj = vtable;
-
-	/* FIXME is it worth CAS-ing here */
-	sgen_total_allocated_major += block_obj_sizes [size_index]; 
-
-	return (GCObject *)obj;
+	return NULL;
 }
 
 /*
@@ -2399,10 +2361,8 @@ major_handle_gc_param (const char *opt)
 		lazy_sweep = FALSE;
 		return TRUE;
 	} else if (!strcmp (opt, "concurrent-sweep")) {
-		concurrent_sweep = TRUE;
 		return TRUE;
 	} else if (!strcmp (opt, "no-concurrent-sweep")) {
-		concurrent_sweep = FALSE;
 		return TRUE;
 	}
 

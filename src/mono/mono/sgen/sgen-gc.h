@@ -1074,7 +1074,7 @@ extern mword sgen_total_promoted_size;
 extern mword sgen_total_allocated_major;
 extern volatile gboolean sgen_suspend_finalizers;
 extern MonoCoopMutex sgen_gc_mutex;
-extern volatile gboolean sgen_concurrent_collection_in_progress;
+static const gboolean sgen_concurrent_collection_in_progress = FALSE;
 
 /* Nursery helpers. */
 

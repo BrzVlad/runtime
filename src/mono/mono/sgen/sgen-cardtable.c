@@ -40,7 +40,7 @@
 
 guint8 *sgen_cardtable;
 
-static gboolean need_mod_union;
+const static gboolean need_mod_union = FALSE;
 
 #ifdef HEAVY_STATISTICS
 guint64 marked_cards;
@@ -628,8 +628,6 @@ sgen_card_table_init (SgenRememberedSet *remset)
 	remset->find_address = sgen_card_table_find_address;
 	remset->find_address_with_cards = sgen_card_table_find_address_with_cards;
 	remset->wbarrier_range_copy = sgen_card_table_wbarrier_range_copy;
-
-	need_mod_union = sgen_get_major_collector ()->is_concurrent;
 }
 
 #endif /*HAVE_SGEN_GC*/

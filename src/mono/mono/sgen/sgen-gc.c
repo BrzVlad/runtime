@@ -378,7 +378,6 @@ static volatile mword highest_heap_address = 0;
 MonoCoopMutex sgen_interruption_mutex;
 
 int sgen_current_collection_generation = -1;
-volatile gboolean sgen_concurrent_collection_in_progress = FALSE;
 
 /* objects that are ready to be finalized */
 static SgenPointerQueue fin_ready_queue = SGEN_POINTER_QUEUE_INIT (INTERNAL_MEM_FINALIZE_READY);
@@ -1142,7 +1141,6 @@ finish_gray_stack (int generation, ScanCopyContext ctx)
 	 * Mark all strong toggleref objects. This must be done before we walk ephemerons or finalizers
 	 * to ensure they see the full set of live objects.
 	 */
-	sgen_client_mark_togglerefs (start_addr, end_addr, ctx);
 
 	/*
 	 * Walk the ephemeron tables marking all values with reachable keys. This must be completely done
@@ -1222,7 +1220,6 @@ finish_gray_stack (int generation, ScanCopyContext ctx)
 	 * This is semantically more inline with what users expect and it allows for
 	 * user finalizers to correctly interact with TR objects.
 	*/
-	sgen_client_clear_togglerefs (start_addr, end_addr, ctx);
 
 	TV_GETTIME (btv);
 	SGEN_LOG (2, "Finalize queue handling scan for %s generation: %" PRId64 " usecs %d ephemeron rounds", generation_name (generation), (gint64)(TV_ELAPSED (atv, btv) / 10), ephemeron_rounds);
@@ -1376,7 +1373,7 @@ sgen_collection_is_concurrent (void)
 gboolean
 sgen_get_concurrent_collection_in_progress (void)
 {
-	return sgen_concurrent_collection_in_progress;
+	return FALSE;
 }
 
 typedef struct {
@@ -1589,32 +1586,6 @@ job_scan_last_pinned (void *worker_data_untyped, SgenThreadPoolJob *job)
 static void
 workers_finish_callback (void)
 {
-	ParallelScanJob *psj;
-	ScanJob *sj;
-	size_t num_major_sections = sgen_major_collector.get_num_major_sections ();
-	int split_count = sgen_workers_get_job_split_count (GENERATION_OLD);
-	int i;
-	/* Mod union preclean jobs */
-	for (i = 0; i < split_count; i++) {
-		psj = (ParallelScanJob*)sgen_thread_pool_job_alloc ("preclean major mod union cardtable", job_major_mod_union_preclean, sizeof (ParallelScanJob));
-		psj->scan_job.gc_thread_gray_queue = NULL;
-		psj->job_index = i;
-		psj->job_split_count = split_count;
-		psj->data = num_major_sections / split_count;
-		sgen_workers_enqueue_job (GENERATION_OLD, &psj->scan_job.job, TRUE);
-	}
-
-	for (i = 0; i < split_count; i++) {
-		psj = (ParallelScanJob*)sgen_thread_pool_job_alloc ("preclean los mod union cardtable", job_los_mod_union_preclean, sizeof (ParallelScanJob));
-		psj->scan_job.gc_thread_gray_queue = NULL;
-		psj->job_index = i;
-		psj->job_split_count = split_count;
-		sgen_workers_enqueue_job (GENERATION_OLD, &psj->scan_job.job, TRUE);
-	}
-
-	sj = (ScanJob*)sgen_thread_pool_job_alloc ("scan last pinned", job_scan_last_pinned, sizeof (ScanJob));
-	sj->gc_thread_gray_queue = NULL;
-	sgen_workers_enqueue_job (GENERATION_OLD, &sj->job, TRUE);
 }
 
 static void
@@ -1739,12 +1710,6 @@ collect_nursery (const char *reason, gboolean is_overflow)
 	object_ops_nopar = sgen_get_concurrent_collection_in_progress ()
 				? &sgen_minor_collector.serial_ops_with_concurrent_major
 				: &sgen_minor_collector.serial_ops;
-	if (sgen_minor_collector.is_parallel && sgen_nursery_size >= SGEN_PARALLEL_MINOR_MIN_NURSERY_SIZE) {
-		object_ops_par = sgen_get_concurrent_collection_in_progress ()
-					? &sgen_minor_collector.parallel_ops_with_concurrent_major
-					: &sgen_minor_collector.parallel_ops;
-		is_parallel = TRUE;
-	}
 
 	if (do_verify_nursery || do_dump_nursery_content)
 		sgen_debug_verify_nursery (do_dump_nursery_content);
@@ -1977,6 +1942,7 @@ major_copy_or_mark_from_roots (SgenGrayQueue *gc_thread_gray_queue, size_t *old_
 	char *heap_start = NULL;
 	char *heap_end = (char*)-1;
 	ScanCopyContext ctx = CONTEXT_FROM_OBJECT_OPERATIONS (object_ops_nopar, gc_thread_gray_queue);
+	mode = COPY_OR_MARK_FROM_ROOTS_SERIAL;
 	gboolean concurrent = mode != COPY_OR_MARK_FROM_ROOTS_SERIAL;
 
 	SGEN_ASSERT (0, !!concurrent == !!sgen_concurrent_collection_in_progress, "We've been called with the wrong mode.");
@@ -2178,7 +2144,6 @@ major_start_collection (SgenGrayQueue *gc_thread_gray_queue, const char *reason,
 
 	if (concurrent) {
 		g_assert (sgen_major_collector.is_concurrent);
-		sgen_concurrent_collection_in_progress = TRUE;
 	}
 
 	sgen_binary_protocol_collection_begin (mono_atomic_load_i32 (&mono_gc_stats.major_gc_count), GENERATION_OLD);
@@ -2365,9 +2330,6 @@ major_finish_collection (SgenGrayQueue *gc_thread_gray_queue, const char *reason
                         time_major_finish_gray_stack - finish_gray_start);
 
 	sgen_binary_protocol_collection_end (mono_atomic_load_i32 (&mono_gc_stats.major_gc_count) - 1, GENERATION_OLD, counts.num_scanned_objects, counts.num_unique_scanned_objects);
-
-	if (sgen_concurrent_collection_in_progress)
-		sgen_concurrent_collection_in_progress = FALSE;
 }
 
 static gboolean

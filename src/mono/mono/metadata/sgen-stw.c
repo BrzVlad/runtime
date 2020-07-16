@@ -118,9 +118,6 @@ sgen_client_stop_world (int generation, gboolean serial_collection)
 
 	update_current_thread_stack (&generation);
 
-	/* We start to scan after locks are taking, this ensures we won't be interrupted. */
-	sgen_process_togglerefs ();
-
 	sgen_global_stop_count++;
 	SGEN_LOG (3, "stopping world n %d from %p %p", sgen_global_stop_count, mono_thread_info_current (), (gpointer) (gsize) mono_native_thread_id_get ());
 	TV_GETTIME (stop_world_time);
