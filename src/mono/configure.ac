@@ -72,6 +72,8 @@ MONO_CORLIB_VERSION=1A5E0066-58DC-428A-B21C-0AD6CDAE2789
 AC_DEFINE_UNQUOTED(MONO_CORLIB_VERSION,"$MONO_CORLIB_VERSION",[Version of the corlib-runtime interface])
 AC_SUBST(MONO_CORLIB_VERSION)
 
+AC_DEFINE(INTERP_NO_STACK_SCAN, 1, [Disable C stack scanning to emulate GC behavior on WASM])
+
 case $host_os in
 *cygwin* )
 		 echo "Run configure using ./configure --host=i686-w64-mingw32 or --host=x86_64-w64-mingw32"
