@@ -3599,7 +3599,7 @@ mono_reflection_method_get_handle (MonoObject *method, MonoError *error)
 	if (mono_is_sre_method_on_tb_inst (klass)) {
 		MonoClass *handle_class;
 
-		MonoMethod *result = (MonoMethod*)mono_reflection_resolve_object (NULL, method, &handle_class, NULL, error);
+		MonoMethod *result = (MonoMethod*)mono_reflection_resolve_object (NULL, method, NULL, &handle_class, NULL, error);
 		return_val_if_nok (error, NULL);
 
 		return result;
@@ -4207,7 +4207,12 @@ reflection_create_dynamic_method (MonoReflectionDynamicMethodHandle ref_mb, Mono
 			handle_class = mono_defaults.methodhandle_class;
 		} else {
 			MonoException *ex = NULL;
-			ref = mono_reflection_resolve_object (mb->module->image, obj, &handle_class, NULL, error);
+			gboolean is_obj;
+			ref = mono_reflection_resolve_object (mb->module->image, obj, &is_obj, &handle_class, NULL, error);
+			if (is_obj) {
+				g_assert_not_reached ();
+				MONO_HANDLE_PIN (ref);
+			}
 			if (!is_ok  (error)) {
 				g_free (rmb.refs);
 				goto exit_false;
@@ -4352,17 +4357,21 @@ exit:
 }
 
 gpointer
-mono_reflection_resolve_object (MonoImage *image, MonoObject *obj, MonoClass **handle_class, MonoGenericContext *context, MonoError *error)
+mono_reflection_resolve_object (MonoImage *image, MonoObject *obj, gboolean *is_obj, MonoClass **handle_class, MonoGenericContext *context, MonoError *error)
 {
 	HANDLE_FUNCTION_ENTER ();
 
 	MonoClass *oklass = obj->vtable->klass;
 	gpointer result = NULL;
+	if (is_obj)
+		*is_obj = FALSE;
 
 	error_init (error);
 
 	if (strcmp (oklass->name, "String") == 0) {
 		result = MONO_HANDLE_RAW (mono_string_intern_checked (MONO_HANDLE_NEW (MonoString, (MonoString*)obj), error));
+		if (is_obj)
+			*is_obj = TRUE;
 		goto_if_nok (error, return_null);
 		*handle_class = mono_defaults.string_class;
 		g_assert (result);
@@ -4538,7 +4547,7 @@ mono_reflection_resolve_object (MonoImage *image, MonoObject *obj, MonoClass **h
 		obj = mono_runtime_invoke_checked (resolve_method, NULL, args, error);
 		goto_if_nok (error, return_null);
 		g_assert (obj);
-		result = mono_reflection_resolve_object (image, obj, handle_class, context, error);
+		result = mono_reflection_resolve_object (image, obj, is_obj, handle_class, context, error);
 		goto exit;
 	} else {
 		g_print ("%s\n", obj->vtable->klass->name);
@@ -4556,7 +4565,7 @@ exit:
 gpointer
 mono_reflection_resolve_object_handle (MonoImage *image, MonoObjectHandle obj, MonoClass **handle_class, MonoGenericContext *context, MonoError *error)
 {
-	return mono_reflection_resolve_object (image, MONO_HANDLE_RAW (obj), handle_class, context, error);
+	return mono_reflection_resolve_object (image, MONO_HANDLE_RAW (obj), NULL, handle_class, context, error);
 }
 
 #else /* DISABLE_REFLECTION_EMIT */
