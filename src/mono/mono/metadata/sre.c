@@ -4187,6 +4187,7 @@ reflection_create_dynamic_method (MonoReflectionDynamicMethodHandle ref_mb, Mono
 		MonoClass *handle_class;
 		gpointer ref;
 		MonoObject *obj = mono_array_get_internal (mb->refs, MonoObject*, i);
+		MONO_HANDLE_PIN (obj);
 
 		if (strcmp (obj->vtable->klass->name, "DynamicMethod") == 0) {
 			MonoReflectionDynamicMethod *method = (MonoReflectionDynamicMethod*)obj;
@@ -4199,10 +4200,8 @@ reflection_create_dynamic_method (MonoReflectionDynamicMethodHandle ref_mb, Mono
 			if (method->mhandle) {
 				ref = method->mhandle;
 			} else {
-				/* FIXME: GC object stored in unmanaged memory */
 				ref = method;
 
-				/* FIXME: GC object stored in unmanaged memory */
 				method->referenced_by = g_slist_append (method->referenced_by, mb);
 			}
 			handle_class = mono_defaults.methodhandle_class;
