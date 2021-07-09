@@ -318,6 +318,9 @@
 /* Disable the interpreter. */
 #cmakedefine DISABLE_INTERPRETER 1
 
+/* Interpreter is built as a separate library. */
+#cmakedefine ENABLE_INTERP_LIB 1
+
 /* Some VES is available at runtime */
 #cmakedefine ENABLE_ILGEN 1
 

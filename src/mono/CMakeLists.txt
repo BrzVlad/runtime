@@ -67,9 +67,6 @@ set(DISABLE_COM 1)
 set(DISABLE_PERFCOUNTERS 1)
 
 # Dependencies between options
-if(ENABLE_INTERP_LIB)
-  set(DISABLE_INTERPRETER 1)
-endif()
 if(NOT DISABLE_INTERPRETER OR NOT DISABLE_JIT)
   set(ENABLE_ILGEN 1)
 endif()

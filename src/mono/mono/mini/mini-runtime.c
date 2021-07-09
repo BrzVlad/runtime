@@ -4314,7 +4314,11 @@ mini_init (const char *filename, const char *runtime_version)
 #endif
 
 	mono_interp_stub_init ();
-#ifndef DISABLE_INTERPRETER
+	/*
+	 * When using interpreter in a separate library, the embedder should link with it
+	 * and call mono_ee_interp_init
+	 */
+#if !DISABLE_INTERPRETER && !ENABLE_INTERP_LIB
 	if (mono_use_interpreter)
 		mono_ee_interp_init (mono_interp_opts_string);
 #endif
