@@ -88,7 +88,6 @@ typedef struct InterpFrame InterpFrame;
 typedef void (*MonoFuncV) (void);
 typedef void (*MonoPIFunc) (void *callme, void *margs);
 
-
 typedef enum {
 	IMETHOD_CODE_INTERP,
 	IMETHOD_CODE_COMPILED,
@@ -97,6 +96,7 @@ typedef enum {
 
 #define PROFILE_INTERP 0
 
+typedef struct InterpFtnDesc InterpFtnDesc;
 /* 
  * Structure representing a method transformed for the interpreter 
  */
@@ -124,7 +124,8 @@ struct InterpMethod {
 	MonoType *rtype;
 	MonoType **param_types;
 	MonoJitInfo *jinfo;
-	MonoFtnDesc *ftndesc;
+	InterpFtnDesc *ftndesc;
+	InterpFtnDesc *ftndesc_unbox;
 
 	guint32 locals_size;
 	guint32 alloca_size;
@@ -144,6 +145,13 @@ struct InterpMethod {
 	long calls;
 	long opcounts;
 #endif
+};
+
+struct InterpFtnDesc {
+        InterpMethod *imethod;
+        gboolean need_unbox;
+
+        MonoFtnDesc *desc;
 };
 
 /* Used for localloc memory allocation */

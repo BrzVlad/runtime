@@ -1146,8 +1146,8 @@ typedef struct
 	gpointer addr;
 	gpointer arg;
 	MonoMethod *method;
-	/* InterpMethod* */
-	gpointer interp_method;
+	/* InterpFtnDesc* */
+	gpointer interp_ftndesc;
 } MonoFtnDesc;
 
 typedef enum {
