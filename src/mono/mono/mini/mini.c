@@ -4074,14 +4074,27 @@ mono_jit_compile_method_inner (MonoMethod *method, int opt, MonoError *error)
 	MonoException *ex = NULL;
 	gint64 start;
 	MonoMethod *prof_method, *shared;
+	static gint64 longest_jit_time = 0;
+	static MonoMethod *longest_jit_method = NULL;
+	static int compilations = 0;
 
 	error_init (error);
 
 	start = mono_time_track_start ();
 	cfg = mini_method_compile (method, opt, JIT_FLAG_RUN_CCTORS, 0, -1);
-	gint64 jit_time = 0.0;
+	compilations++;
+	gint64 jit_time = 0;
 	mono_time_track_end (&jit_time, start);
 	UnlockedAdd64 (&mono_jit_stats.jit_time, jit_time);
+
+	if (jit_time > longest_jit_time) {
+		longest_jit_time = jit_time;
+		longest_jit_method = method;
+	}
+
+	if (compilations % 200 == 0)
+		mono_runtime_printf ("Longest %s took %d ms, total jit %d ms\n", longest_jit_method->name, (int)(longest_jit_time / 10000), (int)(mono_jit_stats.jit_time / 10000));
+//	mono_runtime_printf ("Compiling method %s.%s took %d ms, longest %s took %d ms, total jit %d ms\n", m_class_get_name (method->klass), method->name, (int)(jit_time / 10000), longest_jit_method->name, (int)(longest_jit_time / 10000), (int)(mono_jit_stats.jit_time / 10000));
 
 	prof_method = cfg->method;
 

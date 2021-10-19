@@ -1788,7 +1788,7 @@ void
 mono_jit_parse_options (int argc, char * argv[])
 {
 	int i;
-	char *trace_options = NULL;
+	char *trace_options = (char*)"";
 	int mini_verbose_level = 0;
 	guint32 opt;
 

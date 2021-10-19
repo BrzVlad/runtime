@@ -24,6 +24,7 @@
 #include <mono/metadata/debug-helpers.h>
 #include <mono/utils/mono-time.h>
 #include <mono/utils/mono-memory-model.h>
+#include <mono/utils/mono-logger-internals.h>
 #include "trace.h"
 #include <mono/metadata/callspec.h>
 
@@ -139,6 +140,18 @@ frame_kind (MonoJitInfo *ji)
 	return 'c';
 }
 
+static int recomputed_count = 0;
+
+static void
+print_method_count (gpointer key, gpointer value, gpointer user_data)
+{
+	MonoMethod *method = (MonoMethod*)key;
+	int count = (int)(gsize)value;
+	recomputed_count += count;
+	mono_runtime_printf ("%d METHOD %s.%s.%s\n", count, m_class_get_name_space (method->klass), m_class_get_name (method->klass), method->name);
+	usleep (1);
+}
+
 void
 mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallContext *ctx)
 {
@@ -148,23 +161,46 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 	MonoMethodSignature *sig;
 	char *fname;
 	MonoGenericSharingContext *gsctx = NULL;
+	static int num_calls = 0;
+	static GHashTable *calls_hash = NULL;
+
 
 	if (!trace_spec.enabled)
 		return;
 
 	fname = mono_method_full_name (method, TRUE);
-	indent (1);
+//	indent (1);
 
 	while (output_lock != 0 || mono_atomic_cas_i32 (&output_lock, 1, 0) != 0)
 		mono_thread_info_yield ();
 
+	if (calls_hash == NULL)
+		calls_hash = g_hash_table_new (NULL, NULL);
+
+	gpointer prev_count = g_hash_table_lookup (calls_hash, method);
+	if (prev_count) {
+		g_hash_table_replace (calls_hash, method, (gpointer)((gsize)prev_count + 1));
+	} else {
+		g_hash_table_insert (calls_hash, method, (gpointer)(gsize)1);
+	}
 
 	/* FIXME: Might be better to pass the ji itself */
 	if (!ji)
 		ji = mini_jit_info_table_find ((char *)MONO_RETURN_ADDRESS ());
 
-	printf ("ENTER:%c %s(", frame_kind (ji), fname);
+	num_calls++;
+//	if ((num_calls % 8250) == 0) {
+	if ((num_calls % 630000) == 0) {
+		g_hash_table_foreach (calls_hash, print_method_count, NULL);
+		mono_runtime_printf ("NUM_CALLS %d, RECOMPUTED_COUNT %d\n", num_calls, recomputed_count);
+	}
+	if ((num_calls % 1000) == 0)
+		mono_runtime_printf ("NUM_CALLS %d\n", num_calls);
+//	printf ("ENTER:%c %s(", frame_kind (ji), fname);
 	g_free (fname);
+
+	mono_atomic_store_release (&output_lock, 0);
+	return;
 
 	sig = mono_method_signature_internal (method);
 
@@ -323,6 +359,8 @@ mono_trace_leave_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 	MonoType *type;
 	char *fname;
 	MonoGenericSharingContext *gsctx;
+
+	return;
 
 	if (!trace_spec.enabled)
 		return;

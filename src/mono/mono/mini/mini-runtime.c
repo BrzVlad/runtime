@@ -4376,6 +4376,9 @@ mini_init (const char *filename, const char *runtime_version)
 
 	CHECKED_MONO_INIT ();
 
+	mono_runtime_printf ("MINI_INIT\n\n\n\n");
+	mono_jit_trace_calls = mono_trace_set_options ((char*)"");
+
 #if defined(__linux__)
 	if (access ("/proc/self/maps", F_OK) != 0) {
 		g_print ("Mono requires /proc to be mounted.\n");
