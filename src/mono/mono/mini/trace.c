@@ -152,6 +152,83 @@ print_method_count (gpointer key, gpointer value, gpointer user_data)
 	usleep (1);
 }
 
+static gboolean
+save_stack_frame (StackFrameInfo *frame, MonoContext *ctx, gpointer data)
+{
+        MonoMethod *method = NULL;
+	GPtrArray *stack_trace = (GPtrArray*)data;
+
+	if (!frame->ji || frame->type == FRAME_TYPE_TRAMPOLINE)
+		return FALSE;
+
+	method = jinfo_get_method (frame->ji);
+	if (!method)
+		return FALSE;
+
+	g_ptr_array_add (stack_trace, method);
+
+        return FALSE;
+}
+
+typedef struct {
+	MonoMethod *method;
+	int count;
+	GSList *callers;
+} StackTraceInfo;
+
+static void
+add_call_stack_method (GSList **list_p, GPtrArray *stack_trace, int cur_index)
+{
+	int stack_trace_len = stack_trace->len;
+
+	if (cur_index >= stack_trace_len || cur_index >= 8)
+		return;
+
+	MonoMethod *method = (MonoMethod*)g_ptr_array_index (stack_trace, cur_index);
+
+	// Find entry for existing method
+	StackTraceInfo *info = NULL;
+	GSList *iterator = *list_p;
+	while (iterator != NULL) {
+		StackTraceInfo *info_it = (StackTraceInfo*)iterator->data;
+		if (info_it->method == method) {
+			info = info_it;
+			info->count++;
+			break;
+		}
+		iterator = iterator->next;
+	}
+
+	// Alloc new entry if not found
+	if (!info) {
+		info = g_new0 (StackTraceInfo, 1);
+		info->method = method;
+		info->count = 1;
+
+		*list_p = g_slist_prepend (*list_p, info);
+	}
+
+	g_assert (*list_p);
+
+	// Store the rest of the trace
+	add_call_stack_method (&info->callers, stack_trace, cur_index + 1);
+}
+
+static void
+print_call_stacks (GSList *list, int indent)
+{
+	GSList *iterator = list;
+
+	while (iterator != NULL) {
+		StackTraceInfo *info_it = (StackTraceInfo*)iterator->data;
+		MonoMethod *method = info_it->method;
+		mono_runtime_printf ("%d: calls %d, Method %s.%s.%s\n", indent, info_it->count, m_class_get_name_space (method->klass), m_class_get_name (method->klass), method->name);
+		print_call_stacks (info_it->callers, indent + 1);
+		iterator = iterator->next;
+		usleep (1);
+	}
+}
+
 void
 mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallContext *ctx)
 {
@@ -161,9 +238,9 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 	MonoMethodSignature *sig;
 	char *fname;
 	MonoGenericSharingContext *gsctx = NULL;
+	static GSList *call_stacks = NULL;
 	static int num_calls = 0;
 	static GHashTable *calls_hash = NULL;
-
 
 	if (!trace_spec.enabled)
 		return;
@@ -184,17 +261,30 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 		g_hash_table_insert (calls_hash, method, (gpointer)(gsize)1);
 	}
 
+	if ((strcmp (method->name, "get_Handle") == 0) && (strcmp (m_class_get_name (method->klass), "JniObjectReference") == 0)) {
+		GPtrArray *stack_trace = g_ptr_array_new ();
+		MonoContext ctx;
+		MONO_INIT_CONTEXT_FROM_FUNC (&ctx, mono_trace_enter_method);
+		mono_walk_stack_with_ctx (save_stack_frame, &ctx, MONO_UNWIND_LOOKUP_ACTUAL_METHOD, stack_trace);
+
+		add_call_stack_method (&call_stacks, stack_trace, 0);
+
+		g_ptr_array_free (stack_trace, TRUE);
+	}
+
 	/* FIXME: Might be better to pass the ji itself */
 	if (!ji)
 		ji = mini_jit_info_table_find ((char *)MONO_RETURN_ADDRESS ());
 
 	num_calls++;
 //	if ((num_calls % 8250) == 0) {
-	if ((num_calls % 630000) == 0) {
+//	if ((num_calls % 630000) == 0) {
+	if ((num_calls % 550000) == 0) {
 		g_hash_table_foreach (calls_hash, print_method_count, NULL);
 		mono_runtime_printf ("NUM_CALLS %d, RECOMPUTED_COUNT %d\n", num_calls, recomputed_count);
+		print_call_stacks (call_stacks, 0);
 	}
-	if ((num_calls % 1000) == 0)
+	if ((num_calls % 10000) == 0)
 		mono_runtime_printf ("NUM_CALLS %d\n", num_calls);
 //	printf ("ENTER:%c %s(", frame_kind (ji), fname);
 	g_free (fname);

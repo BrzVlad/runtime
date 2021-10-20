@@ -102,10 +102,10 @@ mini_profiler_emit_enter (MonoCompile *cfg)
 		EMIT_NEW_PCONST (cfg, iargs [2], NULL);
 
 	/* void mono_profiler_raise_method_enter (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallContext *ctx) */
-	if (trace)
+	if (trace && cfg->method->wrapper_type == MONO_WRAPPER_NONE)
 		mono_emit_jit_icall (cfg, mono_trace_enter_method, iargs);
-	else
-		mono_emit_jit_icall (cfg, mono_profiler_raise_method_enter, iargs);
+//	else
+//		mono_emit_jit_icall (cfg, mono_profiler_raise_method_enter, iargs);
 }
 
 void
