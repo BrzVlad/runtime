@@ -447,6 +447,7 @@ extern gboolean mono_break_on_exc;
 extern gboolean mono_compile_aot;
 extern gboolean mono_aot_only;
 extern gboolean mono_llvm_only;
+extern gboolean mono_llvm_only_unwind;
 extern MonoAotMode mono_aot_mode;
 MONO_BEGIN_DECLS
 MONO_API_DATA const char *mono_build_date;

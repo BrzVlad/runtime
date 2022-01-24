@@ -109,6 +109,8 @@ gboolean mono_compile_aot = FALSE;
 gboolean mono_aot_only = FALSE;
 /* Same as mono_aot_only, but only LLVM compiled code is used, no trampolines */
 gboolean mono_llvm_only = FALSE;
+/* Unwinding of frames and EH are implemented through additional llvmonly code generated for each call. */
+gboolean mono_llvm_only_unwind = TRUE; // FIXME enable  later
 /* By default, don't require AOT but attempt to probe */
 MonoAotMode mono_aot_mode = MONO_AOT_MODE_NORMAL;
 MonoEEFeatures mono_ee_features;
@@ -3184,7 +3186,7 @@ mono_llvmonly_runtime_invoke (MonoMethod *method, RuntimeInvokeInfo *info, void 
 	 */
 	// allocate param_refs = param_count and args = param_count + hasthis + 2.
 	int const param_count = sig->param_count;
-	gpointer* const param_refs = g_newa (gpointer, param_count * 2 + sig->hasthis + 2);
+	gpointer* const param_refs = g_newa (gpointer, param_count * 2 + sig->hasthis + 3);
 	gpointer* const args = param_refs + param_count;
 	pindex = 0;
 	/*

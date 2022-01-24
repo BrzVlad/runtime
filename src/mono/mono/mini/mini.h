@@ -709,6 +709,8 @@ typedef struct {
 	gboolean imt_arg;
 	/* Whenever there is a dummy extra argument */
 	gboolean dummy_arg;
+	/* Whenever there is a frame argument */
+	gboolean frame_arg;
 	/* 
 	 * The position of the vret arg in the argument list.
 	 * Only if ret->storage == ArgVtypeRetAddr.
@@ -716,12 +718,18 @@ typedef struct {
 	 */
 	int vret_arg_index;
 	/* The indexes of various special arguments in the LLVM signature */
-	int vret_arg_pindex, this_arg_pindex, rgctx_arg_pindex, imt_arg_pindex, dummy_arg_pindex;
+	int vret_arg_pindex, this_arg_pindex, frame_arg_pindex, rgctx_arg_pindex, imt_arg_pindex, dummy_arg_pindex;
 
 	/* Inline array of argument info */
 	/* args [0] is for the this argument if it exists */
 	LLVMArgInfo args [1];
 } LLVMCallInfo;
+
+struct _LLVMFrame {
+	struct _LLVMFrame *parent;
+	gpointer method_addr;
+};
+typedef struct _LLVMFrame LLVMFrame;
 
 #define MONO_MAX_SRC_REGS	3
 

@@ -165,6 +165,7 @@ typedef struct {
 	GHashTable *clause_to_handler;
 	LLVMBuilderRef alloca_builder;
 	LLVMValueRef last_alloca;
+	LLVMValueRef frame_var, frame_arg;
 	LLVMValueRef rgctx_arg;
 	LLVMValueRef this_arg;
 	LLVMTypeRef *vreg_types;
@@ -1579,7 +1580,7 @@ sig_to_llvm_sig_full (EmitContext *ctx, MonoMethodSignature *sig, LLVMCallInfo *
 		break;
 	}
 
-	param_types = g_new0 (LLVMTypeRef, (sig->param_count * 8) + 3);
+	param_types = g_new0 (LLVMTypeRef, (sig->param_count * 8) + 4);
 	pindex = 0;
 	if (cinfo->ret.storage == LLVMArgVtypeByRef) {
 		/*
@@ -1722,6 +1723,12 @@ sig_to_llvm_sig_full (EmitContext *ctx, MonoMethodSignature *sig, LLVMCallInfo *
 	} else if (ctx->llvm_only && cinfo->dummy_arg) {
 		/* Pass a dummy arg last */
 		cinfo->dummy_arg_pindex = pindex;
+		param_types [pindex] = ctx->module->ptr_type;
+		pindex ++;
+	}
+
+	if (cinfo->frame_arg) {
+		cinfo->frame_arg_pindex = pindex;
 		param_types [pindex] = ctx->module->ptr_type;
 		pindex ++;
 	}
@@ -4113,6 +4120,19 @@ emit_entry_bb (EmitContext *ctx, LLVMBuilderRef builder)
 		ctx->bblocks [cfg->bb_entry->block_num].end_bblock = ctx->inited_bb;
 	}
 
+	if (mono_llvm_only_unwind) {
+		ctx->frame_var = build_alloca_llvm_type_name (ctx, LLVMArrayType (LLVMInt8Type (), MONO_ABI_SIZEOF (LLVMFrame)), sizeof (target_mgreg_t), "frame_var");
+		// Store ctx->frame_arg into first slot of frame_var
+		LLVMValueRef index = LLVMConstInt (LLVMInt32Type (), 0, FALSE);
+		LLVMValueRef addr = LLVMBuildGEP (builder, convert (ctx, ctx->frame_var, LLVMPointerType (LLVMPointerType (IntPtrType (), 0), 0)), &index, 1, "");
+		mono_llvm_build_store (builder, ctx->frame_arg, addr, FALSE, LLVM_BARRIER_NONE);
+
+		LLVMValueRef method_addr = convert (ctx, ctx->lmethod, LLVMPointerType (IntPtrType (), 0));
+		index = LLVMConstInt (LLVMInt32Type (), 1, FALSE);
+		addr = LLVMBuildGEP (builder, convert (ctx, ctx->frame_var, LLVMPointerType (LLVMPointerType (IntPtrType (), 0), 0)), &index, 1, "");
+		mono_llvm_build_store (builder, method_addr, addr, TRUE, LLVM_BARRIER_NONE);
+	}
+
 	/* Compute nesting between clauses */
 	ctx->nested_in = (GSList**)mono_mempool_alloc0 (cfg->mempool, sizeof (GSList*) * cfg->header->num_clauses);
 	for (i = 0; i < cfg->header->num_clauses; ++i) {
@@ -4254,6 +4274,8 @@ process_call (EmitContext *ctx, MonoBasicBlock *bb, LLVMBuilderRef *builder_ref,
 		cinfo->imt_arg = TRUE;
 	if (!call->rgctx_arg_reg && call->method && needs_extra_arg (ctx, call->method))
 		cinfo->dummy_arg = TRUE;
+	if (mono_llvm_only_unwind && !sig->pinvoke)
+		cinfo->frame_arg = TRUE;
 
 	vretaddr = (cinfo->ret.storage == LLVMArgVtypeRetAddr || cinfo->ret.storage == LLVMArgVtypeByRef || cinfo->ret.storage == LLVMArgGsharedvtFixed || cinfo->ret.storage == LLVMArgGsharedvtVariable || cinfo->ret.storage == LLVMArgGsharedvtFixedVtype);
 
@@ -4391,7 +4413,7 @@ process_call (EmitContext *ctx, MonoBasicBlock *bb, LLVMBuilderRef *builder_ref,
 	/*
 	 * Collect and convert arguments
 	 */
-	nargs = (sig->param_count * 16) + sig->hasthis + vretaddr + call->rgctx_reg + call->imt_arg_reg + call->cinfo->dummy_arg + 1;
+	nargs = (sig->param_count * 16) + sig->hasthis + vretaddr + call->cinfo->frame_arg + call->rgctx_reg + call->imt_arg_reg + call->cinfo->dummy_arg + 1;
 	len = sizeof (LLVMValueRef) * nargs;
 	args = g_newa (LLVMValueRef, nargs);
 	memset (args, 0, len);
@@ -4537,6 +4559,11 @@ process_call (EmitContext *ctx, MonoBasicBlock *bb, LLVMBuilderRef *builder_ref,
 	if (call->cinfo->dummy_arg) {
 		g_assert (call->cinfo->dummy_arg_pindex < nargs);
 		args [call->cinfo->dummy_arg_pindex] = LLVMConstNull (ctx->module->ptr_type);
+	}
+
+	if (call->cinfo->frame_arg) {
+		g_assert (call->cinfo->frame_arg_pindex < nargs);
+		args [call->cinfo->frame_arg_pindex] = convert (ctx, ctx->frame_var, LLVMPointerType (IntPtrType (), 0));
 	}
 
 	// FIXME: Align call sites
@@ -11561,6 +11588,9 @@ emit_method_inner (EmitContext *ctx)
 	else if (needs_extra_arg (ctx, cfg->method))
 		linfo->dummy_arg = TRUE;
 
+	if (mono_llvm_only_unwind)
+		linfo->frame_arg = TRUE;
+
 	ctx->method_type = method_type = sig_to_llvm_sig_full (ctx, sig, linfo);
 	if (!ctx_ok (ctx))
 		return;
@@ -11671,6 +11701,11 @@ emit_method_inner (EmitContext *ctx)
 	if (header->num_clauses || (cfg->method->iflags & METHOD_IMPL_ATTRIBUTE_NOINLINING) || cfg->no_inline)
 		/* We can't handle inlined methods with clauses */
 		mono_llvm_add_func_attr (method, LLVM_ATTR_NO_INLINE);
+
+	if (mono_llvm_only_unwind) {
+		ctx->frame_arg = LLVMGetParam (method, linfo->frame_arg_pindex);
+		LLVMSetValueName (ctx->frame_arg, "pframe");
+	}
 
 	if (linfo->rgctx_arg) {
 		ctx->rgctx_arg = LLVMGetParam (method, linfo->rgctx_arg_pindex);

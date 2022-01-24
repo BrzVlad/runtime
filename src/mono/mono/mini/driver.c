@@ -2885,6 +2885,7 @@ mono_runtime_set_execution_mode_full (int mode, gboolean override)
 	case MONO_AOT_MODE_LLVMONLY:
 		mono_aot_only = TRUE;
 		mono_llvm_only = TRUE;
+		mono_llvm_only_unwind = TRUE;
 
 		mono_ee_features.use_aot_trampolines = TRUE;
 		break;

@@ -153,6 +153,7 @@ DECL_SIZE(MonoLMFExt)
 DECL_SIZE(MonoTypedRef)
 DECL_SIZE(CallContext)
 DECL_SIZE(MonoContext)
+DECL_SIZE(LLVMFrame)
 
 DECL_OFFSET(MonoLMF, previous_lmf)
 DECL_OFFSET(MonoLMFExt, kind)
