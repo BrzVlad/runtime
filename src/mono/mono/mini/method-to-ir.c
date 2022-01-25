@@ -3437,34 +3437,6 @@ mini_emit_box (MonoCompile *cfg, MonoInst *val, MonoClass *klass, int context_us
 	return alloc;
 }
 
-static gboolean
-method_needs_stack_walk (MonoCompile *cfg, MonoMethod *cmethod)
-{
-	if (cmethod->klass == mono_defaults.systemtype_class) {
-		if (!strcmp (cmethod->name, "GetType"))
-			return TRUE;
-	}
-
-	/*
-	 * In corelib code, methods which need to do a stack walk declare a StackCrawlMark local and pass it as an
-	 * arguments until it reaches an icall. Its hard to detect which methods do that especially with
-	 * StackCrawlMark.LookForMyCallersCaller, so for now, just hardcode the classes which contain the public
-	 * methods whose caller is needed.
-	 */
-	if (mono_is_corlib_image (m_class_get_image (cmethod->klass))) {
-		const char *cname = m_class_get_name (cmethod->klass);
-		if (!strcmp (cname, "Assembly") ||
-			!strcmp (cname, "AssemblyLoadContext") ||
-			(!strcmp (cname, "Activator"))) {
-			if (!strcmp (cmethod->name, "op_Equality"))
-				return FALSE;
-			return TRUE;
-		}
-	}
-
-	return FALSE;
-}
-
 G_GNUC_UNUSED MonoInst*
 mini_handle_enum_has_flag (MonoCompile *cfg, MonoClass *klass, MonoInst *enum_this, int enum_val_reg, MonoInst *enum_flag)
 {
@@ -7332,9 +7304,6 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 			gboolean direct_icall; direct_icall = FALSE;
 			gboolean tailcall_calli; tailcall_calli = FALSE;
 			gboolean noreturn; noreturn = FALSE;
-#ifdef TARGET_WASM
-			gboolean needs_stack_walk; needs_stack_walk = FALSE;
-#endif
 
 			// Variables shared by CEE_CALLI and CEE_CALL/CEE_CALLVIRT.
 			common_call = FALSE;
@@ -7392,19 +7361,6 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 				if (!mono_method_can_access_method (method_definition, target_method) &&
 					!mono_method_can_access_method (method, cil_method))
 					emit_method_access_failure (cfg, method, cil_method);
-			}
-
-			if (cfg->llvm_only && cmethod && method_needs_stack_walk (cfg, cmethod)) {
-				if (cfg->interp && !cfg->interp_entry_only) {
-					/* Use the interpreter instead */
-					cfg->exception_message = g_strdup ("stack walk");
-					cfg->disable_llvm = TRUE;
-				}
-#ifdef TARGET_WASM
-				else {
-					needs_stack_walk = TRUE;
-				}
-#endif
 			}
 
 			if (!virtual_ && (cmethod->flags & METHOD_ATTRIBUTE_ABSTRACT)) {
@@ -8078,23 +8034,6 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 				INLINE_FAILURE ("call");
 			common_call = TRUE;
 
-#ifdef TARGET_WASM
-			/* Push an LMF so these frames can be enumerated during stack walks by mono_arch_unwind_frame () */
-			if (needs_stack_walk && !cfg->deopt) {
-				MonoInst *method_ins;
-				int lmf_reg;
-
-				emit_push_lmf (cfg);
-
-				EMIT_NEW_VARLOADA (cfg, ins, cfg->lmf_var, NULL);
-				lmf_reg = ins->dreg;
-
-				/* The lmf->method field will be used to look up the MonoJitInfo for this method */
-				method_ins = emit_get_rgctx_method (cfg, mono_method_check_context_used (cfg->method), cfg->method, MONO_RGCTX_INFO_METHOD);
-				EMIT_NEW_STORE_MEMBASE (cfg, ins, OP_STORE_MEMBASE_REG, lmf_reg, MONO_STRUCT_OFFSET (MonoLMF, method), method_ins->dreg);
-			}
-#endif
-
 call_end:
 			// Check that the decision to tailcall would not have changed.
 			g_assert (!called_is_supported_tailcall || tailcall_method == method);
@@ -8115,12 +8054,6 @@ call_end:
 			 */
 			if (cmethod)
 				ins = handle_call_res_devirt (cfg, cmethod, ins);
-
-#ifdef TARGET_WASM
-			if (common_call && needs_stack_walk && !cfg->deopt)
-				/* If an exception is thrown, the LMF is popped by a call to mini_llvmonly_pop_lmf () */
-				emit_pop_lmf (cfg);
-#endif
 
 			if (noreturn) {
 				MONO_INST_NEW (cfg, ins, OP_NOT_REACHED);
@@ -8177,16 +8110,6 @@ calli_end:
 
 				/* See mini_emit_method_call_full () */
 				EMIT_NEW_DUMMY_USE (cfg, dummy_use, keep_this_alive);
-			}
-
-			if (cfg->llvm_only && cmethod && method_needs_stack_walk (cfg, cmethod)) {
-				/*
-				 * Clang can convert these calls to tailcalls which screw up the stack
-				 * walk. This happens even when the -fno-optimize-sibling-calls
-				 * option is passed to clang.
-				 * Work around this by emitting a dummy call.
-				 */
-				mono_emit_jit_icall (cfg, mono_dummy_jit_icall, NULL);
 			}
 
 			CHECK_CFG_EXCEPTION;
