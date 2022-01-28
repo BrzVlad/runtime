@@ -3826,7 +3826,7 @@ emit_entry_bb (EmitContext *ctx, LLVMBuilderRef builder)
 			if (!ctx->addresses [var->dreg]) {
 				if (var->flags & MONO_INST_LMF) {
 					// FIXME: Allocate a smaller struct in the deopt case
-					int size = cfg->deopt ? MONO_ABI_SIZEOF (MonoLMFExt) : MONO_ABI_SIZEOF (MonoLMF);
+					int size = (cfg->deopt || mono_llvm_only_unwind) ? MONO_ABI_SIZEOF (MonoLMFExt) : MONO_ABI_SIZEOF (MonoLMF);
 					ctx->addresses [var->dreg] = build_alloca_llvm_type_name (ctx, LLVMArrayType (LLVMInt8Type (), size), sizeof (target_mgreg_t), "lmf");
 				} else {
 					char *name = g_strdup_printf ("vreg_loc_%d", var->dreg);
@@ -4131,6 +4131,18 @@ emit_entry_bb (EmitContext *ctx, LLVMBuilderRef builder)
 		index = LLVMConstInt (LLVMInt32Type (), 1, FALSE);
 		addr = LLVMBuildGEP (builder, convert (ctx, ctx->frame_var, LLVMPointerType (LLVMPointerType (IntPtrType (), 0), 0)), &index, 1, "");
 		mono_llvm_build_store (builder, method_addr, addr, TRUE, LLVM_BARRIER_NONE);
+
+		if (cfg->lmf_var) {
+			// Store the LMFExt kind
+			LLVMValueRef index = LLVMConstInt (LLVMInt32Type (), MONO_STRUCT_OFFSET (MonoLMFExt, kind) / sizeof (gint32), FALSE);
+			LLVMValueRef addr = LLVMBuildGEP (builder, convert (ctx, ctx->addresses [cfg->lmf_var->dreg], LLVMPointerType (LLVMInt32Type (), 0)), &index, 1, "");
+			mono_llvm_build_store (builder, LLVMConstInt (LLVMInt32Type (), MONO_LMFEXT_LLVM_FRAME, FALSE), addr, TRUE, LLVM_BARRIER_NONE);
+
+			// Store the LLVMFrame ref inside the MonoLMF
+			index = LLVMConstInt (LLVMInt32Type (), MONO_STRUCT_OFFSET (MonoLMFExt, llvm_frame) / TARGET_SIZEOF_VOID_P, FALSE);
+			addr = LLVMBuildGEP (builder, convert (ctx, ctx->addresses [cfg->lmf_var->dreg], LLVMPointerType (LLVMPointerType (IntPtrType (), 0), 0)), &index, 1, "");
+			mono_llvm_build_store (builder, convert (ctx, ctx->frame_var, LLVMPointerType (IntPtrType (), 0)), addr, TRUE, LLVM_BARRIER_NONE);
+		}
 	}
 
 	/* Compute nesting between clauses */

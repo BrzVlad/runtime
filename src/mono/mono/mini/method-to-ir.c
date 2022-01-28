@@ -1774,7 +1774,7 @@ emit_push_lmf (MonoCompile *cfg)
 	prev_lmf_reg = alloc_preg (cfg);
 	/* Save previous_lmf */
 	EMIT_NEW_LOAD_MEMBASE (cfg, ins, OP_LOAD_MEMBASE, prev_lmf_reg, cfg->lmf_addr_var->dreg, 0);
-	if (cfg->deopt)
+	if (cfg->deopt || mono_llvm_only_unwind)
 		/* Mark this as an LMFExt */
 		EMIT_NEW_BIALU_IMM (cfg, ins, OP_POR_IMM, prev_lmf_reg, prev_lmf_reg, 2);
 	EMIT_NEW_STORE_MEMBASE (cfg, ins, OP_STORE_MEMBASE_REG, lmf_reg, MONO_STRUCT_OFFSET (MonoLMF, previous_lmf), prev_lmf_reg);
@@ -8167,7 +8167,7 @@ calli_end:
 					cfg->ret_var_set = TRUE;
 				} 
 			} else {
-				if (cfg->lmf_var && cfg->cbb->in_count && (!cfg->llvm_only || cfg->deopt))
+				if (cfg->lmf_var && cfg->cbb->in_count && (!cfg->llvm_only || cfg->deopt || mono_llvm_only_unwind))
 					emit_pop_lmf (cfg);
 
 				if (cfg->ret) {
@@ -11625,7 +11625,7 @@ mono_ldptr:
 		}
 	}
 
-	if (cfg->lmf_var && cfg->method == method && !cfg->llvm_only) {
+	if (cfg->lmf_var && cfg->method == method && (!cfg->llvm_only || mono_llvm_only_unwind)) {
 		cfg->cbb = init_localsbb;
 		emit_push_lmf (cfg);
 	}

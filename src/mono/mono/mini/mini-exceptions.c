@@ -471,6 +471,13 @@ arch_unwind_frame (MonoJitTlsData *jit_tls,
 					g_assert (clause_index < frame->ji->num_clauses);
 					frame->native_offset = (guint8*)frame->ji->clauses [clause_index].try_start - (guint8*)frame->ji->code_start;
 				}
+			} else if (ext->kind == MONO_LMFEXT_LLVM_FRAME) {
+				LLVMFrame *llvm_frame = (LLVMFrame*) ext->llvm_frame;
+				frame->type = FRAME_TYPE_LLVM_ONLY;
+				frame->llvm_frame = llvm_frame;
+				frame->frame_addr = llvm_frame;
+				frame->ji = mini_jit_info_table_find (llvm_frame->method_addr);
+				frame->method = frame->actual_method = jinfo_get_method (frame->ji);
 			} else {
 				g_assert_not_reached ();
 			}
@@ -740,6 +747,7 @@ mono_find_jit_info_ext (MonoJitTlsData *jit_tls,
 
 typedef struct {
 	gboolean in_interp;
+	gboolean in_llvm_only;
 	MonoInterpStackIter interp_iter;
 	gpointer last_frame_addr;
 } Unwinder;
@@ -788,6 +796,20 @@ unwinder_unwind_frame (Unwinder *unwinder,
 		if (!unwinder->in_interp)
 			frame->type = FRAME_TYPE_INTERP_ENTRY;
 		return TRUE;
+	} else if (unwinder->in_llvm_only) {
+		memcpy (new_ctx, ctx, sizeof (MonoContext));
+
+		LLVMFrame *parent = ((LLVMFrame*)frame->llvm_frame)->parent;
+		if (parent) {
+			frame->llvm_frame = parent;
+			frame->ji = mini_jit_info_table_find (parent->method_addr);
+			frame->method = frame->actual_method = jinfo_get_method (frame->ji);
+		} else {
+			unwinder->in_llvm_only = FALSE;
+			/* This frame will get ignored by the unwinder and then we will unwind through LMF again */
+			frame->type = FRAME_TYPE_JIT_ENTRY;
+		}
+		return TRUE;
 	} else {
 		gboolean res = mono_find_jit_info_ext (jit_tls, prev_ji, ctx, new_ctx, trace, lmf,
 											   save_locations, frame);
@@ -796,6 +818,8 @@ unwinder_unwind_frame (Unwinder *unwinder,
 		if (frame->type == FRAME_TYPE_INTERP_TO_MANAGED || frame->type == FRAME_TYPE_INTERP_TO_MANAGED_WITH_CTX) {
 			unwinder->in_interp = TRUE;
 			mini_get_interp_callbacks ()->frame_iter_init (&unwinder->interp_iter, frame->interp_exit_data);
+		} else if (frame->type == FRAME_TYPE_LLVM_ONLY) {
+			unwinder->in_llvm_only = TRUE;
 		}
 		unwinder->last_frame_addr = frame->frame_addr;
 		return TRUE;
@@ -1430,7 +1454,7 @@ ves_icall_get_frame_info (gint32 skip, MonoBoolean need_file_info,
 
 	g_assert (skip >= 0);
 
-	if (mono_llvm_only) {
+	if (mono_llvm_only && !mono_llvm_only_unwind) {
 		GSList *l, *ips;
 		guint8 *frame_ip = NULL;
 
@@ -1479,6 +1503,7 @@ ves_icall_get_frame_info (gint32 skip, MonoBoolean need_file_info,
 			case FRAME_TYPE_INTERP_ENTRY:
 			case FRAME_TYPE_JIT_ENTRY:
 				continue;
+			case FRAME_TYPE_LLVM_ONLY:
 			case FRAME_TYPE_INTERP:
 			case FRAME_TYPE_MANAGED:
 				ji = frame.ji;
@@ -1495,7 +1520,7 @@ ves_icall_get_frame_info (gint32 skip, MonoBoolean need_file_info,
 			}
 		} while (skip >= 0);
 
-		if (frame.type == FRAME_TYPE_INTERP) {
+		if (frame.type == FRAME_TYPE_INTERP || frame.type == FRAME_TYPE_LLVM_ONLY) {
 			jmethod = frame.method;
 			actual_method = frame.actual_method;
 		} else {

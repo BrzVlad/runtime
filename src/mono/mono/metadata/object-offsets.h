@@ -158,6 +158,7 @@ DECL_SIZE(LLVMFrame)
 DECL_OFFSET(MonoLMF, previous_lmf)
 DECL_OFFSET(MonoLMFExt, kind)
 DECL_OFFSET(MonoLMFExt, il_state)
+DECL_OFFSET(MonoLMFExt, llvm_frame)
 
 DECL_OFFSET(MonoMethodILState, method)
 DECL_OFFSET(MonoMethodILState, il_offset)

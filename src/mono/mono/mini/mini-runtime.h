@@ -214,6 +214,7 @@ typedef struct {
 #define MONO_LMFEXT_INTERP_EXIT_WITH_CTX 3
 #define MONO_LMFEXT_JIT_ENTRY 4
 #define MONO_LMFEXT_IL_STATE 5
+#define MONO_LMFEXT_LLVM_FRAME 6
 
 /*
  * The MonoLMF structure is arch specific, it includes at least these fields.
@@ -242,6 +243,7 @@ typedef struct {
 	MonoContext ctx; /* valid if kind == DEBUGGER_INVOKE || kind == INTERP_EXIT_WITH_CTX */
 	gpointer interp_exit_data; /* valid if kind == INTERP_EXIT || kind == INTERP_EXIT_WITH_CTX */
 	MonoMethodILState *il_state; /* valid if kind == IL_STATE */
+	gpointer llvm_frame;
 #if defined (_MSC_VER)
 	gboolean interp_exit_label_set;
 #endif

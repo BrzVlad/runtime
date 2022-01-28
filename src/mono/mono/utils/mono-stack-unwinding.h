@@ -34,7 +34,9 @@ typedef enum {
 	FRAME_TYPE_JIT_ENTRY = 8,
 	/* Compiled method with IL state */
 	FRAME_TYPE_IL_STATE = 9,
-	FRAME_TYPE_NUM = 10
+	/* Frame initialized from llvm-only code */
+	FRAME_TYPE_LLVM_ONLY = 10,
+	FRAME_TYPE_NUM = 11
 } MonoStackFrameType;
 
 typedef enum {
@@ -108,6 +110,9 @@ typedef struct {
 
 	/* For FRAME_TYPE_IL_STATE */
 	gpointer il_state; /* MonoMethodILState */
+
+	/* For FRAME_TYPE_LLVM_ONLY */
+	gpointer llvm_frame; /* LLVMFrame */
 } MonoStackFrameInfo;
 
 /*Index into MonoThreadState::unwind_data. */
