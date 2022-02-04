@@ -6,7 +6,7 @@ else
 DOTNET_Q_ARGS=--nologo
 endif
 
-CONFIG?=Release
+CONFIG?=Debug
 
 WASM_DEFAULT_BUILD_ARGS?=/p:TargetArchitecture=wasm /p:TargetOS=Browser /p:Configuration=$(CONFIG)
 

@@ -265,7 +265,8 @@ class OffsetsTool:
 			"DynCallArgs",
 			"MonoLMFTramp",
 			"CallContext",
-			"MonoFtnDesc"
+			"MonoFtnDesc",
+			"LLVMFrame"
 		]
 		for name in self.runtime_type_names:
 			self.runtime_types [name] = TypeInfo (name, False)

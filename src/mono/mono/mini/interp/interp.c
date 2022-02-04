@@ -2550,6 +2550,8 @@ do_jit_call (ThreadContext *context, stackval *ret_sp, stackval *sp, InterpFrame
 			/* data is an union, so can use 'p' for all types */
 			args [pindex ++] = sval;
 	}
+	if (mono_llvm_only_unwind)
+		args [pindex++] = NULL;
 
 	JitCallCbData cb_data;
 	memset (&cb_data, 0, sizeof (cb_data));
