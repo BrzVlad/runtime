@@ -3426,8 +3426,7 @@ interp_transform_call (TransformData *td, MonoMethod *method, MonoMethod *target
 		interp_ins_set_dreg (td->last_ins, dreg);
 		interp_ins_set_sreg (td->last_ins, MINT_CALL_ARGS_SREG);
 		td->last_ins->flags |= INTERP_INST_FLAG_CALL;
-		td->last_ins->data [0] = get_data_item_index (td, (void *)mono_interp_get_imethod (target_method, error));
-		mono_error_assert_ok (error);
+		td->last_ins->data [0] = get_data_item_index (td, (void *)mono_interp_get_imethod (target_method));
 	} else {
 		if (is_delegate_invoke) {
 			interp_add_ins (td, MINT_CALL_DELEGATE);
@@ -3471,10 +3470,8 @@ interp_transform_call (TransformData *td, MonoMethod *method, MonoMethod *target
 				 */
 				if (method->wrapper_type == MONO_WRAPPER_MANAGED_TO_NATIVE) {
 					MonoMethod *pinvoke_method = mono_marshal_method_from_wrapper (method);
-					if (pinvoke_method) {
-						imethod = mono_interp_get_imethod (pinvoke_method, error);
-						return_val_if_nok (error, FALSE);
-					}
+					if (pinvoke_method)
+						imethod = mono_interp_get_imethod (pinvoke_method);
 				}
 
 				interp_ins_set_dreg (td->last_ins, dreg);
@@ -3491,8 +3488,7 @@ interp_transform_call (TransformData *td, MonoMethod *method, MonoMethod *target
 				td->last_ins->data [0] = get_data_item_index (td, (void *)csignature);
 			}
 		} else {
-			InterpMethod *imethod = mono_interp_get_imethod (target_method, error);
-			return_val_if_nok (error, FALSE);
+			InterpMethod *imethod = mono_interp_get_imethod (target_method);
 
 			if (csignature->call_convention == MONO_CALL_VARARG) {
 				interp_add_ins (td, MINT_CALL_VARARG);
@@ -4888,8 +4884,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			m = mono_get_method_checked (image, token, NULL, generic_context, error);
 			goto_if_nok (error, exit);
 			interp_add_ins (td, MINT_JMP);
-			td->last_ins->data [0] = get_data_item_index (td, mono_interp_get_imethod (m, error));
-			goto_if_nok (error, exit);
+			td->last_ins->data [0] = get_data_item_index (td, mono_interp_get_imethod (m));
 			td->ip += 5;
 			break;
 		}
@@ -5715,7 +5710,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 				call_args [csignature->param_count + 1] = -1;
 
 				interp_add_ins (td, MINT_NEWOBJ_STRING);
-				td->last_ins->data [0] = get_data_item_index (td, mono_interp_get_imethod (m, error));
+				td->last_ins->data [0] = get_data_item_index (td, mono_interp_get_imethod (m));
 				push_type (td, stack_type [ret_mt], klass);
 
 				interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
@@ -5793,7 +5788,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					}
 
 					// Inlining failed. Set the method to be executed as part of newobj instruction
-					newobj_fast->data [0] = get_data_item_index (td, mono_interp_get_imethod (m, error));
+					newobj_fast->data [0] = get_data_item_index (td, mono_interp_get_imethod (m));
 					/* The constructor was not inlined, abort inlining of current method */
 					if (!td->aggressive_inlining)
 						INLINE_FAILURE;
@@ -5801,7 +5796,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					interp_add_ins (td, MINT_NEWOBJ_SLOW);
 					g_assert (!m_class_is_valuetype (klass));
 					interp_ins_set_dreg (td->last_ins, dreg);
-					td->last_ins->data [0] = get_data_item_index (td, mono_interp_get_imethod (m, error));
+					td->last_ins->data [0] = get_data_item_index (td, mono_interp_get_imethod (m));
 				}
 				goto_if_nok (error, exit);
 
@@ -7293,8 +7288,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					td->ip += 5;
 					break;
 				}
-			
-				int index = get_data_item_index (td, mono_interp_get_imethod (m, error));
+				int index = get_data_item_index (td, mono_interp_get_imethod (m));
 				goto_if_nok (error, exit);
 				if (*td->ip == CEE_LDVIRTFTN) {
 					CHECK_STACK (td, 1);
@@ -9697,7 +9691,6 @@ static mono_mutex_t calc_section;
 static gboolean
 tiered_patcher (MiniTieredPatchPointContext *ctx, gpointer patchsite)
 {
-	ERROR_DECL (error);
 	MonoMethod *m = ctx->target_method;
 
 	if (!jit_call2_supported (m, mono_method_signature_internal (m)))
@@ -9705,8 +9698,7 @@ tiered_patcher (MiniTieredPatchPointContext *ctx, gpointer patchsite)
 
 	/* TODO: Force compilation here. Currently the JIT will be invoked upon
 	 *       first execution of `MINT_JIT_CALL2`. */
-	InterpMethod *rmethod = mono_interp_get_imethod (cm, error);
-	mono_error_assert_ok (error);
+	InterpMethod *rmethod = mono_interp_get_imethod (cm);
 
 	guint16 *ip = ((guint16 *) patchsite);
 	*ip++ = MINT_JIT_CALL2;
