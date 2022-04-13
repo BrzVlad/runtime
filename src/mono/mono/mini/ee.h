@@ -14,7 +14,7 @@
 #ifndef __MONO_EE_H__
 #define __MONO_EE_H__
 
-#define MONO_EE_API_VERSION 0x12
+#define MONO_EE_API_VERSION 0x13
 
 typedef struct _MonoInterpStackIter MonoInterpStackIter;
 
