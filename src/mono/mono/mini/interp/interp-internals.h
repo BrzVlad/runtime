@@ -147,6 +147,7 @@ struct InterpMethod {
 #endif
 	gint32 entry_count;
 	InterpMethod *optimized_imethod;
+	int *patchpoint_bb_offset;
 	unsigned int init_locals : 1;
 	unsigned int vararg : 1;
 	unsigned int optimized : 1;

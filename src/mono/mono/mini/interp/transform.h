@@ -117,6 +117,7 @@ struct _InterpBasicBlock {
 	// This block has special semantics and it shouldn't be optimized away
 	int eh_block : 1;
 	int dead: 1;
+	int patchpoint: 1;
 };
 
 typedef enum {
@@ -208,6 +209,8 @@ typedef struct
 	MonoProfilerCoverageInfo *coverage_info;
 	GList *dont_inline;
 	int inline_depth;
+	int patchpoint_bb_offset_n;
+	int *patchpoint_bb_offset;
 	int has_localloc : 1;
 	// If method compilation fails due to certain limits being exceeded, we disable inlining
 	// and retry compilation.

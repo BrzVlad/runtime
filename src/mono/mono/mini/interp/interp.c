@@ -6595,9 +6595,6 @@ MINT_IN_CASE(MINT_BRTRUE_I8_SP) ZEROP_SP(gint64, !=); MINT_IN_BREAK;
 					g_warning ("Calling already tiered method %s:%s\n", m_class_get_name (frame->imethod->method->klass), frame->imethod->method->name);
 				InterpMethod *optimized_method = mono_interp_tier_up_method (frame->imethod, context);
 				context->stack_pointer = (guchar*)frame->stack + optimized_method->alloca_size;
-				/* Make sure the stack pointer is bumped before we store any references on the stack */
-				mono_compiler_barrier ();
-
 				frame->imethod = optimized_method;
 				ip = optimized_method->code;
 			} else {
@@ -6606,12 +6603,20 @@ MINT_IN_CASE(MINT_BRTRUE_I8_SP) ZEROP_SP(gint64, !=); MINT_IN_BREAK;
 			MINT_IN_BREAK;
 		}
 		MINT_IN_CASE(MINT_TIER_PATCHPOINT) {
-			if (frame->imethod->optimized_imethod) {
+			frame->imethod->entry_count++;
+			if (frame->imethod->entry_count > INTERP_TIER_ENTRY_LIMIT) {
+				InterpMethod *optimized_method;
+				if (!frame->imethod->optimized_imethod)
+					optimized_method = mono_interp_tier_up_method (frame->imethod, context);
+				else
+					optimized_method = frame->imethod->optimized_imethod;
 				int bb_index = ip [1];
-				// Tier up current frame
-				g_error ("FIXME: Tier up current frame");
+				context->stack_pointer = (guchar*)frame->stack + optimized_method->alloca_size;
+				frame->imethod = optimized_method;
+				ip = optimized_method->code + optimized_method->patchpoint_bb_offset [bb_index];
+			} else {
+				ip += 2;
 			}
-			ip += 2;
 			MINT_IN_BREAK;
 		}
 
