@@ -3,7 +3,7 @@
 
 #include "interp-internals.h"
 
-#define INTERP_TIER_ENTRY_LIMIT 1000
+#define INTERP_TIER_ENTRY_LIMIT 10
 
 void
 mono_interp_tiering_init (void);
