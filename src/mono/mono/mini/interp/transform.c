@@ -3126,6 +3126,9 @@ emit_convert (TransformData *td, StackInfo *sp, MonoType *target_type)
 
 	// FIXME: Add more
 	switch (target_type->type) {
+#if SIZEOF_VOID_P == 8
+	case MONO_TYPE_I:
+#endif
 	case MONO_TYPE_I8: {
 		switch (stype) {
 		case STACK_TYPE_I4:
@@ -3137,7 +3140,6 @@ emit_convert (TransformData *td, StackInfo *sp, MonoType *target_type)
 		break;
 	}
 #if SIZEOF_VOID_P == 8
-	case MONO_TYPE_I:
 	case MONO_TYPE_U: {
 		switch (stype) {
 		case STACK_TYPE_I4:
