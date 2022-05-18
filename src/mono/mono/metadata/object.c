@@ -425,6 +425,9 @@ mono_runtime_class_init_full (MonoVTable *vtable, MonoError *error)
 
 	error_init (error);
 
+	if (strcmp (m_class_get_name (vtable->klass), "Class") == 0)
+		asm ("int $3");
+
 	if (vtable->initialized)
 		return TRUE;
 

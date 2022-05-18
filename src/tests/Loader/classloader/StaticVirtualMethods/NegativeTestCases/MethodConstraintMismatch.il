@@ -32,10 +32,11 @@
 .class public auto ansi TestEntrypoint
        extends [System.Runtime]System.Object
 {
-  .method public static class [System.Runtime]System.Type Test_Scenario1() cil managed noinlining
+  .method public static void Test_Scenario1() cil managed noinlining
   {
-    ldtoken BaseScenario1
-    call class [System.Runtime]System.Type [System.Runtime]System.Type::GetTypeFromHandle(valuetype [System.Runtime]System.RuntimeTypeHandle)
+    constrained. class BaseScenario1
+    call int32 InterfaceScenario1::GenericMethod<class BaseScenario1>()
+    pop
     ret
   } // end of method Test_Scenario1
   .method public static int32 Main() cil managed noinlining
@@ -46,8 +47,7 @@
     .entrypoint
     .locals init (class [System.Runtime]System.Exception V_0)
     .try {
-        call class [System.Runtime]System.Type TestEntrypoint::Test_Scenario1()
-        pop
+        call void TestEntrypoint::Test_Scenario1()
         ldstr "MethodConstraintMismatch"
         ldstr "TypeLoadException"
         ldstr "Did not throw exception"

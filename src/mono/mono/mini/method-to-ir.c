@@ -10458,6 +10458,9 @@ field_access_end:
 			gpointer handle;
 			MonoClass *handle_class;
 
+			if (strcmp (method->name, "Test_Scenario1") == 0)
+				asm ("int $3");
+
 			if (method->wrapper_type == MONO_WRAPPER_DYNAMIC_METHOD ||
 					method->wrapper_type == MONO_WRAPPER_SYNCHRONIZED) {
 				handle = mono_method_get_wrapper_data (method, n);

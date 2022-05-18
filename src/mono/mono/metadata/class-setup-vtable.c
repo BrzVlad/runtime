@@ -484,6 +484,10 @@ check_interface_method_override (MonoClass *klass, MonoMethod *im, MonoMethod *c
 	gboolean slot_is_empty = (flags & MONO_ITF_OVERRIDE_SLOT_EMPTY) != 0;
 	gboolean variant_itf = (flags & MONO_ITF_OVERRIDE_VARIANT_ITF) != 0;
 	MonoMethodSignature *cmsig, *imsig;
+
+	if (strcmp (m_class_get_name (klass), "BaseScenario1") == 0)
+		asm ("int $3");
+
 	if (strcmp (im->name, cm->name) == 0) {
 		if (! (cm->flags & METHOD_ATTRIBUTE_PUBLIC)) {
 			TRACE_INTERFACE_VTABLE (printf ("[PUBLIC CHECK FAILED]"));
@@ -537,6 +541,39 @@ check_interface_method_override (MonoClass *klass, MonoMethod *im, MonoMethod *c
 			g_free (body_name);
 			g_free (decl_name);
 			return FALSE;
+		}
+
+		if (cm->is_generic) {
+			MonoGenericContainer *im_container = mono_method_get_generic_container (im);
+			MonoGenericContainer *cm_container = mono_method_get_generic_container (cm);
+
+			asm ("int $3");
+			g_assert (im_container->type_argc == cm_container->type_argc);
+			for (int i = 0; i < cm_container->type_argc; i++) {
+				MonoClass **im_constraints = mono_generic_container_get_param_info (im_container, i)->constraints; 
+				MonoClass **cm_constraints = mono_generic_container_get_param_info (cm_container, i)->constraints;
+
+				// we need to make sure that each one of cm_constraints is assignable from one of the im_constraints
+				if (im_constraints == NULL && cm_constraints != NULL) {
+					mono_class_set_type_load_failure (klass, "constraints not weak enough");
+					return FALSE;
+				}
+				if (cm_constraints != NULL) {
+					for (int j = 0; cm_constraints [j]; j++) {
+						gboolean assignable = FALSE;
+						for (int k = 0; im_constraints [k]; k++) {
+							if (mono_class_is_assignable_from_internal (cm_constraints [j], im_constraints [k])) {
+								assignable = TRUE;
+								break;
+							} 
+						}
+						if (!assignable) {
+							mono_class_set_type_load_failure (klass, "constraints not weak enough");
+							return FALSE;
+						}
+					}
+				}
+			}
 		}
 
 		return TRUE;
