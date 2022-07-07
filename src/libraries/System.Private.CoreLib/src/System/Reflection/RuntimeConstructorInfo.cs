@@ -158,11 +158,7 @@ namespace System.Reflection
                         culture,
                         invokeAttr);
 
-#if MONO // Temporary until Mono is updated.
-                    Invoker.InlinedInvoke(obj, copyOfParameters, invokeAttr);
-#else
                     Invoker.InlinedInvoke(obj, pByRefStorage, invokeAttr);
-#endif
 
                     // Copy modified values out. This should be done only with ByRef or Type.Missing parameters.
                     for (int i = 0; i < argCount; i++)
@@ -228,11 +224,7 @@ namespace System.Reflection
                     culture,
                     invokeAttr);
 
-#if MONO // Temporary until Mono is updated.
-                ci.Invoker.InlinedInvoke(obj, copyOfParameters, invokeAttr);
-#else
                 ci.Invoker.InlinedInvoke(obj, pByRefStorage, invokeAttr);
-#endif
             }
             finally
             {
@@ -311,11 +303,7 @@ namespace System.Reflection
                         culture,
                         invokeAttr);
 
-#if MONO // Temporary until Mono is updated.
-                    retValue = Invoker.InlinedInvoke(obj: null, copyOfParameters, invokeAttr);
-#else
                     retValue = Invoker.InlinedInvoke(obj: null, pByRefStorage, invokeAttr);
-#endif
 
                     // Copy modified values out. This should be done only with ByRef or Type.Missing parameters.
                     for (int i = 0; i < argCount; i++)
@@ -384,11 +372,7 @@ namespace System.Reflection
                     culture,
                     invokeAttr);
 
-#if MONO // Temporary until Mono is updated.
-                retValue = ci.Invoker.InlinedInvoke(obj: null, copyOfParameters, invokeAttr);
-#else
                 retValue = ci.Invoker.InlinedInvoke(obj: null, pByRefStorage, invokeAttr);
-#endif
             }
             finally
             {
