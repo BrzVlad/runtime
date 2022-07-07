@@ -2162,6 +2162,14 @@ namespace System
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         private static extern object CreateInstanceInternal(QCallTypeHandle type);
 
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private static extern object AllocateValueType(QCallTypeHandle type, object? value);
+
+        internal static object AllocateValueType(RuntimeType type, object? value)
+        {
+            return AllocateValueType(new QCallTypeHandle(ref type), value);
+        }
+
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
         private static extern void GetDeclaringMethod(QCallTypeHandle type, ObjectHandleOnStack res);
 

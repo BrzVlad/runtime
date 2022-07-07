@@ -1795,6 +1795,41 @@ ves_icall_RuntimeTypeHandle_IsInstanceOfType (MonoQCallTypeHandle type_handle, M
 	return !MONO_HANDLE_IS_NULL (inst);
 }
 
+MonoObjectHandle
+ves_icall_RuntimeMethodHandle_ReboxToNullable (MonoObjectHandle obj, MonoQCallTypeHandle type_handle, MonoError *error)
+{
+	MonoType *type = type_handle.type;
+	MonoClass *klass = mono_class_from_mono_type_internal (type);
+
+	mono_class_init_checked (klass, error);
+	return_val_if_nok (error, NULL_HANDLE);
+
+	MonoObjectHandle res = mono_object_new_handle (klass, error);
+	gpointer dest = mono_object_unbox_internal (MONO_HANDLE_RAW (res));
+
+	mono_nullable_init (dest, MONO_HANDLE_RAW (obj), klass);
+
+	return res;
+}
+
+MonoObjectHandle
+ves_icall_RuntimeMethodHandle_ReboxFromNullable (MonoObjectHandle obj, MonoError *error)
+{
+	if (MONO_HANDLE_IS_NULL (obj))
+		return NULL_HANDLE;
+
+	MonoVTable *vtable = MONO_HANDLE_GETVAL (obj, vtable);
+	MonoClass *klass = vtable->klass;
+
+	if (!mono_class_is_nullable (klass))
+		return obj;
+
+	gpointer vbuf = mono_object_unbox_internal (MONO_HANDLE_RAW (obj));
+	MonoObjectHandle res = mono_nullable_box_handle (vbuf, klass, error);
+
+	return res;
+}
+
 guint32
 ves_icall_RuntimeTypeHandle_GetAttributes (MonoQCallTypeHandle type_handle)
 {
@@ -6136,6 +6171,25 @@ ves_icall_System_RuntimeType_CreateInstanceInternal (MonoQCallTypeHandle type_ha
 		return NULL_HANDLE;
 
 	return mono_object_new_handle (klass, error);
+}
+
+/* Only used for value types */
+MonoObjectHandle
+ves_icall_System_RuntimeType_AllocateValueType (MonoQCallTypeHandle type_handle, MonoObjectHandle value_h, MonoError *error)
+{
+	MonoType *type = type_handle.type;
+	MonoClass *klass = mono_class_from_mono_type_internal (type);
+
+	mono_class_init_checked (klass, error);
+	return_val_if_nok (error, NULL_HANDLE);
+
+	MonoObjectHandle res = mono_object_new_handle (klass, error);
+
+	MonoObject *value = MONO_HANDLE_RAW (value_h);
+	if (value)
+		mono_value_copy_internal (mono_object_unbox_internal (MONO_HANDLE_RAW (res)), mono_object_unbox_internal (value), klass);
+
+	return res;
 }
 
 MonoReflectionMethodHandle

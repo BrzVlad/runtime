@@ -90,7 +90,16 @@ namespace System
             return value == IntPtr.Zero;
         }
 
-        // Temporary placeholder until Mono adds support for supporting boxing true Nullables.
-        internal static object? ReboxFromNullable(object? src) => src;
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal static extern object ReboxFromNullable (object? src);
+
+        [MethodImplAttribute(MethodImplOptions.InternalCall)]
+        internal static extern object ReboxToNullable (object? src, QCallTypeHandle destNullableType);
+
+        internal static object ReboxToNullable(object? src, RuntimeType destNullableType)
+        {
+            return ReboxToNullable(src, new QCallTypeHandle(ref destNullableType));
+        }
+
     }
 }
