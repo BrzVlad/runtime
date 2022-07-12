@@ -484,6 +484,10 @@ check_interface_method_override (MonoClass *klass, MonoMethod *im, MonoMethod *c
 	gboolean slot_is_empty = (flags & MONO_ITF_OVERRIDE_SLOT_EMPTY) != 0;
 	gboolean variant_itf = (flags & MONO_ITF_OVERRIDE_VARIANT_ITF) != 0;
 	MonoMethodSignature *cmsig, *imsig;
+
+	if (strcmp (m_class_get_name (klass), "BaseScenario1") == 0)
+		asm ("int $3");
+
 	if (strcmp (im->name, cm->name) == 0) {
 		if (! (cm->flags & METHOD_ATTRIBUTE_PUBLIC)) {
 			TRACE_INTERFACE_VTABLE (printf ("[PUBLIC CHECK FAILED]"));
@@ -742,6 +746,46 @@ mono_method_get_method_definition (MonoMethod *method)
 }
 
 static gboolean
+mono_method_matching_generic_constraints (MonoMethod *body, MonoMethod *decl)
+{
+	ERROR_DECL (error);
+	if (!body->is_generic)
+		return TRUE;
+
+	if (strcmp (body->name, "CreateChecked") == 0)
+		asm ("int $3");
+
+	MonoGenericContainer *body_container = mono_method_get_generic_container (body);
+	MonoGenericContainer *decl_container = mono_method_get_generic_container (decl);
+
+	g_assert (body_container->type_argc == decl_container->type_argc);
+
+	for (int i = 0; i < body_container->type_argc; i++) {
+		MonoClass **decl_constraints = mono_generic_container_get_param_info (decl_container, i)->constraints; 
+		MonoClass **body_constraints = mono_generic_container_get_param_info (body_container, i)->constraints;
+
+		// we need to make sure that each one of cm_constraints is assignable from one of the im_constraints
+		if (body_constraints == NULL && decl_constraints != NULL)
+			return FALSE;
+		if (body_constraints != NULL) {
+			for (int j = 0; body_constraints [j]; j++) {
+				gboolean assignable = FALSE;
+				for (int k = 0; decl_constraints [k]; k++) {
+					//if (mono_class_is_assignable_from_internal (body_constraints [j], decl_constraints [k])) {
+					mono_class_is_assignable_from_checked (body_constraints [j], decl_constraints [k], &assignable, error);
+					if (assignable)
+						break;
+				}
+				if (!assignable)
+					return FALSE;
+			}
+		}
+	}
+
+	return TRUE;
+}
+
+static gboolean
 verify_class_overrides (MonoClass *klass, MonoMethod **overrides, int onum)
 {
 	int i;
@@ -772,6 +816,12 @@ verify_class_overrides (MonoClass *klass, MonoMethod **overrides, int onum)
 
 		if (!mono_class_is_assignable_from_slow (decl->klass, klass)) {
 			mono_class_set_type_load_failure (klass, "Method overrides a class or interface that is not extended or implemented by this type");
+			return FALSE;
+		}
+
+		if (!mono_method_matching_generic_constraints (body, decl)) {
+			asm ("int $3");
+			mono_class_set_type_load_failure (klass, "Constraints not weak enough");
 			return FALSE;
 		}
 
@@ -1684,6 +1734,9 @@ mono_class_setup_vtable_general (MonoClass *klass, MonoMethod **overrides, int o
 #endif
 	GSList *virt_methods = NULL, *l;
 	int stelemref_slot = 0;
+
+	if (strcmp (m_class_get_name (klass), "BaseScenario1") == 0)
+		asm ("int $3");
 
 	if (klass->vtable)
 		return;

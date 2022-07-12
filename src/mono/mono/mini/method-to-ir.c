@@ -10471,6 +10471,9 @@ field_access_end:
 			gpointer handle;
 			MonoClass *handle_class;
 
+			if (strcmp (method->name, "Test_Scenario1") == 0)
+				asm ("int $3");
+
 			if (method->wrapper_type == MONO_WRAPPER_DYNAMIC_METHOD ||
 					method->wrapper_type == MONO_WRAPPER_SYNCHRONIZED) {
 				handle = mono_method_get_wrapper_data (method, n);
@@ -11603,6 +11606,8 @@ mono_ldptr:
 		case MONO_CEE_CONSTRAINED_:
 			constrained_class = mini_get_class (method, token, generic_context);
 			CHECK_TYPELOAD (constrained_class);
+			if (strcmp (method->name, "Test_Scenario1") == 0)
+				asm ("int $3");
 			ins_has_side_effect = FALSE;
 			break;
 		case MONO_CEE_CPBLK:
