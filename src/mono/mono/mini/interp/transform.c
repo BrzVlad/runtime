@@ -933,12 +933,12 @@ static MonoType*
 get_arg_type_exact (TransformData *td, int n, int *mt)
 {
 	MonoType *type;
-	gboolean hasthis = mono_method_signature_internal (td->method)->hasthis;
+	gboolean hasthis = td->rtm->hasthis;
 
 	if (hasthis && n == 0)
 		type = m_class_get_byval_arg (td->method->klass);
 	else
-		type = mono_method_signature_internal (td->method)->params [n - !!hasthis];
+		type = td->rtm->param_types [n - !!hasthis];
 
 	if (mt)
 		*mt = mint_type (type);
@@ -953,7 +953,7 @@ load_arg(TransformData *td, int n)
 	int mt;
 	MonoClass *klass = NULL;
 	MonoType *type;
-	gboolean hasthis = mono_method_signature_internal (td->method)->hasthis;
+	gboolean hasthis = td->rtm->hasthis;
 
 	type = get_arg_type_exact (td, n, &mt);
 

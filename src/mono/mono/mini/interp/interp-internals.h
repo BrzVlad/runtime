@@ -142,7 +142,6 @@ struct InterpMethod {
 	int num_clauses; // clauses
 	int transformed; // boolean
 	unsigned int param_count;
-	unsigned int hasthis; // boolean
 	MonoProfilerCallInstrumentationFlags prof_flags;
 	InterpMethodCodeType code_type;
 #ifdef ENABLE_EXPERIMENT_TIERED
@@ -168,6 +167,7 @@ struct InterpMethod {
 	unsigned int vararg : 1;
 	unsigned int optimized : 1;
 	unsigned int needs_thread_attach : 1;
+	unsigned int hasthis : 1;
 #if PROFILE_INTERP
 	long calls;
 	long opcounts;
