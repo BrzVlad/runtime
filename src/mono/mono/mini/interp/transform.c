@@ -3907,18 +3907,17 @@ interp_emit_memory_barrier (TransformData *td, int kind)
 static void
 interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMethodSignature *sig, MonoMethodHeader *header, MonoError *error)
 {
-	int offset, size, align;
+	int size, align;
 	int num_args = sig->hasthis + sig->param_count;
 	int num_il_locals = header->num_locals;
 	int num_locals = num_args + num_il_locals;
 
 	imethod->local_offsets = (guint32*)g_malloc (num_il_locals * sizeof(guint32));
 	td->locals = (InterpLocal*)g_malloc (num_locals * sizeof (InterpLocal));
-	td->locals_size = num_locals;
 	td->locals_capacity = td->locals_size;
-	offset = 0;
 
 	g_assert (MINT_STACK_SLOT_SIZE == MINT_VT_ALIGNMENT);
+	g_assert (!td->total_locals_size);
 
 	/*
 	 * We will load arguments as if they are locals. Unlike normal locals, every argument
@@ -3931,26 +3930,13 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 			type = m_class_is_valuetype (td->method->klass) ? m_class_get_this_arg (td->method->klass) : m_class_get_byval_arg (td->method->klass);
 		else
 			type = mono_method_signature_internal (td->method)->params [i - sig->hasthis];
-		int mt = mint_type (type);
-		td->locals [i].type = type;
-		td->locals [i].offset = offset;
-		td->locals [i].flags = INTERP_LOCAL_FLAG_GLOBAL;
-		td->locals [i].indirects = 0;
-		td->locals [i].mt = mt;
-		td->locals [i].def = NULL;
-		if (mt == MINT_TYPE_VT) {
-			size = mono_type_size (type, &align);
-			td->locals [i].size = size;
-			offset += ALIGN_TO (size, MINT_STACK_SLOT_SIZE);
-		} else {
-			td->locals [i].size = MINT_STACK_SLOT_SIZE; // not really
-			offset += MINT_STACK_SLOT_SIZE;
-		}
+		int var = create_interp_local (td, type);
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
+		alloc_global_var_offset (td, var);
 	}
 
-	td->il_locals_offset = offset;
+	td->il_locals_offset = td->total_locals_size;
 	for (int i = 0; i < num_il_locals; ++i) {
-		int index = num_args + i;
 		size = mono_type_size (header->locals [i], &align);
 		if (header->locals [i]->type == MONO_TYPE_VALUETYPE) {
 			if (mono_class_has_failure (header->locals [i]->data.klass)) {
@@ -3958,25 +3944,12 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 				return;
 			}
 		}
-		offset += align - 1;
-		offset &= ~(align - 1);
-		imethod->local_offsets [i] = offset;
-		td->locals [index].type = header->locals [i];
-		td->locals [index].offset = offset;
-		td->locals [index].flags = INTERP_LOCAL_FLAG_GLOBAL;
-		td->locals [index].indirects = 0;
-		td->locals [index].mt = mint_type (header->locals [i]);
-		td->locals [index].def = NULL;
-		if (td->locals [index].mt == MINT_TYPE_VT)
-			td->locals [index].size = size;
-		else
-			td->locals [index].size = MINT_STACK_SLOT_SIZE; // not really
-		// Every local takes a MINT_STACK_SLOT_SIZE so IL locals have same behavior as execution locals
-		offset += ALIGN_TO (size, MINT_STACK_SLOT_SIZE);
+		int var = create_interp_local (td, header->locals [i]);
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
+		alloc_global_var_offset (td, var);
+		imethod->local_offsets [i] = td->locals [var].offset;
 	}
-	offset = ALIGN_TO (offset, MINT_VT_ALIGNMENT);
-	td->il_locals_size = offset - td->il_locals_offset;
-	td->total_locals_size = offset;
+	td->il_locals_size = td->total_locals_size - td->il_locals_offset;
 
 	imethod->clause_data_offsets = (guint32*)g_malloc (header->num_clauses * sizeof (guint32));
 	td->clause_vars = (int*)mono_mempool_alloc (td->mempool, sizeof (int) * header->num_clauses);
