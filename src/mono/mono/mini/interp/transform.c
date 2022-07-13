@@ -9542,7 +9542,7 @@ retry:
 			c->data.filter_offset = get_native_offset (td, c->data.filter_offset);
 	}
 	rtm->alloca_size = td->total_locals_size;
-	rtm->locals_size = td->param_area_offset;
+	rtm->il_locals_size = td->il_locals_size;
 	rtm->data_items = (gpointer*)mono_mem_manager_alloc0 (td->mem_manager, td->n_data_items * sizeof (td->data_items [0]));
 	memcpy (rtm->data_items, td->data_items, td->n_data_items * sizeof (td->data_items [0]));
 

@@ -137,7 +137,7 @@ struct InterpMethod {
 	MonoFtnDesc *ftndesc_unbox;
 	MonoDelegateTrampInfo *del_info;
 
-	guint32 locals_size;
+	guint32 il_locals_size;
 	guint32 alloca_size;
 	int num_clauses; // clauses
 	int transformed; // boolean
