@@ -934,11 +934,12 @@ get_arg_type_exact (TransformData *td, int n, int *mt)
 {
 	MonoType *type;
 	gboolean hasthis = td->rtm->hasthis;
+	MonoMethodSignature *sig = mono_method_signature_internal (td->rtm->method);
 
 	if (hasthis && n == 0)
 		type = m_class_get_byval_arg (td->method->klass);
 	else
-		type = td->rtm->param_types [n - !!hasthis];
+		type = sig->params [n - !!hasthis];
 
 	if (mt)
 		*mt = mint_type (type);
@@ -3513,6 +3514,8 @@ interp_save_debug_info (InterpMethod *rtm, MonoMethodHeader *header, TransformDa
 	if (!mono_debug_enabled ())
 		return;
 
+	MonoMethodSignature *sig = mono_method_signature_internal (rtm->method);
+
 	/*
 	 * We save the debug info in the same way the JIT does it, treating the interpreter IR as the native code.
 	 */
@@ -3531,7 +3534,7 @@ interp_save_debug_info (InterpMethod *rtm, MonoMethodHeader *header, TransformDa
 
 	for (guint32 i = 0; i < dinfo->num_params; i++) {
 		MonoDebugVarInfo *var = &dinfo->params [i];
-		var->type = rtm->param_types [i];
+		var->type = sig->params [i];
 	}
 	for (guint32 i = 0; i < dinfo->num_locals; i++) {
 		MonoDebugVarInfo *var = &dinfo->locals [i];

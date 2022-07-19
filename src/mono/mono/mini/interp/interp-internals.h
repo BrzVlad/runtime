@@ -121,7 +121,6 @@ struct InterpMethod {
 	// Sort pointers ahead of integers to minimize padding for alignment.
 
 	unsigned short *code;
-	MonoPIFunc func;
 	MonoExceptionClause *clauses; // num_clauses
 	void **data_items;
 	guint32 *local_offsets;
@@ -130,8 +129,6 @@ struct InterpMethod {
 	gpointer jit_call_info;
 	gpointer jit_entry;
 	gpointer llvmonly_unbox_entry;
-	MonoType *rtype;
-	MonoType **param_types;
 	MonoJitInfo *jinfo;
 	MonoFtnDesc *ftndesc;
 	MonoFtnDesc *ftndesc_unbox;

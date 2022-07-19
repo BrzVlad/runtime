@@ -461,7 +461,6 @@ mono_interp_get_imethod (MonoMethod *method)
 	InterpMethod *imethod;
 	MonoMethodSignature *sig;
 	MonoJitMemoryManager *jit_mm = jit_mm_for_method (method);
-	int i;
 
 	jit_mm_lock (jit_mm);
 	imethod = (InterpMethod*)mono_internal_hash_table_lookup (&jit_mm->interp_code_hash, method);
@@ -481,13 +480,6 @@ mono_interp_get_imethod (MonoMethod *method)
 	// always optimize wrappers
 	if (!(mono_interp_opt & INTERP_OPT_TIERING) || method->wrapper_type != MONO_WRAPPER_NONE)
 		imethod->optimized = TRUE;
-	if (imethod->method->string_ctor)
-		imethod->rtype = m_class_get_byval_arg (mono_defaults.string_class);
-	else
-		imethod->rtype = mini_get_underlying_type (sig->ret);
-	imethod->param_types = (MonoType**)m_method_alloc0 (method, sizeof (MonoType*) * sig->param_count);
-	for (i = 0; i < sig->param_count; ++i)
-		imethod->param_types [i] = mini_get_underlying_type (sig->params [i]);
 
 	jit_mm_lock (jit_mm);
 	InterpMethod *old_imethod;
@@ -2150,7 +2142,6 @@ interp_entry (InterpEntryData *data)
 	stackval *sp, *sp_args;
 	MonoMethod *method;
 	MonoMethodSignature *sig;
-	MonoType *type;
 	gpointer orig_domain = NULL, attach_cookie;
 	int i;
 
@@ -2232,9 +2223,8 @@ interp_entry (InterpEntryData *data)
 	}
 
 	// The return value is at the bottom of the stack, after the locals space
-	type = rmethod->rtype;
-	if (type->type != MONO_TYPE_VOID)
-		stackval_to_data (type, frame.stack, data->res, FALSE);
+	if (sig->ret->type != MONO_TYPE_VOID)
+		stackval_to_data (sig->ret, frame.stack, data->res, FALSE);
 }
 
 static void
@@ -2586,7 +2576,7 @@ init_jit_call_info (InterpMethod *rmethod, MonoError *error)
 		cinfo->arginfo = g_new0 (guint8, sig->param_count);
 
 		for (guint i = 0; i < rmethod->param_count; ++i) {
-			MonoType *t = rmethod->param_types [i];
+			MonoType *t = sig->params [i];
 			int mt = mint_type (t);
 			if (m_type_is_byref (sig->params [i])) {
 				cinfo->arginfo [i] = JIT_ARG_BYVAL;
