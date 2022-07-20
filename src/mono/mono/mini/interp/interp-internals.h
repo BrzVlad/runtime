@@ -124,6 +124,7 @@ struct InterpMethod {
 	MonoExceptionClause *clauses; // num_clauses
 	void **data_items;
 	guint32 *local_offsets;
+	guint32 *local_sizes;
 	guint32 *arg_offsets;
 	guint32 *clause_data_offsets;
 	gpointer jit_call_info;
@@ -134,11 +135,11 @@ struct InterpMethod {
 	MonoFtnDesc *ftndesc_unbox;
 	MonoDelegateTrampInfo *del_info;
 
-	guint32 il_locals_size;
 	guint32 alloca_size;
 	int num_clauses; // clauses
 	int transformed; // boolean
-	unsigned int param_count;
+	int param_count;
+	int il_locals_count;
 	MonoProfilerCallInstrumentationFlags prof_flags;
 	InterpMethodCodeType code_type;
 #ifdef ENABLE_EXPERIMENT_TIERED

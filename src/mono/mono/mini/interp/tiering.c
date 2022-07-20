@@ -178,6 +178,24 @@ lookup_patchpoint_data (InterpMethod *imethod, int data)
        return G_MAXINT32;
 }
 
+static void
+copy_il_locals (InterpFrame *frame, InterpMethod *unoptimized_method, InterpMethod *optimized_method)
+{
+	char *tmp_buffer = alloca (optimized_method->alloca_size);
+	// Copy to tmp buffer first, so we don't overwrite other locals in unoptimized frame
+	for (int i = 0; i < unoptimized_method->il_locals_count; i++) {
+		if (optimized_method->local_offsets [i] != -1) {
+			memcpy (tmp_buffer + optimized_method->local_offsets [i], frame_locals (frame) + unoptimized_method->local_offsets [i], optimized_method->local_sizes [i]);
+		}
+	}
+
+	for (int i = 0; i < unoptimized_method->il_locals_count; i++) {
+		if (optimized_method->local_offsets [i] != -1) {
+			memcpy (frame_locals (frame) + optimized_method->local_offsets [i], tmp_buffer + optimized_method->local_offsets [i], optimized_method->local_sizes [i]);
+		}
+	}
+}
+
 const guint16*
 mono_interp_tier_up_frame_patchpoint (InterpFrame *frame, ThreadContext *context, int bb_index)
 {
@@ -207,5 +225,6 @@ mono_interp_tier_up_frame_patchpoint (InterpFrame *frame, ThreadContext *context
 	}
 	context->stack_pointer = (guchar*)frame->stack + optimized_method->alloca_size;
 	frame->imethod = optimized_method;
+	copy_il_locals (frame, unoptimized_method, optimized_method);
 	return optimized_method->code + lookup_patchpoint_data (optimized_method, bb_index);
 }

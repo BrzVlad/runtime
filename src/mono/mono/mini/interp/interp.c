@@ -7557,8 +7557,12 @@ interp_run_clause_with_il_state (gpointer il_state_ptr, int clause_index, MonoOb
 	mono_error_assert_ok (error);
 
 	/* Init locals */
-	if (header->num_locals)
-		memset (frame_locals (&frame) + imethod->local_offsets [0], 0, imethod->il_locals_size);
+	if (header->num_locals) {
+		for (int i = 0; i < header->num_locals; i++) {
+			if (imethod->local_offsets [i] != -1)
+				memset (frame_locals (&frame) + imethod->local_offsets [i], 0, imethod->local_sizes [i]);
+		}
+	}
 	/* Copy locals from il_state */
 	int locals_start = findex;
 	for (int i = 0; i < header->num_locals; ++i) {
