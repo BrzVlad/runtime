@@ -20,6 +20,8 @@
 #define INTERP_LOCAL_FLAG_CALL_ARGS 4
 #define INTERP_LOCAL_FLAG_GLOBAL 8
 #define INTERP_LOCAL_FLAG_NO_CALL_ARGS 16
+#define INTERP_LOCAL_FLAG_IL_LOCAL 32
+#define INTERP_LOCAL_FLAG_FINAL_OFFSET 64
 
 typedef struct _InterpInst InterpInst;
 typedef struct _InterpBasicBlock InterpBasicBlock;
@@ -178,6 +180,7 @@ typedef struct
 	const unsigned char *ip;
 	const unsigned char *in_start;
 	InterpInst *last_ins, *first_ins;
+	InterpInst *initlocals;
 	int code_size;
 	int *in_offsets;
 	int current_il_offset;
@@ -188,12 +191,12 @@ typedef struct
 	StackInfo *sp;
 	unsigned int max_stack_height;
 	unsigned int stack_capacity;
-	gint32 param_area_offset;
 	gint32 total_locals_size;
 	InterpLocal *locals;
 	int *local_ref_count;
-	unsigned int il_locals_offset;
-	unsigned int il_locals_size;
+	gint32 end_offset_args;
+	gint32 end_offset_il_locals;
+	gint32 end_offset_global_vars;
 	unsigned int locals_size;
 	unsigned int locals_capacity;
 	int n_data_items;

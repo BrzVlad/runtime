@@ -1290,12 +1290,6 @@ alloc_var_offset (TransformData *td, int local, gint32 *ptos)
 	return td->locals [local].offset;
 }
 
-static int
-alloc_global_var_offset (TransformData *td, int var)
-{
-	return alloc_var_offset (td, var, &td->total_locals_size);
-}
-
 /*
  * ins_offset is the associated offset of this instruction
  * if ins is null, it means the data belongs to an instruction that was
@@ -3758,7 +3752,6 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 	td->locals_capacity = td->locals_size;
 
 	g_assert (MINT_STACK_SLOT_SIZE == MINT_VT_ALIGNMENT);
-	g_assert (!td->total_locals_size);
 
 	/*
 	 * We will load arguments as if they are locals. Unlike normal locals, every argument
@@ -3772,11 +3765,22 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 		else
 			type = mono_method_signature_internal (td->method)->params [i - sig->hasthis];
 		int var = create_interp_local (td, type);
+		alloc_var_offset (td, var, &td->end_offset_args);
 		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
-		alloc_global_var_offset (td, var);
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_FINAL_OFFSET;
 	}
 
-	td->il_locals_offset = td->total_locals_size;
+	imethod->clause_data_offsets = (guint32*)g_malloc (header->num_clauses * sizeof (guint32));
+	td->clause_vars = (int*)mono_mempool_alloc (td->mempool, sizeof (int) * header->num_clauses);
+	for (guint i = 0; i < header->num_clauses; i++) {
+		int var = create_interp_local (td, mono_get_object_type ());
+		alloc_var_offset (td, var, &td->end_offset_args);
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_FINAL_OFFSET;
+		imethod->clause_data_offsets [i] = td->locals [var].offset;
+		td->clause_vars [i] = var;
+	}
+	td->end_offset_il_locals = td->end_offset_args;
 	for (int i = 0; i < num_il_locals; ++i) {
 		size = mono_type_size (header->locals [i], &align);
 		if (header->locals [i]->type == MONO_TYPE_VALUETYPE) {
@@ -3786,20 +3790,11 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 			}
 		}
 		int var = create_interp_local (td, header->locals [i]);
+		alloc_var_offset (td, var, &td->end_offset_il_locals);
 		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
-		alloc_global_var_offset (td, var);
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_IL_LOCAL;
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_FINAL_OFFSET;
 		imethod->local_offsets [i] = td->locals [var].offset;
-	}
-	td->il_locals_size = td->total_locals_size - td->il_locals_offset;
-
-	imethod->clause_data_offsets = (guint32*)g_malloc (header->num_clauses * sizeof (guint32));
-	td->clause_vars = (int*)mono_mempool_alloc (td->mempool, sizeof (int) * header->num_clauses);
-	for (guint i = 0; i < header->num_clauses; i++) {
-		int var = create_interp_local (td, mono_get_object_type ());
-		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
-		alloc_global_var_offset (td, var);
-		imethod->clause_data_offsets [i] = td->locals [var].offset;
-		td->clause_vars [i] = var;
 	}
 }
 
@@ -4295,26 +4290,12 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			// This is the offset where the variable args are on stack. After this instruction
 			// which copies them to localloc'ed memory, this space will be overwritten by normal
 			// locals
-			td->last_ins->data [0] = GUINT_TO_UINT16 (td->il_locals_offset);
+			td->last_ins->data [0] = GUINT_TO_UINT16 (td->end_offset_args);
 			td->has_localloc = TRUE;
 		}
 
-		/*
-		 * We initialize the locals regardless of the presence of the init_locals
-		 * flag. Locals holding references need to be zeroed so we don't risk
-		 * crashing the GC if they end up being stored in an object.
-		 *
-		 * FIXME
-		 * Track values of locals over multiple basic blocks. This would enable
-		 * us to kill the MINT_INITLOCALS instruction if all locals are initialized
-		 * before use. We also don't need this instruction if the init locals flag
-		 * is not set and there are no locals holding references.
-		 */
-		if (header->num_locals) {
-			interp_add_ins (td, MINT_INITLOCALS);
-			td->last_ins->data [0] = GUINT_TO_UINT16 (td->il_locals_offset);
-			td->last_ins->data [1] = GUINT_TO_UINT16 (td->il_locals_size);
-		}
+		// to be patched later with the il offset area, after var offset allocation
+		td->initlocals = interp_add_ins (td, MINT_INITLOCALS);
 
 		guint16 enter_profiling = 0;
 		if (mono_jit_trace_calls != NULL && mono_trace_eval (method))
@@ -4362,9 +4343,10 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		}
 
 		local_locals = (guint32*) g_malloc (header->num_locals * sizeof (guint32));
-		/* Allocate locals to store inlined method args from stack */
-		for (int i = 0; i < header->num_locals; i++)
+		for (int i = 0; i < header->num_locals; i++) {
 			local_locals [i] = create_interp_local (td, header->locals [i]);
+			td->locals [local_locals [i]].flags |= INTERP_LOCAL_FLAG_IL_LOCAL;
+		}
 	}
 
 	td->dont_inline = g_list_prepend (td->dont_inline, method);
@@ -4470,7 +4452,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		case CEE_LDLOC_3: {
 			int loc_n = *td->ip - CEE_LDLOC_0;
 			if (!inlining)
-				load_local (td, num_args + loc_n);
+				load_local (td, num_args + header->num_clauses + loc_n);
 			else
 				load_local (td, local_locals [loc_n]);
 			++td->ip;
@@ -4482,7 +4464,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		case CEE_STLOC_3: {
 			int loc_n = *td->ip - CEE_STLOC_0;
 			if (!inlining)
-				store_local (td, num_args + loc_n);
+				store_local (td, num_args + header->num_clauses + loc_n);
 			else
 				store_local (td, local_locals [loc_n]);
 			++td->ip;
@@ -4528,7 +4510,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		case CEE_LDLOC_S: {
 			int loc_n = ((guint8 *)td->ip)[1];
 			if (!inlining)
-				load_local (td, num_args + loc_n);
+				load_local (td, num_args + header->num_clauses + loc_n);
 			else
 				load_local (td, local_locals [loc_n]);
 			td->ip += 2;
@@ -4538,7 +4520,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			int loc_n = ((guint8 *)td->ip)[1];
 			interp_add_ins (td, MINT_LDLOCA_S);
 			if (!inlining)
-				loc_n += num_args;
+				loc_n += header->num_clauses + num_args;
 			else
 				loc_n = local_locals [loc_n];
 			interp_ins_set_sreg (td->last_ins, loc_n);
@@ -4551,7 +4533,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		case CEE_STLOC_S: {
 			int loc_n = ((guint8 *)td->ip)[1];
 			if (!inlining)
-				store_local (td, num_args + loc_n);
+				store_local (td, num_args + header->num_clauses + loc_n);
 			else
 				store_local (td, local_locals [loc_n]);
 			td->ip += 2;
@@ -7185,7 +7167,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			case CEE_LDLOC: {
 				int loc_n = read16 (td->ip + 1);
 				if (!inlining)
-					load_local (td, num_args + loc_n);
+					load_local (td, num_args + header->num_clauses + loc_n);
 				else
 					load_local (td, local_locals [loc_n]);
 				td->ip += 3;
@@ -7195,7 +7177,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 				int loc_n = read16 (td->ip + 1);
 				interp_add_ins (td, MINT_LDLOCA_S);
 				if (!inlining)
-					loc_n += num_args;
+					loc_n += header->num_clauses + num_args;
 				else
 					loc_n = local_locals [loc_n];
 				interp_ins_set_sreg (td->last_ins, loc_n);
@@ -7208,7 +7190,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			case CEE_STLOC: {
 				int loc_n = read16 (td->ip + 1);
 				if (!inlining)
-					store_local (td, num_args + loc_n);
+					store_local (td, num_args + header->num_clauses + loc_n);
 				else
 					store_local (td, local_locals [loc_n]);
 				td->ip += 3;
@@ -7816,6 +7798,7 @@ interp_local_deadce (TransformData *td)
 					MINT_IS_LDC_I8 (ins->opcode) ||
 					ins->opcode == MINT_MONO_LDPTR ||
 					ins->opcode == MINT_LDLOCA_S) {
+				// FIXME kill more instructions
 				int dreg = ins->dreg;
 				if (td->locals [dreg].flags & INTERP_LOCAL_FLAG_DEAD) {
 					if (td->verbose_level) {
@@ -8947,13 +8930,19 @@ initialize_global_var (TransformData *td, int var, int bb_index)
 	if (td->locals [var].flags & INTERP_LOCAL_FLAG_GLOBAL)
 		return;
 
-	if (td->locals [var].bb_index == -1) {
+	if (td->locals [var].flags & INTERP_LOCAL_FLAG_IL_LOCAL) {
+		// IL locals that are used even in a single basic block are promoted to global since
+		// it is probably a good ideea avoid having storage overlap with other locals.
+		if (td->verbose_level)
+			g_print ("alloc IL local var %d to offset %d\n", var, td->end_offset_il_locals);
+		alloc_var_offset (td, var, &td->end_offset_il_locals);
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
+		td->locals [var].flags |= INTERP_LOCAL_FLAG_FINAL_OFFSET;
+	} else if (td->locals [var].bb_index == -1) {
 		td->locals [var].bb_index = bb_index;
 	} else if (td->locals [var].bb_index != bb_index) {
 		// var used in multiple basic blocks
-		if (td->verbose_level)
-			g_print ("alloc global var %d to offset %d\n", var, td->total_locals_size);
-		alloc_global_var_offset (td, var);
+		alloc_var_offset (td, var, &td->end_offset_global_vars);
 		td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
 	}
 }
@@ -8980,9 +8969,7 @@ initialize_global_vars (TransformData *td)
 				int var = ins->sregs [0];
 				// If global flag is set, it means its offset was already allocated
 				if (!(td->locals [var].flags & INTERP_LOCAL_FLAG_GLOBAL)) {
-					if (td->verbose_level)
-						g_print ("alloc ldloca global var %d to offset %d\n", var, td->total_locals_size);
-					alloc_global_var_offset (td, var);
+					alloc_var_offset (td, var, &td->end_offset_global_vars);
 					td->locals [var].flags |= INTERP_LOCAL_FLAG_GLOBAL;
 				}
 			}
@@ -9193,12 +9180,17 @@ interp_alloc_offsets (TransformData *td)
 	if (td->verbose_level)
 		g_print ("\nvar offset allocator iteration\n");
 
+	// No other vars should have had their offset computed before the allocator is invoked.
 	initialize_global_vars (td);
 
 	init_active_vars (td, &av);
 	init_active_calls (td, &ac);
 
-	int final_total_locals_size = td->total_locals_size;
+	// IL locals space has been allocated already, by bumping end_offset_il_locals. Other global
+	// vars have been allocated based on end_offset_global_vars counter (which is 0 based). Offsets
+	// for these global will have to be later updated, by offsetting with the end of IL locals.
+	int local_vars_offset = td->end_offset_global_vars + td->end_offset_il_locals;
+	int end_offset_local_vars = local_vars_offset;
 	// We now have the top of stack offset. All local regs are allocated after this offset, with each basic block
 	for (bb = td->entry_bb; bb != NULL; bb = bb->next_bb) {
 		InterpInst *ins;
@@ -9298,7 +9290,7 @@ interp_alloc_offsets (TransformData *td)
 			foreach_local_var (td, ins, (gpointer)(gsize)ins_index, set_var_live_range_cb);
 			ins_index++;
 		}
-		gint32 current_offset = td->total_locals_size;
+		gint32 current_offset = local_vars_offset;
 
 		ins_index = 0;
 		for (ins = bb->first_ins; ins != NULL; ins = ins->next) {
@@ -9337,8 +9329,8 @@ interp_alloc_offsets (TransformData *td)
 					add_active_call (td, &ac, td->locals [var].call);
 				} else if (!(td->locals [var].flags & INTERP_LOCAL_FLAG_GLOBAL) && td->locals [var].offset == -1) {
 					alloc_var_offset (td, var, &current_offset);
-					if (current_offset > final_total_locals_size)
-						final_total_locals_size = current_offset;
+					if (current_offset > end_offset_local_vars)
+						end_offset_local_vars = current_offset;
 
 					if (td->verbose_level)
 						g_print ("alloc var %d to offset %d\n", var, td->locals [var].offset);
@@ -9357,17 +9349,30 @@ interp_alloc_offsets (TransformData *td)
 		}
 	}
 
-	// Iterate over all call args locals, update their final offset (aka add td->total_locals_size to them)
-	// then also update td->total_locals_size to account for this space.
-	td->param_area_offset = final_total_locals_size;
+	// Iterate over all call args locals, update their final offset (aka add end_offset_local_vars to them)
+	td->total_locals_size = end_offset_local_vars;
 	for (unsigned int i = 0; i < td->locals_size; i++) {
-		// These are allocated separately at the end of the stack
+		// FIXME There should be no need to allocate dead vars. The problem is that we don't kill all
+		// the instructions storing into them, which would lead to undefined behavior if we don't allocate
+		// their offset.
+		//
+		// if (td->locals [i].flags & INTERP_LOCAL_FLAG_DEAD)
+		//	continue;
 		if (td->locals [i].flags & INTERP_LOCAL_FLAG_CALL_ARGS) {
-			td->locals [i].offset += td->param_area_offset;
-			final_total_locals_size = MAX (td->locals [i].offset + td->locals [i].size, final_total_locals_size);
+			// Call args locals are allocated separately at the end of the stack
+			td->locals [i].offset += end_offset_local_vars;
+			td->locals [i].flags |= INTERP_LOCAL_FLAG_FINAL_OFFSET;
+			td->total_locals_size = MAX (td->locals [i].offset + td->locals [i].size, td->total_locals_size);
+		} else if (td->locals [i].flags & INTERP_LOCAL_FLAG_GLOBAL &&
+				!(td->locals [i].flags & INTERP_LOCAL_FLAG_FINAL_OFFSET)) {
+			// Global vars that didn't have their final offset determined. We just need to translate the offsets
+			// past the IL local area.
+			td->locals [i].offset += td->end_offset_il_locals;
+			if (td->verbose_level)
+				g_print ("alloc global var %d to offset %d\n", i, td->locals [i].offset);
+			td->locals [i].flags |= INTERP_LOCAL_FLAG_FINAL_OFFSET;
 		}
 	}
-	td->total_locals_size = ALIGN_TO (final_total_locals_size, MINT_STACK_SLOT_SIZE);
 }
 
 /*
@@ -9383,7 +9388,7 @@ interp_fix_localloc_ret (TransformData *td)
 		InterpInst *ins = bb->first_ins;
 		while (ins) {
 			if (ins->opcode >= MINT_RET && ins->opcode <= MINT_RET_VT)
-				ins->opcode += MINT_RET_LOCALLOC - MINT_RET;
+			ins->opcode += MINT_RET_LOCALLOC - MINT_RET;
 			ins = ins->next;
 		}
 	}
@@ -9491,6 +9496,13 @@ retry:
 
 	interp_alloc_offsets (td);
 
+	if (td->end_offset_il_locals > td->end_offset_args) {
+		td->initlocals->data [0] = GUINT_TO_UINT16 (td->end_offset_args);
+		td->initlocals->data [1] = GUINT_TO_UINT16 (td->end_offset_il_locals - td->end_offset_args);
+	} else {
+		interp_clear_ins (td->initlocals);
+	}
+
 	generate_compacted_code (td);
 
 	if (td->total_locals_size >= G_MAXUINT16) {
@@ -9545,7 +9557,6 @@ retry:
 			c->data.filter_offset = get_native_offset (td, c->data.filter_offset);
 	}
 	rtm->alloca_size = td->total_locals_size;
-	rtm->il_locals_size = td->il_locals_size;
 	rtm->data_items = (gpointer*)mono_mem_manager_alloc0 (td->mem_manager, td->n_data_items * sizeof (td->data_items [0]));
 	memcpy (rtm->data_items, td->data_items, td->n_data_items * sizeof (td->data_items [0]));
 
