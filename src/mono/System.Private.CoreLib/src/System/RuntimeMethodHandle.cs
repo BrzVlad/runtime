@@ -91,14 +91,23 @@ namespace System
         }
 
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
-        internal static extern object ReboxFromNullable (object? src);
+        internal static extern void ReboxFromNullable (object? src, ObjectHandleOnStack res);
 
         [MethodImplAttribute(MethodImplOptions.InternalCall)]
-        internal static extern object ReboxToNullable (object? src, QCallTypeHandle destNullableType);
+        internal static extern void ReboxToNullable (object? src, QCallTypeHandle destNullableType, ObjectHandleOnStack res);
+
+        internal static object ReboxFromNullable (object? src)
+        {
+            object? res = null;
+            ReboxFromNullable(src, ObjectHandleOnStack.Create(ref res));
+            return res!;
+        }
 
         internal static object ReboxToNullable(object? src, RuntimeType destNullableType)
         {
-            return ReboxToNullable(src, new QCallTypeHandle(ref destNullableType));
+            object? res = null;
+            ReboxToNullable(src, new QCallTypeHandle(ref destNullableType), ObjectHandleOnStack.Create(ref res));
+            return res!;
         }
 
     }
