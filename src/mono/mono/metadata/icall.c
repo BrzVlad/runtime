@@ -1811,12 +1811,13 @@ ves_icall_RuntimeMethodHandle_ReboxToNullable (MonoObjectHandle obj, MonoQCallTy
 		return;
 	}
 
-	MonoObjectHandle res = mono_object_new_handle (klass, error);
-	gpointer dest = mono_object_unbox_internal (MONO_HANDLE_RAW (res));
+	MonoObject *res = mono_object_new_checked (klass, error);
+	MONO_HANDLE_PIN (res);
+	gpointer dest = mono_object_unbox_internal (res);
 
 	mono_nullable_init (dest, MONO_HANDLE_RAW (obj), klass);
 
-	HANDLE_ON_STACK_SET (res_handle, MONO_HANDLE_RAW (res));
+	HANDLE_ON_STACK_SET (res_handle, res);
 }
 
 void
@@ -1836,9 +1837,9 @@ ves_icall_RuntimeMethodHandle_ReboxFromNullable (MonoObjectHandle obj, MonoObjec
 	}
 
 	gpointer vbuf = mono_object_unbox_internal (MONO_HANDLE_RAW (obj));
-	MonoObjectHandle res = mono_nullable_box_handle (vbuf, klass, error);
+	MonoObject *res = mono_nullable_box (vbuf, klass, error);
 
-	HANDLE_ON_STACK_SET (res_handle, MONO_HANDLE_RAW (res));
+	HANDLE_ON_STACK_SET (res_handle, res);
 }
 
 guint32
