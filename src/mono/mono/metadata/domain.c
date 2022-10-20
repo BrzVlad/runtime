@@ -95,6 +95,14 @@ create_root_domain (void)
 	return domain;
 }
 
+static MONO_NO_OPTIMIZATION MONO_NEVER_INLINE void
+ensure_stack_size (void)
+{
+	const int default_size = 1024 * 1024;
+	volatile uint8_t *s = (uint8_t *)g_alloca(default_size);
+	*s = 0;
+}
+
 /**
  * mono_init_internal:
  *
@@ -127,6 +135,8 @@ mono_init_internal (const char *root_domain_name)
 	mono_counters_init ();
 
 	mono_counters_register ("Max HashTable Chain Length", MONO_COUNTER_INT|MONO_COUNTER_METADATA, &mono_g_hash_table_max_chain_length);
+
+	ensure_stack_size ();
 
 	mono_gc_base_init ();
 	mono_thread_info_attach ();
