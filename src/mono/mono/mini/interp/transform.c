@@ -408,6 +408,43 @@ get_type_from_stack (int type, MonoClass *klass)
 	}
 }
 
+static int
+create_interp_local (TransformData *td, MonoType *type);
+
+static void
+promote_struct_fields (TransformData *td, int vt_var)
+{
+	if (!td->optimized)
+		return;
+
+	MonoClass *klass = mono_class_from_mono_type_internal (td->locals [vt_var].type);
+	// Don't promote fields if they might be overlapping or with weird alignments
+	if (mono_class_is_explicit_layout (klass))
+		return;
+	// Don't promote fields if struct has a lot of fields
+	// FIXME We also check static fields here ?
+	if (mono_class_get_field_count (klass) > 4)
+		return;
+
+	gpointer iter = NULL;
+	MonoClassField *field;
+
+	while ((field = mono_class_get_fields_internal (klass, &iter))) {
+		if (field->type->attrs & FIELD_ATTRIBUTE_STATIC)
+                        continue;
+		MonoType *ftype = mono_field_get_type_internal (field);
+		int mt = mint_type (ftype);
+		if (mt == MINT_TYPE_I4 || mt == MINT_TYPE_I8 ||
+				mt == MINT_TYPE_R4 || mt == MINT_TYPE_R8 ||
+				mt == MINT_TYPE_O) {
+			int struct_field_var = create_interp_local (td, ftype);
+			td->locals [struct_field_var].flags |= INTERP_LOCAL_FLAG_STRUCT_FIELD;
+			td->locals [struct_field_var].offset = field->offset - MONO_ABI_SIZEOF (MonoObject);
+			td->locals [struct_field_var].parent_vt = vt_var;
+		}
+	}
+}
+
 /*
  * These are additional locals that can be allocated as we transform the code.
  * They are allocated past the method locals so they are accessed in the same
@@ -431,8 +468,13 @@ create_interp_local_explicit (TransformData *td, MonoType *type, int size)
 	td->locals [td->locals_size].live_start = -1;
 	td->locals [td->locals_size].bb_index = -1;
 	td->locals [td->locals_size].def = NULL;
+	int ret = td->locals_size;
 	td->locals_size++;
-	return td->locals_size - 1;
+
+	if (td->locals [ret].mt == MINT_TYPE_VT)
+		promote_struct_fields (td, ret);
+
+	return ret;
 
 }
 

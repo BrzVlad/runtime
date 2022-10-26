@@ -20,6 +20,7 @@
 #define INTERP_LOCAL_FLAG_CALL_ARGS 4
 #define INTERP_LOCAL_FLAG_GLOBAL 8
 #define INTERP_LOCAL_FLAG_NO_CALL_ARGS 16
+#define INTERP_LOCAL_FLAG_STRUCT_FIELD 32
 
 typedef struct _InterpInst InterpInst;
 typedef struct _InterpBasicBlock InterpBasicBlock;
@@ -162,6 +163,8 @@ typedef struct {
 		int live_start;
 		// used only by the fast offset allocator, which only works for unoptimized code
 		int stack_offset;
+		// parent var for struct fields, these vars are not handled by the offset allocator
+		int parent_vt;
 	};
 	int live_end;
 	// index of first basic block where this var is used
