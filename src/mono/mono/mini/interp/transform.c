@@ -439,6 +439,7 @@ promote_struct_fields (TransformData *td, int vt_var)
 				mt == MINT_TYPE_O) {
 			int struct_field_var = create_interp_local (td, ftype);
 			td->locals [struct_field_var].flags |= INTERP_LOCAL_FLAG_STRUCT_FIELD;
+			td->locals [struct_field_var].flags |= INTERP_LOCAL_FLAG_NO_CALL_ARGS;
 			td->locals [struct_field_var].offset = field->offset - MONO_ABI_SIZEOF (MonoObject);
 			td->locals [struct_field_var].parent_vt = vt_var;
 		}
@@ -1426,6 +1427,8 @@ static int
 alloc_var_offset (TransformData *td, int local, gint32 *ptos)
 {
 	int size, offset;
+
+	g_assert (!(td->locals [local].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD));
 
 	offset = *ptos;
 	size = td->locals [local].size;
@@ -8182,6 +8185,16 @@ interp_optimize_bblocks (TransformData *td)
 	return needs_cprop;
 }
 
+static int
+get_encapsulating_var (TransformData *td, int var)
+{
+	// Liveness for struct field vars is tied to the parent vt
+	if (td->locals [var].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD)
+		return td->locals [var].parent_vt;
+	else
+		return var;
+}
+
 static gboolean
 interp_local_deadce (TransformData *td)
 {
@@ -9442,6 +9455,7 @@ set_var_live_range (TransformData *td, int var, int ins_index)
 	// We don't track liveness yet for global vars
 	if (td->locals [var].flags & INTERP_LOCAL_FLAG_GLOBAL)
 		return;
+	var = get_encapsulating_var (td, var);
 	if (td->locals [var].live_start == -1)
 		td->locals [var].live_start = ins_index;
 	td->locals [var].live_end = ins_index;
@@ -9456,6 +9470,7 @@ set_var_live_range_cb (TransformData *td, int var, gpointer data)
 static void
 initialize_global_var (TransformData *td, int var, int bb_index)
 {
+	var = get_encapsulating_var (td, var);
 	// Check if already handled
 	if (td->locals [var].flags & INTERP_LOCAL_FLAG_GLOBAL)
 		return;
@@ -9831,6 +9846,7 @@ interp_alloc_offsets (TransformData *td)
 				int var = ins->sregs [i];
 				if (var == MINT_CALL_ARGS_SREG)
 					continue;
+				var = get_encapsulating_var (td, var);
 				if (!(td->locals [var].flags & INTERP_LOCAL_FLAG_GLOBAL) && td->locals [var].live_end == ins_index) {
 					g_assert (!(td->locals [var].flags & INTERP_LOCAL_FLAG_CALL_ARGS));
 					end_active_var (td, &av, var);
@@ -9844,7 +9860,7 @@ interp_alloc_offsets (TransformData *td)
 
 			// Alloc dreg local starting at the stack_offset
 			if (mono_interp_op_dregs [opcode]) {
-				int var = ins->dreg;
+				int var = get_encapsulating_var (td, ins->dreg);
 
 				if (td->locals [var].flags & INTERP_LOCAL_FLAG_CALL_ARGS) {
 					add_active_call (td, &ac, td->locals [var].call);
@@ -9874,10 +9890,14 @@ interp_alloc_offsets (TransformData *td)
 	// then also update td->total_locals_size to account for this space.
 	td->param_area_offset = final_total_locals_size;
 	for (unsigned int i = 0; i < td->locals_size; i++) {
-		// These are allocated separately at the end of the stack
 		if (td->locals [i].flags & INTERP_LOCAL_FLAG_CALL_ARGS) {
+			// These are allocated separately at the end of the stack
 			td->locals [i].offset += td->param_area_offset;
 			final_total_locals_size = MAX (td->locals [i].offset + td->locals [i].size, final_total_locals_size);
+		} else if (td->locals [i].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD) {
+			// These have their offset tied to the parent vt
+			int parent_var = td->locals [i].parent_vt;
+			td->locals [i].offset += td->locals [parent_var].offset;
 		}
 	}
 	td->total_locals_size = ALIGN_TO (final_total_locals_size, MINT_STACK_SLOT_SIZE);
