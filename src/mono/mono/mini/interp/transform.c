@@ -446,6 +446,24 @@ promote_struct_fields (TransformData *td, int vt_var)
 	}
 }
 
+static int
+get_promoted_struct_field (TransformData *td, int vt_var, int offset, int mt)
+{
+	int field_var = vt_var + 1;
+	while (field_var < td->locals_size) {
+		// If we encounter a var that is not a struct field then lookup for this vt is finished
+		if (!(td->locals [field_var].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD))
+			break;
+		if (td->locals [field_var].offset == offset) {
+			g_assert (td->locals [field_var].mt == mt);
+			return field_var;
+		}
+		field_var++;
+	}
+
+	return -1;
+}
+
 /*
  * These are additional locals that can be allocated as we transform the code.
  * They are allocated past the method locals so they are accessed in the same
@@ -6099,27 +6117,36 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					g_assert (!m_field_is_from_update (field));
 					int size = 0;
 					/* First we pop the vt object from the stack. Then we push the field */
-#ifdef NO_UNALIGNED_ACCESS
-					if (m_field_get_offset (field) % SIZEOF_VOID_P != 0) {
-						if (mt == MINT_TYPE_I8 || mt == MINT_TYPE_R8)
-							size = 8;
-					}
-#endif
-					interp_add_ins (td, MINT_MOV_SRC_OFF);
-					g_assert (m_class_is_valuetype (klass));
 					td->sp--;
-					interp_ins_set_sreg (td->last_ins, td->sp [0].local);
-					td->last_ins->data [0] = GINT_TO_UINT16 (m_field_get_offset (field) - MONO_ABI_SIZEOF (MonoObject));
-					td->last_ins->data [1] = GINT_TO_UINT16 (mt);
-					if (mt == MINT_TYPE_VT)
-						size = field_size;
-					td->last_ins->data [2] = GINT_TO_UINT16 (size);
+					int vt_var = td->sp [0].local;
+					int field_var = get_promoted_struct_field (td, vt_var, m_field_get_offset (field) - MONO_ABI_SIZEOF (MonoObject), mt);
+					if (field_var != -1) {
+						interp_add_ins (td, get_mov_for_type (mt, FALSE));
+						interp_ins_set_sreg (td->last_ins, field_var);
+						push_simple_type (td, stack_type [mt]);
+						interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
+					} else {
+#ifdef NO_UNALIGNED_ACCESS
+						if (m_field_get_offset (field) % SIZEOF_VOID_P != 0) {
+							if (mt == MINT_TYPE_I8 || mt == MINT_TYPE_R8)
+								size = 8;
+						}
+#endif
+						interp_add_ins (td, MINT_MOV_SRC_OFF);
+						g_assert (m_class_is_valuetype (klass));
+						interp_ins_set_sreg (td->last_ins, vt_var);
+						td->last_ins->data [0] = GINT_TO_UINT16 (m_field_get_offset (field) - MONO_ABI_SIZEOF (MonoObject));
+						td->last_ins->data [1] = GINT_TO_UINT16 (mt);
+						if (mt == MINT_TYPE_VT)
+							size = field_size;
+						td->last_ins->data [2] = GINT_TO_UINT16 (size);
 
-					if (mt == MINT_TYPE_VT)
-						push_type_vt (td, field_klass, field_size);
-					else
-						push_type (td, stack_type [mt], field_klass);
-					interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
+						if (mt == MINT_TYPE_VT)
+							push_type_vt (td, field_klass, field_size);
+						else
+							push_type (td, stack_type [mt], field_klass);
+						interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
+					}
 				} else {
 					/* TODO: metadata-update: implement me */
 					g_assert (!m_field_is_from_update (field));
@@ -8196,6 +8223,19 @@ get_encapsulating_var (TransformData *td, int var)
 }
 
 static gboolean
+interp_var_has_indirects (TransformData *td, int var)
+{
+	if (td->locals [var].indirects)
+		return TRUE;
+	if (td->locals [var].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD) {
+		int parent_var = td->locals [var].parent_vt;
+		if (td->locals [parent_var].indirects)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+static gboolean
 interp_local_deadce (TransformData *td)
 {
 	int *local_ref_count = td->local_ref_count;
@@ -8205,6 +8245,8 @@ interp_local_deadce (TransformData *td)
 	for (unsigned int i = 0; i < td->locals_size; i++) {
 		g_assert (local_ref_count [i] >= 0);
 		g_assert (td->locals [i].indirects >= 0);
+		if (td->locals [i].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD)
+			continue;
 		if (!local_ref_count [i] &&
 				!td->locals [i].indirects &&
 				(td->locals [i].flags & INTERP_LOCAL_FLAG_DEAD) == 0) {
@@ -8606,12 +8648,12 @@ interp_fold_binop_cond_br (TransformData *td, InterpBasicBlock *cbb, LocalValue 
 }
 
 static void
-cprop_sreg (TransformData *td, InterpInst *ins, int *psreg, LocalValue *local_defs)
+cprop_sreg (TransformData *td, InterpInst *ins, int *psreg, LocalValue *local_defs, gboolean call_args)
 {
 	int *local_ref_count = td->local_ref_count;
 	int sreg = *psreg;
 
-	local_ref_count [sreg]++;
+	local_ref_count [get_encapsulating_var (td, sreg)]++;
 	if (local_defs [sreg].type == LOCAL_VALUE_LOCAL) {
 		int cprop_local = local_defs [sreg].local;
 
@@ -8619,12 +8661,17 @@ cprop_sreg (TransformData *td, InterpInst *ins, int *psreg, LocalValue *local_de
 		// modified, so we can't use it.
 		if (local_defs [cprop_local].ins != NULL && local_defs [cprop_local].def_index > local_defs [sreg].def_index)
 			return;
+		// There is no point in propagating a no call args local, since we will emit a mov anyway
+		if (call_args &&
+				td->locals [cprop_local].flags & INTERP_LOCAL_FLAG_NO_CALL_ARGS &&
+				!(td->locals [sreg].flags & INTERP_LOCAL_FLAG_NO_CALL_ARGS))
+			return;
 
 		if (td->verbose_level)
 			g_print ("cprop %d -> %d:\n\t", sreg, cprop_local);
-		local_ref_count [sreg]--;
+		local_ref_count [get_encapsulating_var (td, sreg)]--;
 		*psreg = cprop_local;
-		local_ref_count [cprop_local]++;
+		local_ref_count [get_encapsulating_var (td, cprop_local)]++;
 		if (td->verbose_level)
 			dump_interp_inst (ins);
 	}
@@ -8638,7 +8685,7 @@ cprop_ct (TransformData *td, InterpInst **ins_p, LocalValue *local_defs)
 	int sreg = ins->sregs [0];
 	int dreg = ins->dreg;
 
-	if (td->locals [sreg].indirects)
+	if (interp_var_has_indirects (td, sreg))
 		return FALSE;
 	if (!(local_defs [sreg].type == LOCAL_VALUE_I4 || local_defs [sreg].type == LOCAL_VALUE_I8))
 		return FALSE;
@@ -8656,7 +8703,7 @@ cprop_ct (TransformData *td, InterpInst **ins_p, LocalValue *local_defs)
 		local_defs [dreg].l = ct;
 	}
 	local_defs [dreg].ins = ins;
-	td->local_ref_count [sreg]--;
+	td->local_ref_count [get_encapsulating_var (td, sreg)]--;
 	mono_interp_stats.copy_propagations++;
 	if (td->verbose_level) {
 		g_print ("cprop loc %d -> ct :\n\t", sreg);
@@ -8672,6 +8719,34 @@ clear_local_defs (TransformData *td, int var, void *data)
 	LocalValue *local_defs = (LocalValue*) data;
 	local_defs [var].type = LOCAL_VALUE_NONE;
 	local_defs [var].ins = NULL;
+}
+
+static void
+init_var_def (TransformData *td, InterpInst *def_ins, LocalValue* local_defs, int ins_index)
+{
+	int var = def_ins->dreg;
+	local_defs [var].type = LOCAL_VALUE_NONE;
+	local_defs [var].ins = def_ins;
+	local_defs [var].def_index = ins_index;
+
+	if (td->locals [var].mt == MINT_TYPE_VT) {
+		int field_var = var + 1;
+		// init definition for every field var for this vt
+		while (field_var < td->locals_size) {
+			if (!(td->locals [field_var].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD))
+				break;
+			local_defs [field_var].type = LOCAL_VALUE_NONE;
+			local_defs [field_var].ins = NULL;
+			local_defs [field_var].def_index = ins_index;
+			field_var++;
+		}
+	} else if (td->locals [var].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD) {
+		// reset definition for the parent vt
+		int vt_var = td->locals [var].parent_vt;
+		local_defs [vt_var].type = LOCAL_VALUE_NONE;
+		local_defs [vt_var].ins = NULL;
+		local_defs [vt_var].def_index = ins_index;
+	}
 }
 
 static void
@@ -8723,12 +8798,12 @@ retry:
 					int *call_args = ins->info.call_args;
 					if (call_args) {
 						while (*call_args != -1) {
-							cprop_sreg (td, ins, call_args, local_defs);
+							cprop_sreg (td, ins, call_args, local_defs, TRUE);
 							call_args++;
 						}
 					}
 				} else {
-					cprop_sreg (td, ins, &sregs [i], local_defs);
+					cprop_sreg (td, ins, &sregs [i], local_defs, FALSE);
 					// This var is used as a source to a normal instruction. In case this var will
 					// also be used as source to a call, make sure the offset allocator will create
 					// a new temporary call arg var and not use this one. Call arg vars have special
@@ -8737,11 +8812,8 @@ retry:
 				}
 			}
 
-			if (num_dregs) {
-				local_defs [dreg].type = LOCAL_VALUE_NONE;
-				local_defs [dreg].ins = ins;
-				local_defs [dreg].def_index = ins_index;
-			}
+			if (num_dregs)
+				init_var_def (td, ins, local_defs, ins_index);
 
 			// We always store to the full i4, except as part of STIND opcodes. These opcodes can be
 			// applied to a local var only if that var has LDLOCA applied to it
@@ -8757,7 +8829,7 @@ retry:
 						g_print ("clear redundant mov\n");
 					interp_clear_ins (ins);
 					local_ref_count [sreg]--;
-				} else if (td->locals [sreg].indirects || td->locals [dreg].indirects) {
+				} else if (interp_var_has_indirects (td, sreg) || interp_var_has_indirects (td, dreg)) {
 					// Don't bother with indirect locals
 				} else if (cprop_ct (td, &ins, local_defs)) {
 					// We successfully replaced ins with a LDC, nothing else to do
@@ -8774,13 +8846,14 @@ retry:
 					InterpInst *def = local_defs [sreg].ins;
 					int original_dreg = def->dreg;
 
+					// FIXME
+					g_assert (!(td->locals [original_dreg].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD));
+
 					def->dreg = dreg;
 					ins->dreg = original_dreg;
 					sregs [0] = dreg;
 
-					local_defs [dreg].type = LOCAL_VALUE_NONE;
-					local_defs [dreg].ins = def;
-					local_defs [dreg].def_index = local_defs [original_dreg].def_index;
+					init_var_def (td, def, local_defs, local_defs [original_dreg].def_index);
 					local_defs [original_dreg].type = LOCAL_VALUE_LOCAL;
 					local_defs [original_dreg].ins = ins;
 					local_defs [original_dreg].local = dreg;
@@ -8800,6 +8873,32 @@ retry:
 						g_print ("local copy %d <- %d\n", dreg, sreg);
 					local_defs [dreg].type = LOCAL_VALUE_LOCAL;
 					local_defs [dreg].local = sreg;
+					if (td->locals [dreg].mt == MINT_TYPE_VT) {
+						int index = 1;
+						while ((dreg + index) < td->locals_size) {
+							if (!(td->locals [dreg + index].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD))
+								break;
+							// since this is a move between identical VTs, assert that the promoted fields are matching
+							g_assert (td->locals [sreg + index].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD);
+							g_assert (td->locals [dreg + index].offset == td->locals [sreg + index].offset);
+							int src_def_type = local_defs [sreg + index].type;
+							if (src_def_type == LOCAL_VALUE_I4 || src_def_type == LOCAL_VALUE_I8) {
+								// We set the def for this struct field var to a constant. When we will
+								// load from this field we will be able to replace with a LDC
+								local_defs [dreg + index] = local_defs [sreg + index];
+							} else {
+								local_defs [dreg + index].type = LOCAL_VALUE_LOCAL;
+								local_defs [dreg + index].local = sreg + index;
+							}
+							index++;
+						}
+						// set all defs for containing fields to the defs of sreg's promoted fields
+					} else if (td->locals [dreg].flags & INTERP_LOCAL_FLAG_STRUCT_FIELD) {
+						int parent_vt = td->locals [dreg].parent_vt;
+						// mark definition of parent_vt to reflect that its value was modified
+						local_defs [parent_vt].type = LOCAL_VALUE_NONE;
+						local_defs [parent_vt].def_index = ins_index;
+					}
 				}
 			} else if (opcode == MINT_LDLOCA_S) {
 				// The local that we are taking the address of is not a sreg but still referenced
@@ -9011,29 +9110,38 @@ retry:
 						ins->dreg = local;
 						sregs [0] = sregs [1];
 					} else {
-						// Add mov.dst.off to store directly int the local var space without use of ldloca.
 						int foffset = ins->data [0];
-						guint16 vtsize = 0;
-						if (mt == MINT_TYPE_VT) {
-							vtsize = ins->data [1];
-						}
+						int field_var = get_promoted_struct_field (td, local, foffset, mt);
+						if (field_var != -1) {
+							// Store directly into the promoted struct field var
+							ins = interp_insert_ins (td, ins, get_mov_for_type (mt, FALSE));
+							interp_ins_set_dreg (ins, field_var);
+							interp_ins_set_sreg (ins, sregs [1]);
+							interp_clear_ins (ins->prev);
+							cprop_ct (td, &ins, local_defs);
+						} else {
+							// Add mov.dst.off to store directly int the local var space without use of ldloca.
+							guint16 vtsize = 0;
+							if (mt == MINT_TYPE_VT) {
+								vtsize = ins->data [1];
+							}
 #ifdef NO_UNALIGNED_ACCESS
-						else {
-							// As with normal loads/stores we use memcpy for unaligned 8 byte accesses
-							if ((mt == MINT_TYPE_I8 || mt == MINT_TYPE_R8) && foffset % SIZEOF_VOID_P != 0)
-								vtsize = 8;
-						}
+							else {
+								// As with normal loads/stores we use memcpy for unaligned 8 byte accesses
+								if ((mt == MINT_TYPE_I8 || mt == MINT_TYPE_R8) && foffset % SIZEOF_VOID_P != 0)
+									vtsize = 8;
+							}
 #endif
 
-						// This stores just to part of the dest valuetype
-						ins = interp_insert_ins (td, ins, MINT_MOV_DST_OFF);
-						interp_ins_set_dreg (ins, local);
-						interp_ins_set_sreg (ins, sregs [1]);
-						ins->data [0] = foffset;
-						ins->data [1] = mt;
-						ins->data [2] = vtsize;
-
-						interp_clear_ins (ins->prev);
+							// This stores just to part of the dest valuetype
+							ins = interp_insert_ins (td, ins, MINT_MOV_DST_OFF);
+							interp_ins_set_dreg (ins, local);
+							interp_ins_set_sreg (ins, sregs [1]);
+							ins->data [0] = foffset;
+							ins->data [1] = mt;
+							ins->data [2] = vtsize;
+							interp_clear_ins (ins->prev);
+						}
 					}
 					if (td->verbose_level) {
 						g_print ("Replace ldloca/stfld pair (off %p) :\n\t", (void *)(uintptr_t) ldloca->il_offset);
