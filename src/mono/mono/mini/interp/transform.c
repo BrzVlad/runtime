@@ -8575,6 +8575,42 @@ cprop_sreg (TransformData *td, InterpInst *ins, int *psreg, LocalValue *local_de
 	}
 }
 
+static gboolean
+cprop_ct (TransformData *td, InterpInst **ins_p, LocalValue *local_defs)
+{
+	InterpInst *ins = *ins_p;
+	g_assert (MINT_IS_MOV (ins->opcode));
+	int sreg = ins->sregs [0];
+	int dreg = ins->dreg;
+
+	if (td->locals [sreg].indirects)
+		return FALSE;
+	if (!(local_defs [sreg].type == LOCAL_VALUE_I4 || local_defs [sreg].type == LOCAL_VALUE_I8))
+		return FALSE;
+
+	// Replace mov with ldc
+	gboolean is_i4 = local_defs [sreg].type == LOCAL_VALUE_I4;
+	local_defs [dreg].type = local_defs [sreg].type;
+	if (is_i4) {
+		int ct = local_defs [sreg].i;
+		ins = interp_get_ldc_i4_from_const (td, ins, ct, dreg);
+		local_defs [dreg].i = ct;
+	} else {
+		gint64 ct = local_defs [sreg].l;
+		ins = interp_inst_replace_with_i8_const (td, ins, ct);
+		local_defs [dreg].l = ct;
+	}
+	local_defs [dreg].ins = ins;
+	td->local_ref_count [sreg]--;
+	mono_interp_stats.copy_propagations++;
+	if (td->verbose_level) {
+		g_print ("cprop loc %d -> ct :\n\t", sreg);
+		dump_interp_inst (ins);
+	}
+	*ins_p = ins;
+	return TRUE;
+}
+
 static void
 clear_local_defs (TransformData *td, int var, void *data)
 {
@@ -8668,27 +8704,8 @@ retry:
 					local_ref_count [sreg]--;
 				} else if (td->locals [sreg].indirects || td->locals [dreg].indirects) {
 					// Don't bother with indirect locals
-				} else if (local_defs [sreg].type == LOCAL_VALUE_I4 || local_defs [sreg].type == LOCAL_VALUE_I8) {
-					// Replace mov with ldc
-					gboolean is_i4 = local_defs [sreg].type == LOCAL_VALUE_I4;
-					g_assert (!td->locals [sreg].indirects);
-					local_defs [dreg].type = local_defs [sreg].type;
-					if (is_i4) {
-						int ct = local_defs [sreg].i;
-						ins = interp_get_ldc_i4_from_const (td, ins, ct, dreg);
-						local_defs [dreg].i = ct;
-					} else {
-						gint64 ct = local_defs [sreg].l;
-						ins = interp_inst_replace_with_i8_const (td, ins, ct);
-						local_defs [dreg].l = ct;
-					}
-					local_defs [dreg].ins = ins;
-					local_ref_count [sreg]--;
-					mono_interp_stats.copy_propagations++;
-					if (td->verbose_level) {
-						g_print ("cprop loc %d -> ct :\n\t", sreg);
-						dump_interp_inst (ins);
-					}
+				} else if (cprop_ct (td, &ins, local_defs)) {
+					// We successfully replaced ins with a LDC, nothing else to do
 				} else if (local_defs [sreg].ins != NULL &&
 						(td->locals [sreg].flags & INTERP_LOCAL_FLAG_EXECUTION_STACK) &&
 						!(td->locals [dreg].flags & INTERP_LOCAL_FLAG_EXECUTION_STACK) &&
