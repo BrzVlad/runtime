@@ -55,6 +55,7 @@ static guint16 sri_vector128_methods [] = {
 	SN_CreateScalarUnsafe,
 	SN_Equals,
 	SN_ExtractMostSignificantBits,
+	SN_GetElementUnsafe,
 	SN_GreaterThan,
 	SN_LessThan,
 	SN_LessThanOrEqual,
@@ -254,6 +255,25 @@ emit_sri_vector128 (TransformData *td, MonoMethod *cmethod, MonoMethodSignature 
 			else if (arg_size == 4) simd_intrins = INTERP_SIMD_INTRINSIC_V128_I4_EXTRACT_MSB;
 			else if (arg_size == 8) simd_intrins = INTERP_SIMD_INTRINSIC_V128_I8_EXTRACT_MSB;
 			break;
+		case SN_GetElementUnsafe: {
+			// This intrinsic usually receives the v128 as a this ptr via a ldloca
+			// Try to optimize it out
+			InterpInst *ldloca = td->last_ins->prev;
+			if (ldloca->opcode == MINT_LDLOCA_S) {
+				simd_opcode = MINT_SIMD_INTRINS_P_PP;
+				if (atype == MONO_TYPE_I1) simd_intrins = INTERP_SIMD_INTRINSIC_V128_I1_GET_ELEMENT_UNSAFE;
+				else if (atype == MONO_TYPE_U1) simd_intrins = INTERP_SIMD_INTRINSIC_V128_U1_GET_ELEMENT_UNSAFE;
+				else if (atype == MONO_TYPE_I2) simd_intrins = INTERP_SIMD_INTRINSIC_V128_I2_GET_ELEMENT_UNSAFE;
+				else if (atype == MONO_TYPE_U2) simd_intrins = INTERP_SIMD_INTRINSIC_V128_U2_GET_ELEMENT_UNSAFE;
+				else if (arg_size == 4) simd_intrins = INTERP_SIMD_INTRINSIC_V128_I4_GET_ELEMENT_UNSAFE;
+
+				if (simd_intrins != -1) {
+					td->sp [-2].local = ldloca->sregs [0];
+					interp_clear_ins (ldloca);
+				}
+				break;
+			}
+		}
 		case SN_GreaterThan:
 			simd_opcode = MINT_SIMD_INTRINS_P_PP;
 			if (atype == MONO_TYPE_U1) simd_intrins = INTERP_SIMD_INTRINSIC_V128_U1_GREATER_THAN;

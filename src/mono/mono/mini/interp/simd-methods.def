@@ -26,7 +26,7 @@ SIMD_METHOD(ConditionalSelect)
 SIMD_METHOD(Create)
 SIMD_METHOD(CreateScalar)
 SIMD_METHOD(CreateScalarUnsafe)
-
+SIMD_METHOD(GetElementUnsafe)
 SIMD_METHOD(Equals)
 SIMD_METHOD(ExtractMostSignificantBits)
 SIMD_METHOD(GreaterThan)

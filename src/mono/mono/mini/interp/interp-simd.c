@@ -25,6 +25,42 @@ interp_v128_i4_all_bits_set (gpointer res)
 	memset (res, 0xff, SIZEOF_V128);
 }
 
+// GetElementUnsafe
+static void
+interp_v128_i1_get_element_unsafe (gpointer res, gpointer v1, gpointer v2)
+{
+	gint8 *v1_cast = (gint8*)v1;
+	*(gint32*)res = v1_cast [*(gint32*)v2];
+}
+
+static void
+interp_v128_u1_get_element_unsafe (gpointer res, gpointer v1, gpointer v2)
+{
+	guint8 *v1_cast = (guint8*)v1;
+	*(gint32*)res = v1_cast [*(gint32*)v2];
+}
+
+static void
+interp_v128_i2_get_element_unsafe (gpointer res, gpointer v1, gpointer v2)
+{
+	gint16 *v1_cast = (gint16*)v1;
+	*(gint32*)res = v1_cast [*(gint32*)v2];
+}
+
+static void
+interp_v128_u2_get_element_unsafe (gpointer res, gpointer v1, gpointer v2)
+{
+	guint16 *v1_cast = (guint16*)v1;
+	*(gint32*)res = v1_cast [*(gint32*)v2];
+}
+
+static void
+interp_v128_i4_get_element_unsafe (gpointer res, gpointer v1, gpointer v2)
+{
+	gint32 *v1_cast = (gint32*)v1;
+	*(gint32*)res = v1_cast [*(gint32*)v2];
+}
+
 // op_Addition
 static void
 interp_v128_i1_op_addition (gpointer res, gpointer v1, gpointer v2)

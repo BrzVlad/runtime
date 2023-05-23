@@ -30,6 +30,12 @@
 // The third argument is the wasm opcode that corresponds to this simd intrinsic, if any.
 // Specify 0 if there is no exact 1:1 mapping (the opcode can still be implemented manually in the jiterpreter.)
 
+INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_I1_GET_ELEMENT_UNSAFE, interp_v128_i1_get_element_unsafe, 0)
+INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_U1_GET_ELEMENT_UNSAFE, interp_v128_u1_get_element_unsafe, 0)
+INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_I2_GET_ELEMENT_UNSAFE, interp_v128_i2_get_element_unsafe, 0)
+INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_U2_GET_ELEMENT_UNSAFE, interp_v128_u2_get_element_unsafe, 0)
+INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_I4_GET_ELEMENT_UNSAFE, interp_v128_i4_get_element_unsafe, 0)
+
 INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_I1_ADD, interp_v128_i1_op_addition, 110)
 INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_I2_ADD, interp_v128_i2_op_addition, 142)
 INTERP_SIMD_INTRINSIC_P_PP (INTERP_SIMD_INTRINSIC_V128_I4_ADD, interp_v128_i4_op_addition, 174)
