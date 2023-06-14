@@ -37,6 +37,13 @@ stub_frame_get_ip (MonoInterpFrameHandle frame)
 }
 
 static gpointer
+stub_frame_get_sp (MonoInterpFrameHandle frame)
+{
+	g_assert_not_reached ();
+	return NULL;
+}
+
+static gpointer
 stub_frame_get_arg (MonoInterpFrameHandle frame, int pos)
 {
 	g_assert_not_reached ();

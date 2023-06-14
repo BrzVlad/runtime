@@ -1786,6 +1786,7 @@ handle_exception_first_pass (MonoContext *ctx, MonoObject *obj, gint32 *out_filt
 	MonoObject *ex_obj;
 	Unwinder unwinder;
 	gboolean in_interp;
+	guint8 *interp_stack_top = NULL;
 
 	MonoFirstPassResult result = MONO_FIRST_PASS_UNHANDLED;
 
@@ -1908,7 +1909,11 @@ handle_exception_first_pass (MonoContext *ctx, MonoObject *obj, gint32 *out_filt
 			dynamic_methods = g_slist_prepend (dynamic_methods, method);
 
 		if (stack_overflow) {
+			if (!interp_stack_top && in_interp)
+				interp_stack_top = (guint8*)mini_get_interp_callbacks ()->frame_get_sp (frame.interp_frame);
 			free_stack = (guint32)((guint8*)(MONO_CONTEXT_GET_SP (ctx)) - (guint8*)(MONO_CONTEXT_GET_SP (&initial_ctx)));
+			if (in_interp)
+				free_stack += (guint32)(interp_stack_top - (guint8*)mini_get_interp_callbacks ()->frame_get_sp (frame.interp_frame));
 		} else {
 			free_stack = 0xffffff;
 		}
@@ -2096,6 +2101,7 @@ mono_handle_exception_internal (MonoContext *ctx, MonoObject *obj, gboolean resu
 	gboolean in_interp;
 	gboolean is_caught_unmanaged = FALSE;
 	gboolean last_mono_wrapper_runtime_invoke = TRUE;
+	guint8 *interp_stack_top = NULL;
 
 	g_assert (ctx != NULL);
 	if (!obj) {
@@ -2335,7 +2341,11 @@ mono_handle_exception_internal (MonoContext *ctx, MonoObject *obj, gboolean resu
 		// printf ("[%d] %s.\n", frame_count, mono_method_full_name (method, TRUE));
 
 		if (stack_overflow) {
+			if (!interp_stack_top && in_interp)
+				interp_stack_top = (guint8*)mini_get_interp_callbacks ()->frame_get_sp (frame.interp_frame);
 			free_stack = (guint32)((guint8*)(MONO_CONTEXT_GET_SP (ctx)) - (guint8*)(MONO_CONTEXT_GET_SP (&initial_ctx)));
+			if (in_interp)
+				free_stack += (guint32)(interp_stack_top - (guint8*)mini_get_interp_callbacks ()->frame_get_sp (frame.interp_frame));
 		} else {
 			free_stack = 0xffffff;
 		}

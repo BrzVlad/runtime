@@ -8146,6 +8146,14 @@ interp_frame_get_ip (MonoInterpFrameHandle frame)
 	return (gpointer)(iframe->state.ip - 1);
 }
 
+static gpointer
+interp_frame_get_sp (MonoInterpFrameHandle frame)
+{
+	InterpFrame *iframe = (InterpFrame*)frame;
+	g_assert (iframe->imethod);
+	return iframe->stack;
+}
+
 /*
  * interp_frame_iter_init:
  *

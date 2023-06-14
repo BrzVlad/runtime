@@ -14,7 +14,7 @@
 #ifndef __MONO_EE_H__
 #define __MONO_EE_H__
 
-#define MONO_EE_API_VERSION 0x17
+#define MONO_EE_API_VERSION 0x18
 
 typedef struct _MonoInterpStackIter MonoInterpStackIter;
 
@@ -46,6 +46,7 @@ typedef gpointer MonoInterpFrameHandle;
 	MONO_EE_CALLBACK (void, clear_breakpoint, (MonoJitInfo *jinfo, gpointer ip)) \
 	MONO_EE_CALLBACK (MonoJitInfo*, frame_get_jit_info, (MonoInterpFrameHandle frame)) \
 	MONO_EE_CALLBACK (gpointer, frame_get_ip, (MonoInterpFrameHandle frame)) \
+	MONO_EE_CALLBACK (gpointer, frame_get_sp, (MonoInterpFrameHandle frame)) \
 	MONO_EE_CALLBACK (gpointer, frame_get_arg, (MonoInterpFrameHandle frame, int pos)) \
 	MONO_EE_CALLBACK (gpointer, frame_get_local, (MonoInterpFrameHandle frame, int pos)) \
 	MONO_EE_CALLBACK (gpointer, frame_get_this, (MonoInterpFrameHandle frame)) \
