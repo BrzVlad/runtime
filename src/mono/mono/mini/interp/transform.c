@@ -2918,7 +2918,14 @@ interp_method_check_inlining (TransformData *td, MonoMethod *method, MonoMethodS
 	if (td->inline_depth > INLINE_DEPTH_LIMIT)
 		return FALSE;
 
-	if (header.code_size >= INLINE_LENGTH_LIMIT) {
+	int inline_length_limit = INLINE_LENGTH_LIMIT;
+	// For every argument passed as a constant we increase the inline code limit
+	StackInfo *args = &td->sp [-csignature->param_count];
+	for (int i = 0; i < csignature->param_count; i++) {
+		if (args [i].flags & INTERP_STACK_FLAG_CONSTANT)
+			inline_length_limit += 10;
+	}
+	if (header.code_size >= inline_length_limit) {
 		gboolean aggressive_inlining = (method->iflags & METHOD_IMPL_ATTRIBUTE_AGGRESSIVE_INLINING);
 		if (!aggressive_inlining)
 			aggressive_inlining = has_intrinsic_attribute(method);
@@ -5174,12 +5181,14 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		case CEE_LDNULL:
 			interp_add_ins (td, MINT_LDNULL);
 			push_type (td, STACK_TYPE_O, NULL);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			++td->ip;
 			break;
 		case CEE_LDC_I4_M1:
 			interp_add_ins (td, MINT_LDC_I4_M1);
 			push_simple_type (td, STACK_TYPE_I4);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			++td->ip;
 			break;
@@ -5195,6 +5204,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			} else {
 				interp_add_ins (td, MINT_LDC_I4_0);
 				push_simple_type (td, STACK_TYPE_I4);
+				td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 				interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 				++td->ip;
 			}
@@ -5211,6 +5221,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			} else {
 				interp_add_ins (td, MINT_LDC_I4_1);
 				push_simple_type (td, STACK_TYPE_I4);
+				td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 				interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 				++td->ip;
 			}
@@ -5224,6 +5235,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		case CEE_LDC_I4_8:
 			interp_add_ins (td, (*td->ip - CEE_LDC_I4_0) + MINT_LDC_I4_0);
 			push_simple_type (td, STACK_TYPE_I4);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			++td->ip;
 			break;
@@ -5231,6 +5243,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			interp_add_ins (td, MINT_LDC_I4_S);
 			td->last_ins->data [0] = ((gint8 *) td->ip) [1];
 			push_simple_type (td, STACK_TYPE_I4);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			td->ip += 2;
 			break;
@@ -5239,6 +5252,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			interp_add_ins (td, MINT_LDC_I4);
 			WRITE32_INS (td->last_ins, 0, &i32);
 			push_simple_type (td, STACK_TYPE_I4);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			td->ip += 5;
 			break;
@@ -5247,6 +5261,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			interp_add_ins (td, MINT_LDC_I8);
 			WRITE64_INS (td->last_ins, 0, &val);
 			push_simple_type (td, STACK_TYPE_I8);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			td->ip += 9;
 			break;
@@ -5257,6 +5272,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			interp_add_ins (td, MINT_LDC_R4);
 			WRITE32_INS (td->last_ins, 0, &val);
 			push_simple_type (td, STACK_TYPE_R4);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			td->ip += 5;
 			break;
@@ -5267,6 +5283,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			interp_add_ins (td, MINT_LDC_R8);
 			WRITE64_INS (td->last_ins, 0, &val);
 			push_simple_type (td, STACK_TYPE_R8);
+			td->sp [-1].flags |= INTERP_STACK_FLAG_CONSTANT;
 			interp_ins_set_dreg (td->last_ins, td->sp [-1].local);
 			td->ip += 9;
 			break;

@@ -26,6 +26,8 @@
 // We use this flag to avoid addition of align field in InterpLocal, for now
 #define INTERP_LOCAL_FLAG_SIMD 128
 
+#define INTERP_STACK_FLAG_CONSTANT 1
+
 typedef struct _InterpInst InterpInst;
 typedef struct _InterpBasicBlock InterpBasicBlock;
 typedef struct _InterpCallInfo InterpCallInfo;
