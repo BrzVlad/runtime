@@ -211,7 +211,7 @@ do_rehash (GHashTable *hash)
 			hash->table [hashcode] = s;
 		}
 	}
-	g_free (table);
+	g_free_vb (table);
 }
 
 static void
@@ -423,7 +423,7 @@ g_hash_table_remove (GHashTable *hash, gconstpointer key)
 				hash->table [hashcode] = s->next;
 			else
 				last->next = s->next;
-			g_free (s);
+			g_free_vb (s);
 			hash->in_use--;
 			sanity_check (hash);
 			return TRUE;
@@ -463,7 +463,7 @@ g_hash_table_foreach_remove (GHashTable *hash, GHRFunc func, gpointer user_data)
 					last->next = s->next;
 					n = last->next;
 				}
-				g_free (s);
+				g_free_vb (s);
 				hash->in_use--;
 				count++;
 				s = n;
@@ -498,7 +498,7 @@ g_hash_table_steal (GHashTable *hash, gconstpointer key)
 				hash->table [hashcode] = s->next;
 			else
 				last->next = s->next;
-			g_free (s);
+			g_free_vb (s);
 			hash->in_use--;
 			sanity_check (hash);
 			return TRUE;
@@ -535,7 +535,7 @@ g_hash_table_foreach_steal (GHashTable *hash, GHRFunc func, gpointer user_data)
 					last->next = s->next;
 					n = last->next;
 				}
-				g_free (s);
+				g_free_vb (s);
 				hash->in_use--;
 				count++;
 				s = n;
@@ -569,12 +569,12 @@ g_hash_table_destroy (GHashTable *hash)
 				(*hash->key_destroy_func)(s->key);
 			if (hash->value_destroy_func != NULL)
 				(*hash->value_destroy_func)(s->value);
-			g_free (s);
+			g_free_vb (s);
 		}
 	}
-	g_free (hash->table);
+	g_free_vb (hash->table);
 
-	g_free (hash);
+	g_free_vb (hash);
 }
 
 void

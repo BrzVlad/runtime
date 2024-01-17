@@ -45,7 +45,7 @@ mono_path_canonicalize (const char *path)
 		gchar *tmpdir = g_get_current_dir ();
 		abspath = g_build_filename (tmpdir, path, (const char*)NULL);
 		g_assert (abspath);
-		g_free (tmpdir);
+		g_free_vb (tmpdir);
 	}
 
 #ifdef HOST_WIN32
@@ -94,7 +94,7 @@ mono_path_canonicalize (const char *path)
 	 * result */
 	if (strchr (abspath, G_DIR_SEPARATOR) == NULL) {
 		size_t len = strlen (abspath);
-		abspath = (gchar *) g_realloc (abspath, len + 2);
+		abspath = (gchar *) g_realloc_vb (abspath, len + 2);
 		abspath [len] = G_DIR_SEPARATOR;
 		abspath [len+1] = 0;
 	}
@@ -121,7 +121,7 @@ resolve_symlink (const char *path)
 		if (n < 0){
 			char *copy = p;
 			p = mono_path_canonicalize (copy);
-			g_free (copy);
+			g_free_vb (copy);
 			return p;
 		}
 
@@ -130,13 +130,13 @@ resolve_symlink (const char *path)
 			dir = g_path_get_dirname (p);
 			concat = g_build_filename (dir, buffer, (const char*)NULL);
 			g_assert (concat);
-			g_free (dir);
+			g_free_vb (dir);
 		} else {
 			concat = g_strdup (buffer);
 		}
-		g_free (p);
+		g_free_vb (p);
 		p = mono_path_canonicalize (concat);
-		g_free (concat);
+		g_free_vb (concat);
 	} while (iterations < MAXSYMLINKS);
 
 	return p;
@@ -159,14 +159,14 @@ mono_path_resolve_symlinks (const char *path)
 		// resolve_symlink of "" goes into canonicalize which resolves to cwd
 		if (strcmp (split [i], "") != 0) {
 			tmp = g_strdup_printf ("%s%s", p, split [i]);
-			g_free (p);
+			g_free_vb (p);
 			p = resolve_symlink (tmp);
-			g_free (tmp);
+			g_free_vb (tmp);
 		}
 
 		if (split [i+1] != NULL) {
 			tmp = g_strdup_printf ("%s%s", p, G_DIR_SEPARATOR_S);
-			g_free (p);
+			g_free_vb (p);
 			p = tmp;
 		}
 	}

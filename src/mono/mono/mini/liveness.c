@@ -537,8 +537,8 @@ mono_analyze_liveness (MonoCompile *cfg)
 
 	mono_bitset_free (old_live_out_set);
 
-	g_free (worklist);
-	g_free (in_worklist);
+	g_free_vb (worklist);
+	g_free_vb (in_worklist);
 
 	/* Compute live_in_set for bblocks skipped earlier */
 	for (guint i = 0; i < cfg->num_bblocks; ++i) {
@@ -690,7 +690,7 @@ optimize_initlocals (MonoCompile *cfg)
 		}
 	}
 
-	g_free (used);
+	g_free_vb (used);
 }
 
 void
@@ -1037,7 +1037,7 @@ mono_analyze_liveness2 (MonoCompile *cfg)
 	}
 #endif
 
-	g_free (last_use);
+	g_free_vb (last_use);
 }
 
 #endif
@@ -1194,8 +1194,8 @@ mono_analyze_liveness_gc (MonoCompile *cfg)
 		bb->gc_callsites = callsites;
 	}
 
-	g_free (last_use);
-	g_free (vreg_to_varinfo);
+	g_free_vb (last_use);
+	g_free_vb (vreg_to_varinfo);
 }
 
 #else /* !DISABLE_JIT */

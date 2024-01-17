@@ -22,7 +22,7 @@ mono_dynstream_init (MonoDynamicStream *sh)
 
 	sh->index = 0;
 	sh->alloc_size = 4096;
-	sh->data = (char *)g_malloc (4096);
+	sh->data = (char *)g_malloc_vb (4096);
 	sh->hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 	mono_dynstream_insert_string (sh, "");
 }
@@ -42,7 +42,7 @@ make_room_in_stream (MonoDynamicStream *stream, guint32 size)
 			stream->alloc_size *= 2;
 	}
 
-	stream->data = (char *)g_realloc (stream->data, stream->alloc_size);
+	stream->data = (char *)g_realloc_vb (stream->data, stream->alloc_size);
 }
 
 guint32
@@ -83,7 +83,7 @@ mono_dynstream_insert_mstring (MonoDynamicStream *sh, MonoString *str, MonoError
 	return_val_if_nok (error, -1);
 	guint32 idx;
 	idx = mono_dynstream_insert_string (sh, name);
-	g_free (name);
+	g_free_vb (name);
 	return idx;
 }
 

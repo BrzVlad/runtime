@@ -516,7 +516,7 @@ mono_try_assembly_resolve_handle (MonoAssemblyLoadContext *alc, MonoStringHandle
 		ret = MONO_HANDLE_GETVAL (result, assembly);
 
 leave:
-	g_free (filename);
+	g_free_vb (filename);
 	HANDLE_FUNCTION_RETURN_VAL (ret);
 }
 
@@ -536,7 +536,7 @@ mono_domain_assembly_postload_search (MonoAssemblyLoadContext *alc, MonoAssembly
 	/* FIXME: We invoke managed code here, so there is a potential for deadlocks */
 
 	assembly = mono_try_assembly_resolve (alc, aname_str, requesting, error);
-	g_free (aname_str);
+	g_free_vb (aname_str);
 	mono_error_cleanup (error);
 
 	return assembly;
@@ -624,7 +624,7 @@ try_load_from (MonoAssembly **assembly,
 		*assembly = mono_assembly_request_open (fullpath, req, NULL);
 	}
 
-	g_free (fullpath);
+	g_free_vb (fullpath);
 	return (*assembly != NULL);
 }
 
@@ -673,7 +673,7 @@ real_load (gchar **search_path, const gchar *culture, const gchar *name, const M
 			break;
 	}
 
-	g_free (filename);
+	g_free_vb (filename);
 	return result;
 }
 
@@ -736,7 +736,7 @@ mono_domain_assembly_preload (MonoAssemblyLoadContext *alc,
 
 		result = real_load (search_path, aname->culture, aname->name, &req);
 
-		g_free (base_dir);
+		g_free_vb (base_dir);
 	}
 
 	if (result == NULL && assemblies_path && assemblies_path [0] != NULL) {
@@ -793,7 +793,7 @@ ves_icall_System_Reflection_Assembly_InternalLoad (MonoStringHandle name_handle,
 	name = mono_string_handle_to_utf8 (name_handle, error);
 	goto_if_nok (error, fail);
 	parsed = mono_assembly_name_parse (name, &aname);
-	g_free (name);
+	g_free_vb (name);
 	if (!parsed)
 		goto fail;
 
@@ -913,19 +913,19 @@ mono_runtime_install_appctx_properties (void)
 
 	/* No longer needed */
 	for (int i = 0; i < n_combined_props; ++i) {
-		g_free (combined_keys [i]);
-		g_free (combined_values [i]);
+		g_free_vb (combined_keys [i]);
+		g_free_vb (combined_values [i]);
 	}
-	g_free (combined_keys);
-	g_free (combined_values);
-	g_free (combined_key_lengths);
-	g_free (combined_value_lengths);
+	g_free_vb (combined_keys);
+	g_free_vb (combined_values);
+	g_free_vb (combined_key_lengths);
+	g_free_vb (combined_value_lengths);
 	for (int i = 0; i < n_appctx_props; ++i) {
-		g_free (appctx_keys [i]);
-		g_free (appctx_values [i]);
+		g_free_vb (appctx_keys [i]);
+		g_free_vb (appctx_values [i]);
 	}
-	g_free (appctx_keys);
-	g_free (appctx_values);
+	g_free_vb (appctx_keys);
+	g_free_vb (appctx_values);
 
 	appctx_keys = NULL;
 	appctx_values = NULL;

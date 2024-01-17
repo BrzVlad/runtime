@@ -322,12 +322,12 @@ mon_finalize (MonoThreadsSync *mon)
 
 	if (mon->entry_cond != NULL) {
 		mono_coop_cond_destroy (mon->entry_cond);
-		g_free (mon->entry_cond);
+		g_free_vb (mon->entry_cond);
 		mon->entry_cond = NULL;
 	}
 	if (mon->entry_mutex != NULL) {
 		mono_coop_mutex_destroy (mon->entry_mutex);
-		g_free (mon->entry_mutex);
+		g_free_vb (mon->entry_mutex);
 		mon->entry_mutex = NULL;
 	}
 	/* If this isn't empty then something is seriously broken - it
@@ -378,7 +378,7 @@ mon_new (gsize id)
 		if (!monitor_freelist) {
 			MonitorArray *last;
 			LOCK_DEBUG (g_message ("%s: allocating more monitors: %d", __func__, array_size));
-			marray = (MonitorArray *)g_malloc0 (MONO_SIZEOF_MONO_ARRAY + array_size * sizeof (MonoThreadsSync));
+			marray = (MonitorArray *)g_malloc0_vb (MONO_SIZEOF_MONO_ARRAY + array_size * sizeof (MonoThreadsSync));
 			marray->num_monitors = array_size;
 			array_size *= 2;
 			/* link into the freelist */
@@ -761,7 +761,7 @@ mon_init_cond_var (MonoThreadsSync *mon)
 		if (mono_atomic_cas_ptr ((gpointer*)&mon->entry_mutex, mutex, NULL) != NULL) {
 			/* Someone else just put a handle here */
 			mono_coop_mutex_destroy (mutex);
-			g_free (mutex);
+			g_free_vb (mutex);
 		}
 	}
 
@@ -772,7 +772,7 @@ mon_init_cond_var (MonoThreadsSync *mon)
 		if (mono_atomic_cas_ptr ((gpointer*)&mon->entry_cond, cond, NULL) != NULL) {
 			/* Someone else just put a handle here */
 			mono_coop_cond_destroy (cond);
-			g_free (cond);
+			g_free_vb (cond);
 		}
 	}
 }

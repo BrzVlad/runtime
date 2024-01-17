@@ -754,7 +754,7 @@ mono_arch_get_delegate_invoke_impl (MonoMethodSignature *sig, gboolean has_targe
 		if (mono_ee_features.use_aot_trampolines) {
 			char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", sig->param_count);
 			start = (guint8*)mono_aot_get_trampoline (name);
-			g_free (name);
+			g_free_vb (name);
 		} else {
 			MonoTrampInfo *info;
 			start = get_delegate_invoke_impl (&info, FALSE, sig->param_count);
@@ -847,7 +847,7 @@ mono_arch_init (void)
 
 	if (soft && !strncmp (soft, "1", 1))
 		arm_fpu = MONO_ARM_FPU_NONE;
-	g_free (soft);
+	g_free_vb (soft);
 #endif
 #endif
 
@@ -895,7 +895,7 @@ mono_arch_init (void)
 		}
 
 		thumb_supported = strstr (cpu_arch, "thumb") != NULL;
-		g_free (cpu_arch);
+		g_free_vb (cpu_arch);
 	}
 }
 
@@ -1278,7 +1278,7 @@ get_call_info (MonoMemPool *mp, MonoMethodSignature *sig)
 	if (mp)
 		cinfo = mono_mempool_alloc0 (mp, call_info_size (sig));
 	else
-		cinfo = g_malloc0 (call_info_size (sig));
+		cinfo = g_malloc0_vb (call_info_size (sig));
 
 	cinfo->nargs = n;
 	gr = ARMREG_R0;
@@ -1682,7 +1682,7 @@ mono_arch_get_interp_native_call_info (MonoMemoryManager *mem_manager, MonoMetho
 		int size = call_info_size (sig);
 		gpointer res = mono_mem_manager_alloc0 (mem_manager, size);
 		memcpy (res, cinfo, size);
-		g_free (cinfo);
+		g_free_vb (cinfo);
 		return res;
 	} else {
 		return cinfo;
@@ -1693,7 +1693,7 @@ void
 mono_arch_free_interp_native_call_info (gpointer call_info)
 {
 	/* Allocated by get_call_info () */
-	g_free (call_info);
+	g_free_vb (call_info);
 }
 
 /* Set arguments in the ccontext (for i2n entry) */
@@ -1709,7 +1709,7 @@ mono_arch_set_native_call_context_args (CallContext *ccontext, gpointer frame, M
 
 	ccontext->stack_size = ALIGN_TO (cinfo->stack_usage, MONO_ARCH_FRAME_ALIGNMENT);
 	if (ccontext->stack_size)
-		ccontext->stack = (guint8*)g_calloc (1, ccontext->stack_size);
+		ccontext->stack = (guint8*)g_calloc_vb (1, ccontext->stack_size);
 
 	if (sig->ret->type != MONO_TYPE_VOID) {
 		ainfo = &cinfo->ret;
@@ -1841,8 +1841,8 @@ mono_arch_tailcall_supported (MonoCompile *cfg, MonoMethodSignature *caller_sig,
 	res &= IS_SUPPORTED_TAILCALL (callee_info->stack_usage < (4096 - 4));
 	res &= IS_SUPPORTED_TAILCALL (caller_info->stack_usage < (4096 - 4));
 
-	g_free (caller_info);
-	g_free (callee_info);
+	g_free_vb (caller_info);
+	g_free_vb (callee_info);
 
 	return res;
 }
@@ -2914,7 +2914,7 @@ mono_arch_dyn_call_prepare (MonoMethodSignature *sig)
 	cinfo = get_call_info (NULL, sig);
 
 	if (!dyn_call_supported (cinfo, sig)) {
-		g_free (cinfo);
+		g_free_vb (cinfo);
 		return NULL;
 	}
 
@@ -2935,8 +2935,8 @@ mono_arch_dyn_call_free (MonoDynCallInfo *info)
 {
 	ArchDynCallInfo *ainfo = (ArchDynCallInfo*)info;
 
-	g_free (ainfo->cinfo);
-	g_free (ainfo);
+	g_free_vb (ainfo->cinfo);
+	g_free_vb (ainfo);
 }
 
 int
@@ -6079,7 +6079,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 
 	sig = mono_method_signature_internal (method);
 	cfg->code_size = 256 + sig->param_count * 64;
-	code = cfg->native_code = g_malloc (cfg->code_size);
+	code = cfg->native_code = g_malloc_vb (cfg->code_size);
 
 	mono_emit_unwind_op_def_cfa (cfg, code, ARMREG_SP, 0);
 
@@ -6537,7 +6537,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 	}
 
 	set_code_cursor (cfg, code);
-	g_free (cinfo);
+	g_free_vb (cinfo);
 
 	return code;
 }
@@ -7062,11 +7062,11 @@ mono_arch_build_imt_trampoline (MonoVTable *vtable, MonoIMTCheckItem **imt_entri
 	{
 		char *buff = g_strdup_printf ("thunk_for_class_%s_%s_entries_%d", m_class_get_name_space (vtable->klass), m_class_get_name (vtable->klass), count);
 		mono_disassemble_code (NULL, (guint8*)start, size, buff);
-		g_free (buff);
+		g_free_vb (buff);
 	}
 #endif
 
-	g_free (constant_pool_starts);
+	g_free_vb (constant_pool_starts);
 
 	mono_arch_flush_icache ((guint8*)start, size);
 	MONO_PROFILER_RAISE (jit_code_buffer, ((guint8*)start, code - start, MONO_PROFILER_CODE_BUFFER_IMT_TRAMPOLINE, NULL));
@@ -7316,7 +7316,7 @@ mono_arch_get_seq_point_info (guint8 *code)
 		ji = mini_jit_info_table_find (code);
 		g_assert (ji);
 
-		info = g_malloc0 (sizeof (SeqPointInfo) + ji->code_size);
+		info = g_malloc0_vb (sizeof (SeqPointInfo) + ji->code_size);
 
 		info->ss_trigger_page = ss_trigger_page;
 		info->bp_trigger_page = bp_trigger_page;

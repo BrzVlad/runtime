@@ -25,7 +25,7 @@ lock_free_mempool_free (LockFreeMempool *mp)
 		mono_vfree (chunk, mono_pagesize (), MONO_MEM_ACCOUNT_MEM_MANAGER);
 		chunk = next;
 	}
-	g_free (mp);
+	g_free_vb (mp);
 }
 
 /*
@@ -248,7 +248,7 @@ memory_manager_delete (MonoMemoryManager *memory_manager, gboolean debug_unload)
 	mono_wrapper_caches_free (&mm->wrapper_caches);
 	for (int i = 0; i < mm->gshared_types_len; ++i)
 		free_hash (&mm->gshared_types [i]);
-	g_free (mm->gshared_types);
+	g_free_vb (mm->gshared_types);
 
 	mono_coop_mutex_destroy (&memory_manager->lock);
 
@@ -278,7 +278,7 @@ void
 mono_mem_manager_free (MonoMemoryManager *memory_manager, gboolean debug_unload)
 {
 	memory_manager_delete (memory_manager, debug_unload);
-	g_free (memory_manager);
+	g_free_vb (memory_manager);
 }
 
 void

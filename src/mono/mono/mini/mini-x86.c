@@ -557,7 +557,7 @@ get_call_info (MonoMemPool *mp, MonoMethodSignature *sig)
 	if (mp)
 		cinfo = mono_mempool_alloc0 (mp, size);
 	else
-		cinfo = g_malloc0 (size);
+		cinfo = g_malloc0_vb (size);
 
 	return get_call_info_internal (cinfo, sig);
 }
@@ -611,7 +611,7 @@ mono_arch_get_interp_native_call_info (MonoMemoryManager *mem_manager, MonoMetho
 		int size = call_info_size (sig);
 		gpointer res = mono_mem_manager_alloc0 (mem_manager, size);
 		memcpy (res, cinfo, size);
-		g_free (cinfo);
+		g_free_vb (cinfo);
 		return res;
 	} else {
 		return cinfo;
@@ -622,7 +622,7 @@ void
 mono_arch_free_interp_native_call_info (gpointer call_info)
 {
 	/* Allocated by get_call_info () */
-	g_free (call_info);
+	g_free_vb (call_info);
 }
 
 void
@@ -637,7 +637,7 @@ mono_arch_set_native_call_context_args (CallContext *ccontext, gpointer frame, M
 
 	ccontext->stack_size = ALIGN_TO (cinfo->stack_usage, MONO_ARCH_FRAME_ALIGNMENT);
 	if (ccontext->stack_size)
-		ccontext->stack = (guint8*)g_calloc (1, ccontext->stack_size);
+		ccontext->stack = (guint8*)g_calloc_vb (1, ccontext->stack_size);
 
 	if (sig->ret->type != MONO_TYPE_VOID) {
 		ainfo = &cinfo->ret;
@@ -827,8 +827,8 @@ mono_arch_tailcall_supported (MonoCompile *cfg, MonoMethodSignature *caller_sig,
 	res &= IS_SUPPORTED_TAILCALL (caller_info->stack_usage < (1 << 30));
 
 exit:
-	g_free (caller_info);
-	g_free (callee_info);
+	g_free_vb (caller_info);
+	g_free_vb (callee_info);
 
 	return res;
 }
@@ -1187,7 +1187,7 @@ mono_arch_allocate_vars (MonoCompile *cfg)
 	if (locals_stack_size > MONO_ARCH_MAX_FRAME_SIZE) {
 		char *mname = mono_method_full_name (cfg->method, TRUE);
 		mono_cfg_set_exception_invalid_program (cfg, g_strdup_printf ("Method %s stack is too big.", mname));
-		g_free (mname);
+		g_free_vb (mname);
 		return;
 	}
 	if (locals_stack_align) {
@@ -4995,7 +4995,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 
 	cfg->code_size = MAX (cfg->header->code_size * 4, 10240);
 
-	code = cfg->native_code = g_malloc (cfg->code_size);
+	code = cfg->native_code = g_malloc_vb (cfg->code_size);
 
 #if 0
 	{
@@ -5574,7 +5574,7 @@ mono_arch_build_imt_trampoline (MonoVTable *vtable, MonoIMTCheckItem **imt_entri
 	{
 		char *buff = g_strdup_printf ("thunk_for_class_%s_%s_entries_%d", m_class_get_name_space (vtable->klass), m_class_get_name (vtable->klass), count);
 		mono_disassemble_code (NULL, (guint8*)start, code - start, buff);
-		g_free (buff);
+		g_free_vb (buff);
 	}
 #endif
 	if (mono_jit_map_is_enabled ()) {
@@ -5584,7 +5584,7 @@ mono_arch_build_imt_trampoline (MonoVTable *vtable, MonoIMTCheckItem **imt_entri
 		else
 			buff = g_strdup_printf ("imt_trampoline_entries_%d", count);
 		mono_emit_jit_tramp (start, code - start, buff);
-		g_free (buff);
+		g_free_vb (buff);
 	}
 
 	MONO_PROFILER_RAISE (jit_code_buffer, (start, code - start, MONO_PROFILER_CODE_BUFFER_IMT_TRAMPOLINE, NULL));
@@ -5810,7 +5810,7 @@ get_delegate_invoke_impl (MonoTrampInfo **info, gboolean has_target, guint32 par
 	} else {
 		char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", param_count);
 		*info = mono_tramp_info_create (name, start, GPTRDIFF_TO_UINT32 (code - start), NULL, unwind_ops);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	if (mono_jit_map_is_enabled ()) {
@@ -5821,7 +5821,7 @@ get_delegate_invoke_impl (MonoTrampInfo **info, gboolean has_target, guint32 par
 			buff = g_strdup_printf ("delegate_invoke_no_target_%d", param_count);
 		mono_emit_jit_tramp (start, code - start, buff);
 		if (!has_target)
-			g_free (buff);
+			g_free_vb (buff);
 	}
 	MONO_PROFILER_RAISE (jit_code_buffer, (start, code - start, MONO_PROFILER_CODE_BUFFER_DELEGATE_INVOKE, NULL));
 
@@ -5870,7 +5870,7 @@ get_delegate_virtual_invoke_impl (MonoTrampInfo **info, gboolean load_imt_reg, i
 
 	tramp_name = mono_get_delegate_virtual_invoke_impl_name (load_imt_reg, offset);
 	*info = mono_tramp_info_create (tramp_name, start, GPTRDIFF_TO_UINT32 (code - start), NULL, unwind_ops);
-	g_free (tramp_name);
+	g_free_vb (tramp_name);
 
 
 	return start;
@@ -5951,7 +5951,7 @@ mono_arch_get_delegate_invoke_impl (MonoMethodSignature *sig, gboolean has_targe
 		if (mono_ee_features.use_aot_trampolines) {
 			char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", sig->param_count);
 			start = (guint8*)mono_aot_get_trampoline (name);
-			g_free (name);
+			g_free_vb (name);
 		} else {
 			MonoTrampInfo *info;
 			start = (guint8*)get_delegate_invoke_impl (&info, FALSE, sig->param_count);

@@ -1998,7 +1998,7 @@ emit_sri_vector (MonoCompile *cfg, MonoMethod *cmethod, MonoMethodSignature *fsi
 	if (cfg->verbose_level > 1) {
 		char *name = mono_method_full_name (cmethod, TRUE);
 		printf ("  SIMD intrinsic %s\n", name);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	switch (id) {
@@ -3508,7 +3508,7 @@ emit_vector_2_3_4 (MonoCompile *cfg, MonoMethod *cmethod, MonoMethodSignature *f
 	if (cfg->verbose_level > 1) {
 		char *name = mono_method_full_name (cmethod, TRUE);
 		printf ("  SIMD intrinsic %s\n", name);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	switch (id) {

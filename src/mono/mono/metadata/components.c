@@ -132,7 +132,7 @@ load_component_entrypoint (MonoComponentLibrary *component_lib, const MonoCompon
 	if (!sym)
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_DLLIMPORT, "Component %s library does not have symbol %s: %s", component->name, component_init, mono_error_get_message_without_fields (symbol_error));
 	mono_error_cleanup (symbol_error);
-	g_free (component_init);
+	g_free_vb (component_init);
 	return sym;
 }
 
@@ -152,7 +152,7 @@ components_dir (void)
 		if (g_module_address ((void *)components_dir, buf, sizeof (buf), NULL, NULL, 0, NULL)) {
 			char *resolvedname = mono_path_resolve_symlinks (buf);
 			dir = g_path_get_dirname (resolvedname);
-			g_free (resolvedname);
+			g_free_vb (resolvedname);
 		}
 	}
 	return dir;
@@ -172,7 +172,7 @@ try_load (const char* dir, const MonoComponentEntry *component, const char* comp
 			mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_DLLIMPORT, "Component library %s not found at %s: %s", component_base_lib, path, mono_error_get_message_without_fields (load_error));
 		else
 			mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_DLLIMPORT, "Component library %s found at %s", component_base_lib, path);
-		g_free (path);
+		g_free_vb (path);
 		mono_error_cleanup (load_error);
 	}
 
@@ -226,7 +226,7 @@ load_component (const MonoComponentEntry *component, MonoComponentLibrary **comp
 	mono_refcount_inc (component_lib);
 	*component_lib_out = component_lib;
 done:
-	g_free (component_base_lib);
+	g_free_vb (component_base_lib);
 	return result;
 }
 

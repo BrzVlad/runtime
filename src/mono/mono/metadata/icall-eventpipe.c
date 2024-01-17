@@ -26,7 +26,7 @@ ves_icall_System_Diagnostics_Tracing_EventPipeInternal_CreateProvider (
 		provider = mono_component_event_pipe ()->create_provider (provider_name_utf8, (EventPipeCallback)callback_func, callback_context);
 	}
 
-	g_free (provider_name_utf8);
+	g_free_vb (provider_name_utf8);
 	return (gconstpointer)provider;
 }
 
@@ -93,7 +93,7 @@ ves_icall_System_Diagnostics_Tracing_EventPipeInternal_Enable (
 
 	mono_component_event_pipe ()->start_streaming (session_id);
 
-	g_free (output_file_utf8);
+	g_free_vb (output_file_utf8);
 	return (uint64_t)session_id;
 }
 
@@ -125,7 +125,7 @@ ves_icall_System_Diagnostics_Tracing_EventPipeInternal_GetProvider (const gunich
 		provider = mono_component_event_pipe()->get_provider (provider_name_utf8);
 	}
 
-	g_free (provider_name_utf8);
+	g_free_vb (provider_name_utf8);
 	return (intptr_t)provider;
 }
 

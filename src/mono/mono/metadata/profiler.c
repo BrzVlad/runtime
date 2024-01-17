@@ -40,11 +40,11 @@ load_profiler (MonoDl *module, const char *name, const char *desc)
 
 	if (func) {
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_PROFILER, "Found old-style startup symbol '%s' for the '%s' profiler; it has not been migrated to the new API.", old_name, name);
-		g_free (old_name);
+		g_free_vb (old_name);
 		return FALSE;
 	}
 
-	g_free (old_name);
+	g_free_vb (old_name);
 
 	char *new_name = g_strdup_printf (NEW_INITIALIZER_NAME "_%s", name);
 
@@ -53,11 +53,11 @@ load_profiler (MonoDl *module, const char *name, const char *desc)
 	mono_error_cleanup (symbol_error);
 
 	if (!func) {
-		g_free (new_name);
+		g_free_vb (new_name);
 		return FALSE;
 	}
 
-	g_free (new_name);
+	g_free_vb (new_name);
 
 	func (desc);
 
@@ -102,12 +102,12 @@ load_profiler_from_directory (const char *directory, const char *libname, const 
 		if (!module) {
 			mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_PROFILER, "Could not open from directory \"%s\": %s", path, mono_error_get_message_without_fields (load_error));
 			mono_error_cleanup (load_error);
-			g_free (path);
+			g_free_vb (path);
 			continue;
 		}
 		mono_error_assert_ok (load_error);
 
-		g_free (path);
+		g_free_vb (path);
 		return load_profiler (module, name, desc);
 	}
 
@@ -181,8 +181,8 @@ mono_profiler_load (const char *desc)
 	mono_trace (G_LOG_LEVEL_CRITICAL, MONO_TRACE_PROFILER, "The '%s' profiler wasn't found in the main executable nor could it be loaded from '%s'.", mname, libname);
 
 done:
-	g_free (mname);
-	g_free (libname);
+	g_free_vb (mname);
+	g_free_vb (libname);
 }
 
 /**
@@ -373,8 +373,8 @@ mono_profiler_get_coverage_data (MonoProfilerHandle handle, MonoMethod *method, 
 			cb (handle->prof, &data);
 		}
 
-		g_free (source_files);
-		g_free (sym_seq_points);
+		g_free_vb (source_files);
+		g_free_vb (sym_seq_points);
 		g_ptr_array_free (source_file_list, TRUE);
 
 		return TRUE;
@@ -408,7 +408,7 @@ mono_profiler_get_coverage_data (MonoProfilerHandle handle, MonoMethod *method, 
 
 			cb (handle->prof, &data);
 
-			g_free ((char *) data.file_name);
+			g_free_vb ((char *) data.file_name);
 		}
 	}
 
@@ -441,7 +441,7 @@ mono_profiler_coverage_alloc (MonoMethod *method, guint32 entries)
 
 	coverage_lock ();
 
-	MonoProfilerCoverageInfo *info = g_malloc0 (sizeof (MonoProfilerCoverageInfo) + sizeof (MonoProfilerCoverageInfoEntry) * entries);
+	MonoProfilerCoverageInfo *info = g_malloc0_vb (sizeof (MonoProfilerCoverageInfo) + sizeof (MonoProfilerCoverageInfoEntry) * entries);
 
 	info->entries = entries;
 

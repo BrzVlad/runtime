@@ -39,8 +39,8 @@
 #include <errno.h>
 
 /*
- * g_strndup and g_vasprintf need to allocate memory with g_malloc if
- * ENABLE_OVERRIDABLE_ALLOCATORS is defined so that it can be safely freed with g_free
+ * g_strndup and g_vasprintf need to allocate memory with g_malloc_vb if
+ * ENABLE_OVERRIDABLE_ALLOCATORS is defined so that it can be safely freed with g_free_vb
  * rather than free.
  */
 
@@ -52,7 +52,7 @@ g_strndup (const gchar *str, gsize n)
 	return strndup (str, n);
 #else
 	if (str) {
-		char *retval = g_malloc(n+1);
+		char *retval = g_malloc_vb(n+1);
 		if (retval) {
 			strncpy(retval, str, n)[n] = 0;
 		}
@@ -80,7 +80,7 @@ gint g_vasprintf (gchar **ret, const gchar *fmt, va_list ap)
 	len = vsnprintf(NULL, 0, fmt, ap2);
 #endif
 
-	if (len >= 0 && (buf = g_malloc ((buflen = (size_t) (len + 1)))) != NULL) {
+	if (len >= 0 && (buf = g_malloc_vb ((buflen = (size_t) (len + 1)))) != NULL) {
 		len = vsnprintf(buf, buflen, fmt, ap);
 		*ret = buf;
 	} else {
@@ -100,10 +100,10 @@ g_strfreev (gchar **str_array)
 	if (str_array == NULL)
 		return;
 	while (*str_array != NULL){
-		g_free (*str_array);
+		g_free_vb (*str_array);
 		str_array++;
 	}
-	g_free (orig);
+	g_free_vb (orig);
 }
 
 gchar **
@@ -261,16 +261,16 @@ g_strerror (gint errnum)
 				break;
 			}
 			if (buff == tmp_buff)
-				buff = g_malloc (buff_len * 2);
+				buff = g_malloc_vb (buff_len * 2);
 			else
-				buff = g_realloc (buff, buff_len * 2);
+				buff = g_realloc_vb (buff, buff_len * 2);
 			buff_len *= 2;
 		 //Spec is not clean on whether size argument includes space for null terminator or not
 		}
 		if (!error_messages [errnum])
 			error_messages [errnum] = g_strdup (buff);
 		if (buff != tmp_buff)
-			g_free (buff);
+			g_free_vb (buff);
 #endif /* HAVE_GNU_STRERROR_R */
 
 #else /* HAVE_STRERROR_R */
@@ -302,7 +302,7 @@ g_strconcat (const gchar *first, ...)
 	}
 	va_end (args);
 
-	ret = (char*)g_malloc (len + 1);
+	ret = (char*)g_malloc_vb (len + 1);
 	if (ret == NULL)
 		return NULL;
 
@@ -324,8 +324,8 @@ static void
 add_to_vector (gchar ***vector, int size, gchar *token)
 {
 	*vector = *vector == NULL ?
-		(gchar **)g_malloc(2 * sizeof(*vector)) :
-		(gchar **)g_realloc(*vector, (size + 1) * sizeof(*vector));
+		(gchar **)g_malloc_vb(2 * sizeof(*vector)) :
+		(gchar **)g_realloc_vb(*vector, (size + 1) * sizeof(*vector));
 
 	(*vector)[size - 1] = token;
 }
@@ -342,7 +342,7 @@ g_strsplit (const gchar *string, const gchar *delimiter, gint max_tokens)
 	g_return_val_if_fail (delimiter[0] != 0, NULL);
 
 	if (strncmp (string, delimiter, strlen (delimiter)) == 0) {
-		vector = (gchar **)g_malloc (2 * sizeof(vector));
+		vector = (gchar **)g_malloc_vb (2 * sizeof(vector));
 		vector[0] = g_strdup ("");
 		size++;
 		string += strlen (delimiter);
@@ -391,7 +391,7 @@ g_strsplit (const gchar *string, const gchar *delimiter, gint max_tokens)
 	}
 
 	if (vector == NULL) {
-		vector = (gchar **) g_malloc (2 * sizeof (vector));
+		vector = (gchar **) g_malloc_vb (2 * sizeof (vector));
 		vector [0] = NULL;
 	} else if (size > 0) {
 		vector[size - 1] = NULL;
@@ -425,7 +425,7 @@ g_strsplit_set (const gchar *string, const gchar *delimiter, gint max_tokens)
 	g_return_val_if_fail (delimiter[0] != 0, NULL);
 
 	if (charcmp (*string, delimiter)) {
-		vector = (gchar **)g_malloc (2 * sizeof(vector));
+		vector = (gchar **)g_malloc_vb (2 * sizeof(vector));
 		vector[0] = g_strdup ("");
 		size++;
 		string++;
@@ -473,7 +473,7 @@ g_strsplit_set (const gchar *string, const gchar *delimiter, gint max_tokens)
 	}
 
 	if (vector == NULL) {
-		vector = (gchar **) g_malloc (2 * sizeof (vector));
+		vector = (gchar **) g_malloc_vb (2 * sizeof (vector));
 		vector [0] = NULL;
 	} else if (size > 0) {
 		vector[size - 1] = NULL;
@@ -600,7 +600,7 @@ g_ascii_strdown (const gchar *str, gssize len)
 	if (len == -1)
 		len = strlen (str);
 
-	ret = g_malloc (len + 1);
+	ret = g_malloc_vb (len + 1);
 	g_ascii_strdown_no_alloc (ret, str, len);
 	ret [len] = 0;
 
@@ -624,7 +624,7 @@ g_ascii_strup (const gchar *str, gssize len)
 	if (len == -1)
 		len = strlen (str);
 
-	ret = g_malloc (len + 1);
+	ret = g_malloc_vb (len + 1);
 	for (i = 0; i < len; i++)
 		ret [i] = g_ascii_toupper (str [i]);
 	ret [i] = 0;

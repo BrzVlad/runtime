@@ -33,7 +33,7 @@
 #define GROW_IF_NECESSARY(s,l) { \
 	if(s->len + l >= s->allocated_len) { \
 		s->allocated_len = (s->allocated_len + l + 16) * 2; \
-		s->str = g_realloc(s->str, s->allocated_len); \
+		s->str = g_realloc_vb(s->str, s->allocated_len); \
 	} \
 }
 
@@ -47,7 +47,7 @@ g_string_new_len (const gchar *init, gssize len)
 	else
 		ret->len = len < 0 ? strlen(init) : len;
 	ret->allocated_len = MAX(ret->len + 1, 16);
-	ret->str = g_malloc(ret->allocated_len);
+	ret->str = g_malloc_vb(ret->allocated_len);
 	if (init)
 		memcpy(ret->str, init, ret->len);
 	ret->str[ret->len] = 0;
@@ -66,7 +66,7 @@ g_string_sized_new (gsize default_size)
 {
 	GString *ret = g_new (GString, 1);
 
-	ret->str = g_malloc (default_size);
+	ret->str = g_malloc_vb (default_size);
 	ret->str [0] = 0;
 	ret->len = 0;
 	ret->allocated_len = default_size;
@@ -82,13 +82,13 @@ g_string_free (GString *string, gboolean free_segment)
 	g_return_val_if_fail (string != NULL, NULL);
 
 	data = string->str;
-	g_free(string);
+	g_free_vb(string);
 
 	if(!free_segment) {
 		return data;
 	}
 
-	g_free(data);
+	g_free_vb(data);
 	return NULL;
 }
 
@@ -147,7 +147,7 @@ g_string_append_printf (GString *string, const gchar *format, ...)
 	va_end (args);
 	g_string_append (string, ret);
 
-	g_free (ret);
+	g_free_vb (ret);
 }
 
 void
@@ -160,7 +160,7 @@ g_string_append_vprintf (GString *string, const gchar *format, va_list args)
 
 	ret = g_strdup_vprintf (format, args);
 	g_string_append (string, ret);
-	g_free (ret);
+	g_free_vb (ret);
 }
 
 void
@@ -171,7 +171,7 @@ g_string_printf (GString *string, const gchar *format, ...)
 	g_return_if_fail (string != NULL);
 	g_return_if_fail (format != NULL);
 
-	g_free (string->str);
+	g_free_vb (string->str);
 
 	va_start (args, format);
 	string->str = g_strdup_vprintf (format, args);

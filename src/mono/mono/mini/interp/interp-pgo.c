@@ -212,7 +212,7 @@ table_add_locked (interp_pgo_table **table_variable, uint8_t hash[MM3_HASH_BYTE_
 	interp_pgo_table *table = *table_variable;
 	// If we don't have a table yet, allocate one
 	if (!table)
-		*table_variable = table = g_malloc0 (sizeof (interp_pgo_table));
+		*table_variable = table = g_malloc0_vb (sizeof (interp_pgo_table));
 
 	const uint32_t required_size = table->size + MM3_HASH_BYTE_SIZE,
 		required_capacity = MAX (required_size, TABLE_MINIMUM_SIZE);
@@ -223,9 +223,9 @@ table_add_locked (interp_pgo_table **table_variable, uint8_t hash[MM3_HASH_BYTE_
 	while (required_capacity >= table->capacity) {
 		uint32_t new_capacity = MAX (required_capacity, (table->capacity * TABLE_GROWTH_FACTOR / 100));
 		if (table->data)
-			table->data = g_realloc (table->data, new_capacity);
+			table->data = g_realloc_vb (table->data, new_capacity);
 		else
-			table->data = g_malloc0 (new_capacity);
+			table->data = g_malloc0_vb (new_capacity);
 		table->capacity = new_capacity;
 	}
 
@@ -266,7 +266,7 @@ mono_interp_pgo_should_tier_method (MonoMethod *method) {
 		if (mono_opt_interp_pgo_logging) {
 			char * name = mono_method_full_name (method, TRUE);
 			g_print ("Tiering %s because it was in the interp_pgo table\n", name);
-			g_free (name);
+			g_free_vb (name);
 		}
 
 		return TRUE;
@@ -294,7 +294,7 @@ mono_interp_pgo_method_was_tiered (MonoMethod *method) {
 	if (mono_opt_interp_pgo_logging) {
 		char * name = mono_method_full_name (method, TRUE);
 		g_print ("added %s to table\n", name);
-		g_free (name);
+		g_free_vb (name);
 	}
 }
 
@@ -316,14 +316,14 @@ mono_interp_pgo_load_table (uint8_t * data, int data_size) {
 	if (data_size < sizeof(uint32_t))
 		return 3;
 
-	interp_pgo_table *result = g_malloc0 (sizeof (interp_pgo_table));
+	interp_pgo_table *result = g_malloc0_vb (sizeof (interp_pgo_table));
 	// The table storage format is [uint32 size] [data...]
 	uint32_t size = *(uint32_t *)data;
 
 	if (mono_opt_interp_pgo_logging)
 		g_print ("Loading %d bytes of interp_pgo data (table size == %zu)\n", data_size, size);
 
-	result->data = g_malloc0 (data_size);
+	result->data = g_malloc0_vb (data_size);
 	g_assert ((int64_t)size < (int64_t)data_size);
 	result->size = size;
 	result->capacity = data_size;
@@ -336,8 +336,8 @@ mono_interp_pgo_load_table (uint8_t * data, int data_size) {
 		// We lost a race with another thread that also loaded a table, so destroy ours and leave
 		//  theirs in place.
 		if (result->data)
-			g_free (result->data);
-		g_free (result);
+			g_free_vb (result->data);
+		g_free_vb (result);
 
 		return 2;
 	}

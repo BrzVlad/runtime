@@ -192,7 +192,7 @@ void
 mono_marshal_shared_mb_emit_exception_marshal_directive (MonoMethodBuilder *mb, char *msg)
 {
 	char *s = mono_mb_strdup (mb, msg);
-	g_free (msg);
+	g_free_vb (msg);
 	mono_mb_emit_exception_full (mb, "System.Runtime.InteropServices", "MarshalDirectiveException", s);
 }
 

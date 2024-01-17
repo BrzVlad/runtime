@@ -627,7 +627,7 @@ thread_detach_func (gpointer user_data)
 {
 	TlsData *tls = user_data;
 
-	g_free (tls);
+	g_free_vb (tls);
 }
 
 static void
@@ -945,7 +945,7 @@ conservative_pass (TlsData *tls, guint8 *stack_start, guint8 *stack_end)
 			char *mono_precise_count = g_getenv ("MONO_PRECISE_COUNT");
 			if (mono_precise_count) {
 				precise_frame_limit = atoi (mono_precise_count);
-				g_free (mono_precise_count);
+				g_free_vb (mono_precise_count);
 			}
 			precise_frame_limit_inited = TRUE;
 		}
@@ -1304,7 +1304,7 @@ mini_gc_init_gc_map (MonoCompile *cfg)
 		char *mono_gcmap_count = g_getenv ("MONO_GCMAP_COUNT");
 		if (mono_gcmap_count) {
 			int count = atoi (mono_gcmap_count);
-			g_free (mono_gcmap_count);
+			g_free_vb (mono_gcmap_count);
 			if (precise_count == count)
 				printf ("LAST: %s\n", mono_method_full_name (cfg->method, TRUE));
 			if (precise_count > count)
@@ -1822,7 +1822,7 @@ process_variables (MonoCompile *cfg)
 				}
 			}
 
-			g_free (bitmap);
+			g_free_vb (bitmap);
 
 			continue;
 		}
@@ -1906,7 +1906,7 @@ process_variables (MonoCompile *cfg)
 		}
 	}
 
-	g_free (pc_offsets);
+	g_free_vb (pc_offsets);
 }
 
 static int
@@ -2527,7 +2527,7 @@ parse_debug_options (void)
 		exit (1);
 	}
 	g_strfreev (opts);
-	g_free (env);
+	g_free_vb (env);
 }
 
 void

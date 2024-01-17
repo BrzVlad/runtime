@@ -251,7 +251,7 @@ desc_alloc (MonoMemAccountType type)
 	if (desc)
 		return desc;
 
-	return g_calloc (1, sizeof (Descriptor));
+	return g_calloc_vb (1, sizeof (Descriptor));
 }
 
 static void

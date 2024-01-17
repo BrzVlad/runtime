@@ -119,7 +119,7 @@ mono_mem_manager_free_debug_info (MonoMemoryManager *memory_manager)
 	mono_mempool_destroy (info->mp);
 	g_hash_table_destroy (info->method_hash);
 
-	g_free (info);
+	g_free_vb (info);
 }
 
 static void
@@ -131,7 +131,7 @@ free_debug_handle (MonoDebugHandle *handle)
 		mono_debug_close_mono_symbol_file (handle->symfile);
 	/* decrease the refcount added with mono_image_addref () */
 	mono_image_close (handle->image);
-	g_free (handle);
+	g_free_vb (handle);
 }
 
 /*
@@ -458,7 +458,7 @@ mono_debug_add_method (MonoMethod *method, MonoDebugMethodJitInfo *jit, MonoDoma
 	}
 
 	if (max_size > BUFSIZ)
-		ptr = oldptr = (guint8 *)g_malloc (max_size);
+		ptr = oldptr = (guint8 *)g_malloc_vb (max_size);
 	else
 		ptr = oldptr = buffer;
 
@@ -500,7 +500,7 @@ mono_debug_add_method (MonoMethod *method, MonoDebugMethodJitInfo *jit, MonoDoma
 	mono_debugger_lock ();
 
 	if (method_is_dynamic (method)) {
-		address = (MonoDebugMethodAddress *)g_malloc0 (total_size);
+		address = (MonoDebugMethodAddress *)g_malloc0_vb (total_size);
 	} else {
 		address = (MonoDebugMethodAddress *)mono_mempool_alloc (info->mp, total_size);
 	}
@@ -510,7 +510,7 @@ mono_debug_add_method (MonoMethod *method, MonoDebugMethodJitInfo *jit, MonoDoma
 
 	memcpy (&address->data, oldptr, size);
 	if (max_size > BUFSIZ)
-		g_free (oldptr);
+		g_free_vb (oldptr);
 
 	g_hash_table_insert (info->method_hash, method, address);
 
@@ -535,7 +535,7 @@ mono_debug_remove_method (MonoMethod *method, MonoDomain *domain)
 
 	address = (MonoDebugMethodAddress *)g_hash_table_lookup (info->method_hash, method);
 	if (address)
-		g_free (address);
+		g_free_vb (address);
 
 	g_hash_table_remove (info->method_hash, method);
 
@@ -610,14 +610,14 @@ free_method_jit_info (MonoDebugMethodJitInfo *jit, gboolean stack)
 {
 	if (!jit)
 		return;
-	g_free (jit->line_numbers);
-	g_free (jit->this_var);
-	g_free (jit->params);
-	g_free (jit->locals);
-	g_free (jit->gsharedvt_info_var);
-	g_free (jit->gsharedvt_locals_var);
+	g_free_vb (jit->line_numbers);
+	g_free_vb (jit->this_var);
+	g_free_vb (jit->params);
+	g_free_vb (jit->locals);
+	g_free_vb (jit->gsharedvt_info_var);
+	g_free_vb (jit->gsharedvt_locals_var);
 	if (!stack)
-		g_free (jit);
+		g_free_vb (jit);
 }
 
 void
@@ -966,10 +966,10 @@ mono_debug_free_locals (MonoDebugLocalsInfo *info)
 	int i;
 
 	for (i = 0; i < info->num_locals; ++i)
-		g_free (info->locals [i].name);
-	g_free (info->locals);
-	g_free (info->code_blocks);
-	g_free (info);
+		g_free_vb (info->locals [i].name);
+	g_free_vb (info->locals);
+	g_free_vb (info->code_blocks);
+	g_free_vb (info);
 }
 
 /*
@@ -1011,11 +1011,11 @@ void
 mono_debug_free_method_async_debug_info (MonoDebugMethodAsyncInfo *info)
 {
 	if (info->num_awaits) {
-		g_free (info->yield_offsets);
-		g_free (info->resume_offsets);
-		g_free (info->move_next_method_token);
+		g_free_vb (info->yield_offsets);
+		g_free_vb (info->resume_offsets);
+		g_free_vb (info->move_next_method_token);
 	}
-	g_free (info);
+	g_free_vb (info);
 }
 
 /**
@@ -1027,8 +1027,8 @@ void
 mono_debug_free_source_location (MonoDebugSourceLocation *location)
 {
 	if (location) {
-		g_free (location->source_file);
-		g_free (location);
+		g_free_vb (location->source_file);
+		g_free_vb (location);
 	}
 }
 
@@ -1082,17 +1082,17 @@ mono_debug_print_stack_frame (MonoMethod *method, guint32 native_offset, MonoDom
 			else
 				res = g_strdup_printf ("at %s [0x%05x] in <%s>:0" , fname, offset, mvid);
 
-			g_free (aotid);
-			g_free (mvid);
+			g_free_vb (aotid);
+			g_free_vb (mvid);
 		}
-		g_free (fname);
+		g_free_vb (fname);
 		return res;
 	}
 
 	res = g_strdup_printf ("at %s [0x%05x] in %s:%d", fname, location->il_offset,
 			       location->source_file, location->row);
 
-	g_free (fname);
+	g_free_vb (fname);
 	mono_debug_free_source_location (location);
 	return res;
 }

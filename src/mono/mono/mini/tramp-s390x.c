@@ -684,7 +684,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 
 	unwind_ops = mono_arch_get_cie_program ();
 
-	rgctx_null_jumps = (guint8 **) g_malloc (sizeof (guint8*) * (depth + 2));
+	rgctx_null_jumps = (guint8 **) g_malloc_vb (sizeof (guint8*) * (depth + 2));
 
 	if (mrgctx) {
 		/* get mrgctx ptr */
@@ -727,7 +727,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 		s390_patch_rel ((rgctx_null_jumps [i] + 2), displace);
 	}
 
-	g_free (rgctx_null_jumps);
+	g_free_vb (rgctx_null_jumps);
 
 	/* move the rgctx pointer to the VTABLE register */
 #if MONO_ARCH_VTABLE_REG != s390_r2
@@ -754,7 +754,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 
 	char *name = mono_get_rgctx_fetch_trampoline_name (slot);
 	*info = mono_tramp_info_create (name, buf, code - buf, ji, unwind_ops);
-	g_free (name);
+	g_free_vb (name);
 
 	return(buf);
 }

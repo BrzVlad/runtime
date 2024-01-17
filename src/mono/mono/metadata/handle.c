@@ -73,7 +73,7 @@ new_handle_stack (void)
 static void
 free_handle_stack (HandleStack *stack)
 {
-	g_free (stack);
+	g_free_vb (stack);
 }
 
 static HandleChunk*
@@ -85,7 +85,7 @@ new_handle_chunk (void)
 static void
 free_handle_chunk (HandleChunk *chunk)
 {
-	g_free (chunk);
+	g_free_vb (chunk);
 }
 
 #define THIS_IS_AN_OK_NUMBER_OF_HANDLES 100

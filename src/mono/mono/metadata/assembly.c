@@ -97,7 +97,7 @@ encode_public_tok (const guchar *token, gint32 len)
 	gchar *res;
 	int i;
 
-	res = (gchar *)g_malloc (len * 2 + 1);
+	res = (gchar *)g_malloc_vb (len * 2 + 1);
 	for (i = 0; i < len; i++) {
 		res [i * 2] = allowed [token [i] >> 4];
 		res [i * 2 + 1] = allowed [token [i] & 0xF];
@@ -140,7 +140,7 @@ mono_set_assemblies_path (const char* path)
 		char *tmp = *split;
 		if (*tmp)
 			*dest++ = mono_path_canonicalize (tmp);
-		g_free (tmp);
+		g_free_vb (tmp);
 		split++;
 	}
 	*dest = *split;
@@ -175,7 +175,7 @@ check_path_env (void)
 		return;
 
 	mono_set_assemblies_path(path);
-	g_free (path);
+	g_free_vb (path);
 }
 
 static void
@@ -184,8 +184,8 @@ mono_assembly_binding_info_free (MonoAssemblyBindingInfo *info)
 	if (!info)
 		return;
 
-	g_free (info->name);
-	g_free (info->culture);
+	g_free_vb (info->name);
+	g_free_vb (info->culture);
 }
 
 /**
@@ -338,7 +338,7 @@ load_in_path (const char *basename, const char** search_path, const MonoAssembly
 		fullpath = g_build_filename (search_path [i], basename, (const char*)NULL);
 		g_assert (fullpath);
 		result = mono_assembly_request_open (fullpath, req, status);
-		g_free (fullpath);
+		g_free_vb (fullpath);
 		if (result)
 			return result;
 	}
@@ -456,7 +456,7 @@ mono_assembly_fill_assembly_name_full (MonoImage *image, MonoAssemblyName *aname
 	aname->revision = cols [MONO_ASSEMBLY_REV_NUMBER];
 	aname->hash_alg = cols [MONO_ASSEMBLY_HASH_ALG];
 	if (cols [MONO_ASSEMBLY_PUBLIC_KEY]) {
-		guchar* token = (guchar *)g_malloc (8);
+		guchar* token = (guchar *)g_malloc_vb (8);
 		gchar* encoded;
 		const gchar* pkey;
 		int len;
@@ -469,8 +469,8 @@ mono_assembly_fill_assembly_name_full (MonoImage *image, MonoAssemblyName *aname
 		encoded = encode_public_tok (token, 8);
 		g_strlcpy ((char*)aname->public_key_token, encoded, MONO_PUBLIC_KEY_TOKEN_LENGTH);
 
-		g_free (encoded);
-		g_free (token);
+		g_free_vb (encoded);
+		g_free_vb (token);
 	}
 	else {
 		aname->public_key = NULL;
@@ -697,7 +697,7 @@ mono_assembly_get_assemblyref (MonoImage *image, int index, MonoAssemblyName *an
 	if (cols [MONO_ASSEMBLYREF_PUBLIC_KEY]) {
 		gchar *token = assemblyref_public_tok (image, cols [MONO_ASSEMBLYREF_PUBLIC_KEY], aname->flags);
 		g_strlcpy ((char*)aname->public_key_token, token, MONO_PUBLIC_KEY_TOKEN_LENGTH);
-		g_free (token);
+		g_free_vb (token);
 	} else {
 		memset (aname->public_key_token, 0, MONO_PUBLIC_KEY_TOKEN_LENGTH);
 	}
@@ -717,7 +717,7 @@ search_bundle_for_assembly (MonoAssemblyLoadContext *alc, MonoAssemblyName *anam
 	if (!image && !g_str_has_suffix (aname->name, ".dll")) {
 		char *name = g_strdup_printf ("%s.dll", aname->name);
 		image = mono_assembly_open_from_bundle (alc, name, &status, aname->culture);
-		g_free (name);
+		g_free_vb (name);
 	}
 	if (image) {
 		mono_assembly_request_prepare_load (&req, alc);
@@ -922,7 +922,7 @@ mono_assembly_get_assemblyref_checked (MonoImage *image, int index, MonoAssembly
 		gchar *token = assemblyref_public_tok_checked (image, cols [MONO_ASSEMBLYREF_PUBLIC_KEY], aname->flags, error);
 		return_val_if_nok (error, FALSE);
 		g_strlcpy ((char*)aname->public_key_token, token, MONO_PUBLIC_KEY_TOKEN_LENGTH);
-		g_free (token);
+		g_free_vb (token);
 	} else {
 		memset (aname->public_key_token, 0, MONO_PUBLIC_KEY_TOKEN_LENGTH);
 	}
@@ -972,7 +972,7 @@ mono_assembly_load_reference (MonoImage *image, int index)
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "Loading reference %d of %s (%s), looking for %s",
 				index, image->name, mono_alc_is_default (mono_image_get_alc (image)) ? "default ALC" : "custom ALC" ,
 				aname_str);
-		g_free (aname_str);
+		g_free_vb (aname_str);
 	}
 
 	MonoAssemblyByNameRequest req;
@@ -1004,7 +1004,7 @@ mono_assembly_load_reference (MonoImage *image, int index)
 				   image->name, aname.name, index,
 				   aname.major, aname.minor, aname.build, aname.revision,
 				   strlen ((char*)aname.public_key_token) == 0 ? "(none)" : (char*)aname.public_key_token, extra_msg);
-		g_free (extra_msg);
+		g_free_vb (extra_msg);
 
 	}
 
@@ -1402,7 +1402,7 @@ absolute_dir (const gchar *filename)
 	if (g_path_is_absolute (filename)) {
 		part = g_path_get_dirname (filename);
 		res = g_strconcat (part, G_DIR_SEPARATOR_S, (const char*)NULL);
-		g_free (part);
+		g_free_vb (part);
 		return res;
 	}
 
@@ -1410,8 +1410,8 @@ absolute_dir (const gchar *filename)
 	mixed = g_build_filename (cwd, filename, (const char*)NULL);
 	g_assert (mixed);
 	parts = g_strsplit (mixed, G_DIR_SEPARATOR_S, 0);
-	g_free (mixed);
-	g_free (cwd);
+	g_free_vb (mixed);
+	g_free_vb (cwd);
 
 	list = NULL;
 	for (i = 0; (part = parts [i]) != NULL; i++) {
@@ -1441,7 +1441,7 @@ absolute_dir (const gchar *filename)
 	g_list_free (list);
 	g_strfreev (parts);
 	if (*res == '\0') {
-		g_free (res);
+		g_free_vb (res);
 		return g_strdup (".");
 	}
 
@@ -1462,7 +1462,7 @@ open_from_bundle_internal (MonoAssemblyLoadContext *alc, const char *filename, M
 	if (mono_bundled_resources_get_assembly_resource_values (name, &data, &size))
 		image = mono_image_open_from_data_internal (alc, (char *)data, size, FALSE, status, FALSE, name, NULL);
 
-	g_free (name);
+	g_free_vb (name);
 	return image;
 }
 
@@ -1480,7 +1480,7 @@ open_from_satellite_bundle (MonoAssemblyLoadContext *alc, const char *filename, 
 	if (mono_bundled_resources_get_satellite_assembly_resource_values (bundle_name, &data, &size))
 		image = mono_image_open_from_data_internal (alc, (char *)data, size, FALSE, status, FALSE, bundle_name, NULL);
 
-	g_free (bundle_name);
+	g_free_vb (bundle_name);
 	return image;
 }
 
@@ -1597,7 +1597,7 @@ mono_assembly_request_open (const char *filename, const MonoAssemblyOpenRequest 
 	if (!image){
 		if (*status == MONO_IMAGE_OK)
 			*status = MONO_IMAGE_ERROR_ERRNO;
-		g_free (fname);
+		g_free_vb (fname);
 		return NULL;
 	}
 
@@ -1611,13 +1611,13 @@ mono_assembly_request_open (const char *filename, const MonoAssemblyOpenRequest 
 		if (mono_loader_get_strict_assembly_name_check () &&
 		    load_req.predicate && !load_req.predicate (image->assembly, load_req.predicate_ud)) {
 			mono_image_close (image);
-			g_free (fname);
+			g_free_vb (fname);
 			return NULL;
 		} else {
 			/* Already loaded by another appdomain */
 			mono_assembly_invoke_load_hook_internal (load_req.alc, image->assembly);
 			mono_image_close (image);
-			g_free (fname);
+			g_free_vb (fname);
 			return image->assembly;
 		}
 	}
@@ -1633,7 +1633,7 @@ mono_assembly_request_open (const char *filename, const MonoAssemblyOpenRequest 
 	/* Clear the reference added by mono_image_open */
 	mono_image_close (image);
 
-	g_free (fname);
+	g_free_vb (fname);
 
 	return ass;
 }
@@ -1642,7 +1642,7 @@ static void
 free_assembly_name_item (gpointer val, gpointer user_data)
 {
 	mono_assembly_name_free_internal ((MonoAssemblyName *)val);
-	g_free (val);
+	g_free_vb (val);
 }
 
 /**
@@ -1727,9 +1727,9 @@ mono_assembly_load_friends (MonoAssembly* ass)
 			if (has_ignores)
 				ignores_list = g_slist_prepend (ignores_list, aname);
 		} else {
-			g_free (aname);
+			g_free_vb (aname);
 		}
-		g_free (data_with_terminator);
+		g_free_vb (data_with_terminator);
 	}
 	mono_custom_attrs_free (attrs);
 
@@ -1901,7 +1901,7 @@ mono_assembly_request_load_from (MonoImage *image, const char *fname,
 		g_strdelimit (tmp_fn, '/', '\\');
 
 		base_dir = absolute_dir (tmp_fn);
-		g_free (tmp_fn);
+		g_free_vb (tmp_fn);
 	}
 #else
 	base_dir = absolute_dir (fname);
@@ -1921,8 +1921,8 @@ mono_assembly_request_load_from (MonoImage *image, const char *fname,
 
 	if (mono_defaults.corlib && strcmp (ass->aname.name, MONO_ASSEMBLY_CORLIB_NAME) == 0) {
 		// MS.NET doesn't support loading other mscorlibs
-		g_free (ass);
-		g_free (base_dir);
+		g_free_vb (ass);
+		g_free_vb (base_dir);
 		mono_image_addref (mono_defaults.corlib);
 		*status = MONO_IMAGE_OK;
 		return mono_defaults.corlib->assembly;
@@ -1942,8 +1942,8 @@ mono_assembly_request_load_from (MonoImage *image, const char *fname,
 		ass2 = mono_assembly_invoke_search_hook_internal (req->alc, NULL, &ass->aname, FALSE);
 		if (ass2) {
 			mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "Image %s[%p] reusing existing assembly %s[%p]", ass->aname.name, ass, ass2->aname.name, ass2);
-			g_free (ass);
-			g_free (base_dir);
+			g_free_vb (ass);
+			g_free_vb (base_dir);
 			mono_image_close (image);
 			*status = MONO_IMAGE_OK;
 			return ass2;
@@ -1961,8 +1961,8 @@ mono_assembly_request_load_from (MonoImage *image, const char *fname,
 		ERROR_DECL (refasm_error);
 		if (mono_assembly_has_reference_assembly_attribute (ass, refasm_error)) {
 			mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "Image for assembly '%s' (%s) has ReferenceAssemblyAttribute, skipping", ass->aname.name, image->name);
-			g_free (ass);
-			g_free (base_dir);
+			g_free_vb (ass);
+			g_free_vb (base_dir);
 			mono_image_close (image);
 			*status = MONO_IMAGE_IMAGE_INVALID;
 			return NULL;
@@ -1972,8 +1972,8 @@ mono_assembly_request_load_from (MonoImage *image, const char *fname,
 
 	if (predicate && !predicate (ass, user_data)) {
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "Predicate returned FALSE, skipping '%s' (%s)\n", ass->aname.name, image->name);
-		g_free (ass);
-		g_free (base_dir);
+		g_free_vb (ass);
+		g_free_vb (base_dir);
 		mono_image_close (image);
 		*status = MONO_IMAGE_IMAGE_INVALID;
 		return NULL;
@@ -1992,8 +1992,8 @@ mono_assembly_request_load_from (MonoImage *image, const char *fname,
 		 */
 		mono_assemblies_unlock ();
 		ass2 = image->assembly;
-		g_free (ass);
-		g_free (base_dir);
+		g_free_vb (ass);
+		g_free_vb (base_dir);
 		mono_image_close (image);
 		*status = MONO_IMAGE_OK;
 		return ass2;
@@ -2076,10 +2076,10 @@ mono_assembly_name_free_internal (MonoAssemblyName *aname)
 	if (aname == NULL)
 		return;
 
-	g_free ((void *) aname->name);
-	g_free ((void *) aname->culture);
-	g_free ((void *) aname->hash_value);
-	g_free ((guint8*) aname->public_key);
+	g_free_vb ((void *) aname->name);
+	g_free_vb ((void *) aname->culture);
+	g_free_vb ((void *) aname->hash_value);
+	g_free_vb ((guint8*) aname->public_key);
 }
 
 static gboolean
@@ -2145,7 +2145,7 @@ parse_public_key (const gchar *key, gchar** pubkey, gboolean *is_ecma)
 	if ((bitlen + 16 + 4) != pkeylen)
 		return FALSE;
 
-	arr = (gchar *)g_malloc (keylen + 4);
+	arr = (gchar *)g_malloc_vb (keylen + 4);
 	/* Encode the size of the blob */
 	mono_metadata_encode_value (keylen, &arr[0], &endp);
 	offset = (gint)(endp-arr);
@@ -2233,7 +2233,7 @@ build_assembly_name (const char *name, const char *version, const char *culture,
 		}
 		lower = g_ascii_strdown (token, MONO_PUBLIC_KEY_TOKEN_LENGTH);
 		g_strlcpy ((char*)aname->public_key_token, lower, MONO_PUBLIC_KEY_TOKEN_LENGTH);
-		g_free (lower);
+		g_free_vb (lower);
 	}
 
 	if (key) {
@@ -2256,12 +2256,12 @@ build_assembly_name (const char *name, const char *version, const char *culture,
 		mono_digest_get_public_token ((guchar*) tok, (guint8*) pkeyptr, len);
 		encoded = encode_public_tok ((guchar*) tok, 8);
 		g_strlcpy ((gchar*)aname->public_key_token, encoded, MONO_PUBLIC_KEY_TOKEN_LENGTH);
-		g_free (encoded);
+		g_free_vb (encoded);
 
 		if (save_public_key)
 			aname->public_key = (guint8*) pkey;
 		else
-			g_free (pkey);
+			g_free_vb (pkey);
 	}
 
 	return TRUE;
@@ -2396,11 +2396,11 @@ mono_assembly_name_parse_full (const char *name, MonoAssemblyName *aname, gboole
 			if (!g_ascii_strcasecmp (retargetable, "yes")) {
 				flags |= ASSEMBLYREF_RETARGETABLE_FLAG;
 			} else if (g_ascii_strcasecmp (retargetable, "no")) {
-				g_free (retargetable_uq);
+				g_free_vb (retargetable_uq);
 				goto cleanup_and_fail;
 			}
 
-			g_free (retargetable_uq);
+			g_free_vb (retargetable_uq);
 			tmp++;
 			continue;
 		}
@@ -2426,13 +2426,13 @@ mono_assembly_name_parse_full (const char *name, MonoAssemblyName *aname, gboole
 			else if (!g_ascii_strcasecmp (procarch, "ARM"))
 				arch = MONO_PROCESSOR_ARCHITECTURE_ARM;
 			else {
-				g_free (procarch_uq);
+				g_free_vb (procarch_uq);
 				goto cleanup_and_fail;
 			}
 
 			flags |= arch << 4;
 
-			g_free (procarch_uq);
+			g_free_vb (procarch_uq);
 			tmp++;
 			continue;
 		}
@@ -2460,11 +2460,11 @@ mono_assembly_name_parse_full (const char *name, MonoAssemblyName *aname, gboole
 		key_uq == NULL ? key : key_uq,
 		flags, arch, aname, save_public_key);
 
-	g_free (dllname_uq);
-	g_free (version_uq);
-	g_free (culture_uq);
-	g_free (token_uq);
-	g_free (key_uq);
+	g_free_vb (dllname_uq);
+	g_free_vb (version_uq);
+	g_free_vb (culture_uq);
+	g_free_vb (token_uq);
+	g_free_vb (key_uq);
 
 	g_strfreev (parts);
 	return res;
@@ -2531,7 +2531,7 @@ mono_assembly_name_new (const char *name)
 	if (mono_assembly_name_parse (name, aname))
 		result = aname;
 	else
-		g_free (aname);
+		g_free_vb (aname);
 	MONO_EXIT_GC_UNSAFE;
 	return result;
 }
@@ -2692,27 +2692,27 @@ mono_assembly_load_corlib (void)
 		if (assemblies_path) { // Custom assemblies path set via MONO_PATH or mono_set_assemblies_path
 			char *corlib_name = g_strdup_printf ("%s.dll", MONO_ASSEMBLY_CORLIB_NAME);
 			corlib = load_in_path (corlib_name, (const char**)assemblies_path, &req, &status);
-			g_free (corlib_name);
+			g_free_vb (corlib_name);
 		}
 	}
 	if (!corlib) {
 		/* Maybe its in a bundle */
 		char *corlib_name = g_strdup_printf ("%s.dll", MONO_ASSEMBLY_CORLIB_NAME);
 		corlib = mono_assembly_request_open (corlib_name, &req, &status);
-		g_free (corlib_name);
+		g_free_vb (corlib_name);
 	}
 #ifdef ENABLE_WEBCIL
 	if (!corlib) {
 		/* Maybe its in a bundle */
 		char *corlib_name = g_strdup_printf ("%s.webcil", MONO_ASSEMBLY_CORLIB_NAME);
 		corlib = mono_assembly_request_open (corlib_name, &req, &status);
-		g_free (corlib_name);
+		g_free_vb (corlib_name);
 	}
 	if (!corlib) {
 		/* Maybe its in a bundle */
 		char *corlib_name = g_strdup_printf ("%s%s", MONO_ASSEMBLY_CORLIB_NAME, MONO_WEBCIL_IN_WASM_EXTENSION);
 		corlib = mono_assembly_request_open (corlib_name, &req, &status);
-		g_free (corlib_name);
+		g_free_vb (corlib_name);
 	}
 #endif
 	g_assert (corlib);
@@ -2754,10 +2754,10 @@ mono_assembly_candidate_predicate_sn_same_name (MonoAssembly *candidate, gpointe
 	if (mono_trace_is_traced (G_LOG_LEVEL_INFO, MONO_TRACE_ASSEMBLY)) {
 		char * s = mono_stringify_assembly_name (wanted_name);
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "Predicate: wanted = %s", s);
-		g_free (s);
+		g_free_vb (s);
 		s = mono_stringify_assembly_name (candidate_name);
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "Predicate: candidate = %s", s);
-		g_free (s);
+		g_free_vb (s);
 	}
 
 	return mono_assembly_check_name_match (wanted_name, candidate_name);
@@ -2965,7 +2965,7 @@ mono_assembly_close_except_image_pools (MonoAssembly *assembly)
 	g_slist_foreach (assembly->ignores_checks_assembly_names, free_assembly_name_item, NULL);
 	g_slist_free (assembly->friend_assembly_names);
 	g_slist_free (assembly->ignores_checks_assembly_names);
-	g_free (assembly->basedir);
+	g_free_vb (assembly->basedir);
 
 	MONO_PROFILER_RAISE (assembly_unloaded, (assembly));
 
@@ -2981,9 +2981,9 @@ mono_assembly_close_finish (MonoAssembly *assembly)
 		mono_image_close_finish (assembly->image);
 
 	if (assembly_is_dynamic (assembly)) {
-		g_free ((char*)assembly->aname.culture);
+		g_free_vb ((char*)assembly->aname.culture);
 	} else {
-		g_free (assembly);
+		g_free_vb (assembly);
 	}
 }
 
@@ -3166,7 +3166,7 @@ mono_create_new_bundled_satellite_assembly (const char *name, const char *cultur
 static void
 mono_free_bundled_satellite_assembly_func (void *resource, void *free_data)
 {
-	g_free (free_data);
+	g_free_vb (free_data);
 }
 
 /**

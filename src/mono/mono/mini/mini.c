@@ -100,7 +100,7 @@ static MonoBackend *current_backend;
 gpointer
 mono_realloc_native_code (MonoCompile *cfg)
 {
-	return g_realloc (cfg->native_code, cfg->code_size);
+	return g_realloc_vb (cfg->native_code, cfg->code_size);
 }
 
 typedef struct {
@@ -645,8 +645,8 @@ mono_compile_create_var_for_vreg (MonoCompile *cfg, MonoType *type, int opcode, 
 	if ((num + 1) >= cfg->varinfo_count) {
 		int orig_count = cfg->varinfo_count;
 		cfg->varinfo_count = cfg->varinfo_count ? (cfg->varinfo_count * 2) : 32;
-		cfg->varinfo = (MonoInst **)g_realloc (cfg->varinfo, sizeof (MonoInst*) * cfg->varinfo_count);
-		cfg->vars = (MonoMethodVar *)g_realloc (cfg->vars, sizeof (MonoMethodVar) * cfg->varinfo_count);
+		cfg->varinfo = (MonoInst **)g_realloc_vb (cfg->varinfo, sizeof (MonoInst*) * cfg->varinfo_count);
+		cfg->vars = (MonoMethodVar *)g_realloc_vb (cfg->vars, sizeof (MonoMethodVar) * cfg->varinfo_count);
 		memset (&cfg->vars [orig_count], 0, (cfg->varinfo_count - orig_count) * sizeof (MonoMethodVar));
 	}
 
@@ -1581,8 +1581,8 @@ mini_register_opcode_emulation (int opcode, MonoJitICallInfo *info, const char *
 	if (emul_opcode_num >= emul_opcode_alloced) {
 		short incr = emul_opcode_alloced? emul_opcode_alloced/2: 16;
 		emul_opcode_alloced += incr;
-		emul_opcode_map = (MonoJitICallInfo **)g_realloc (emul_opcode_map, sizeof (emul_opcode_map [0]) * emul_opcode_alloced);
-		emul_opcode_opcodes = (short *)g_realloc (emul_opcode_opcodes, sizeof (emul_opcode_opcodes [0]) * emul_opcode_alloced);
+		emul_opcode_map = (MonoJitICallInfo **)g_realloc_vb (emul_opcode_map, sizeof (emul_opcode_map [0]) * emul_opcode_alloced);
+		emul_opcode_opcodes = (short *)g_realloc_vb (emul_opcode_opcodes, sizeof (emul_opcode_opcodes [0]) * emul_opcode_alloced);
 	}
 	emul_opcode_map [emul_opcode_num] = info;
 	emul_opcode_opcodes [emul_opcode_num] = GINT_TO_OPCODE (opcode);
@@ -1600,7 +1600,7 @@ print_dfn (MonoCompile *cfg)
 	{
 		char *method_name = mono_method_full_name (cfg->method, TRUE);
 		g_print ("IR code for method %s\n", method_name);
-		g_free (method_name);
+		g_free_vb (method_name);
 	}
 
 	for (guint i = 0; i < cfg->num_bblocks; ++i) {
@@ -1615,8 +1615,8 @@ print_dfn (MonoCompile *cfg)
 
 			code1 [strlen (code1) - 1] = 0;
 			code = g_strdup_printf ("%s -> %s", code1, code2);
-			g_free (code1);
-			g_free (code2);
+			g_free_vb (code1);
+			g_free_vb (code2);
 		} else*/
 			code = g_strdup ("\n");
 		g_print ("\nBB%d (%d) (len: %d): %s", bb->block_num, i, bb->cil_length, code);
@@ -1641,7 +1641,7 @@ print_dfn (MonoCompile *cfg)
 			mono_blockset_print (cfg, bb->dominators, "\tdominators", bb->idom? bb->idom->dfn: -1);
 		if (bb->dfrontier)
 			mono_blockset_print (cfg, bb->dfrontier, "\tdfrontier", -1);
-		g_free (code);
+		g_free_vb (code);
 	}
 
 	g_print ("\n");
@@ -1762,10 +1762,10 @@ mono_empty_compile (MonoCompile *cfg)
 		cfg->mempool = NULL;
 	}
 
-	g_free (cfg->varinfo);
+	g_free_vb (cfg->varinfo);
 	cfg->varinfo = NULL;
 
-	g_free (cfg->vars);
+	g_free_vb (cfg->vars);
 	cfg->vars = NULL;
 
 	if (cfg->rs) {
@@ -1789,14 +1789,14 @@ mono_destroy_compile (MonoCompile *cfg)
 
 	mono_debug_free_method (cfg);
 
-	g_free (cfg->asm_symbol);
-	g_free (cfg->asm_debug_symbol);
-	g_free (cfg->llvm_method_name);
+	g_free_vb (cfg->asm_symbol);
+	g_free_vb (cfg->asm_debug_symbol);
+	g_free_vb (cfg->llvm_method_name);
 
-	g_free (cfg->varinfo);
-	g_free (cfg->vars);
-	g_free (cfg->exception_message);
-	g_free (cfg);
+	g_free_vb (cfg->varinfo);
+	g_free_vb (cfg->vars);
+	g_free_vb (cfg->exception_message);
+	g_free_vb (cfg);
 }
 
 void
@@ -2143,7 +2143,7 @@ mono_codegen (MonoCompile *cfg)
 
 	g_assert (code);
 	memcpy (code, cfg->native_code, cfg->code_len);
-	g_free (cfg->native_code);
+	g_free_vb (cfg->native_code);
 	cfg->native_code = code;
 	code = cfg->native_code + cfg->code_len;
 
@@ -2154,7 +2154,7 @@ mono_codegen (MonoCompile *cfg)
 	if (valgrind_register){
 		char* nm = mono_method_full_name (cfg->method, TRUE);
 		VALGRIND_JIT_REGISTER_MAP (nm, cfg->native_code, cfg->native_code + cfg->code_len);
-		g_free (nm);
+		g_free_vb (nm);
 	}
 #endif
 
@@ -2163,7 +2163,7 @@ mono_codegen (MonoCompile *cfg)
 		g_print ("Method %s emitted at %p to %p (code length %d)\n",
 				 nm,
 				 cfg->native_code, cfg->native_code + cfg->code_len, cfg->code_len);
-		g_free (nm);
+		g_free_vb (nm);
 	}
 
 	{
@@ -2369,7 +2369,7 @@ create_jit_info (MonoCompile *cfg, MonoMethod *method_to_compile)
 	}
 
 	if (cfg->method->dynamic)
-		jinfo = (MonoJitInfo *)g_malloc0 (mono_jit_info_size (flags, num_clauses, num_holes));
+		jinfo = (MonoJitInfo *)g_malloc0_vb (mono_jit_info_size (flags, num_clauses, num_holes));
 	else
 		jinfo = mini_alloc_jinfo (cfg->jit_mm, mono_jit_info_size (flags, num_clauses, num_holes));
 	jinfo_try_holes_size += num_holes * sizeof (MonoTryBlockHoleJitInfo);
@@ -2420,7 +2420,7 @@ create_jit_info (MonoCompile *cfg, MonoMethod *method_to_compile)
 
 			gi->nlocs = g_slist_length (loclist);
 			if (cfg->method->dynamic)
-				gi->locations = (MonoDwarfLocListEntry *)g_malloc0 (gi->nlocs * sizeof (MonoDwarfLocListEntry));
+				gi->locations = (MonoDwarfLocListEntry *)g_malloc0_vb (gi->nlocs * sizeof (MonoDwarfLocListEntry));
 			else
 				gi->locations = (MonoDwarfLocListEntry *)mono_mem_manager_alloc0 (cfg->mem_manager, gi->nlocs * sizeof (MonoDwarfLocListEntry));
 			i = 0;
@@ -2628,7 +2628,7 @@ create_jit_info (MonoCompile *cfg, MonoMethod *method_to_compile)
 	if (cfg->encoded_unwind_ops) {
 		/* Generated by LLVM */
 		jinfo->unwind_info = mono_cache_unwind_info (cfg->encoded_unwind_ops, cfg->encoded_unwind_ops_len);
-		g_free (cfg->encoded_unwind_ops);
+		g_free_vb (cfg->encoded_unwind_ops);
 	} else if (cfg->unwind_ops) {
 		guint32 info_len;
 		guint8 *unwind_info = mono_unwind_ops_encode (cfg->unwind_ops, &info_len);
@@ -2644,7 +2644,7 @@ create_jit_info (MonoCompile *cfg, MonoMethod *method_to_compile)
 			info->epilog_size = cfg->code_len - cfg->epilog_begin;
 		}
 		jinfo->unwind_info = unwind_desc;
-		g_free (unwind_info);
+		g_free_vb (unwind_info);
 	} else {
 		jinfo->unwind_info = (guint32)cfg->used_int_regs;
 	}
@@ -3365,7 +3365,7 @@ mini_method_compile (MonoMethod *method, guint32 opts, JitFlags flags, int parts
 					//g_free (nm);
 				}
 				if (cfg->llvm_only) {
-					g_free (cfg->exception_message);
+					g_free_vb (cfg->exception_message);
 					cfg->disable_aot = TRUE;
 					return cfg;
 				}
@@ -3475,7 +3475,7 @@ mini_method_compile (MonoMethod *method, guint32 opts, JitFlags flags, int parts
 		else
 			g_print ("converting method %s\n", method_name = mono_method_full_name (method, TRUE));
 		*/
-		g_free (method_name);
+		g_free_vb (method_name);
 	}
 
 	if (cfg->opt & MONO_OPT_ABCREM)
@@ -3952,7 +3952,7 @@ mini_method_compile (MonoMethod *method, guint32 opts, JitFlags flags, int parts
 			g_print ("LLVM Method %s emitted at %p to %p (code length %d)\n",
 					 nm,
 					 cfg->native_code, cfg->native_code + cfg->code_len, cfg->code_len);
-			g_free (nm);
+			g_free_vb (nm);
 		}
 #endif
 	} else {
@@ -3986,7 +3986,7 @@ mini_method_compile (MonoMethod *method, guint32 opts, JitFlags flags, int parts
 		g_print ("\n*** ASM for %s ***\n", id);
 		mono_disassemble_code (cfg, cfg->native_code, cfg->code_len, id + 3);
 		g_print ("***\n\n");
-		g_free (id);
+		g_free_vb (id);
 	}
 
 	if (!cfg->compile_aot && !(flags & JIT_FLAG_DISCARD_RESULTS)) {
@@ -4022,14 +4022,14 @@ mini_method_compile (MonoMethod *method, guint32 opts, JitFlags flags, int parts
 			mono_atomic_store_i32 (&mono_jit_stats.biggest_method_size, code_size_ratio);
 			char *biggest_method = g_strdup_printf ("%s::%s)", m_class_get_name (method->klass), method->name);
 			biggest_method = (char*)mono_atomic_xchg_ptr ((gpointer*)&mono_jit_stats.biggest_method, biggest_method);
-			g_free (biggest_method);
+			g_free_vb (biggest_method);
 		}
 		code_size_ratio = (code_size_ratio * 100) / header->code_size;
 		if (code_size_ratio > mono_atomic_load_i32 (&mono_jit_stats.max_code_size_ratio)) {
 			mono_atomic_store_i32 (&mono_jit_stats.max_code_size_ratio, code_size_ratio);
 			char *max_ratio_method = g_strdup_printf ("%s::%s)", m_class_get_name (method->klass), method->name);
 			max_ratio_method = (char*)mono_atomic_xchg_ptr ((gpointer*)&mono_jit_stats.max_ratio_method, max_ratio_method);
-			g_free (max_ratio_method);
+			g_free_vb (max_ratio_method);
 		}
 	}
 
@@ -4486,7 +4486,7 @@ mini_realloc_code_slow (MonoCompile *cfg, int size)
 	if (cfg->code_len + size > (cfg->code_size - EXTRA_CODE_SPACE)) {
 		while (cfg->code_len + size > (cfg->code_size - EXTRA_CODE_SPACE))
 			cfg->code_size = cfg->code_size * 2 + EXTRA_CODE_SPACE;
-		cfg->native_code = g_realloc (cfg->native_code, cfg->code_size);
+		cfg->native_code = g_realloc_vb (cfg->native_code, cfg->code_size);
 		cfg->stat_code_reallocs++;
 	}
 	return cfg->native_code + cfg->code_len;

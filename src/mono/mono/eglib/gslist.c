@@ -39,7 +39,7 @@ g_slist_alloc (void)
 void
 g_slist_free_1 (GSList *list)
 {
-	g_free (list);
+	g_free_vb (list);
 }
 
 GSList*

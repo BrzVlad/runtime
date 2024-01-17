@@ -1064,7 +1064,7 @@ get_call_info (MonoMemPool *mp, MonoMethodSignature *sig)
 	if (mp)
 		cinfo = (CallInfo *) mono_mempool_alloc0 (mp, sizeof (CallInfo) + sizeof (ArgInfo) * nParm);
 	else
-		cinfo = (CallInfo *) g_malloc0 (sizeof (CallInfo) + sizeof (ArgInfo) * nParm);
+		cinfo = (CallInfo *) g_malloc0_vb (sizeof (CallInfo) + sizeof (ArgInfo) * nParm);
 
 	fr                = 0;
 	gr                = s390_r2;
@@ -5606,7 +5606,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 	if (method->save_lmf)
 		cfg->code_size += 200;
 
-	cfg->native_code = code = (guint8 *) g_malloc (cfg->code_size);
+	cfg->native_code = code = (guint8 *) g_malloc_vb (cfg->code_size);
 
 	/**
 	 * Create unwind information
@@ -6524,7 +6524,7 @@ get_delegate_invoke_impl (MonoTrampInfo **info, gboolean has_target, MonoMethodS
 		}
 		s390_br (code, s390_r1);
 
-		g_free (cinfo);
+		g_free_vb (cinfo);
 
 		g_assert ((code - start) <= size);
 
@@ -6537,7 +6537,7 @@ get_delegate_invoke_impl (MonoTrampInfo **info, gboolean has_target, MonoMethodS
 	} else {
 		char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", sig->param_count);
 		*info = mono_tramp_info_create (name, start, code - start, NULL, NULL);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	return start;
@@ -6632,7 +6632,7 @@ mono_arch_get_delegate_invoke_impl (MonoMethodSignature *sig, gboolean has_targe
 		if (mono_ee_features.use_aot_trampolines) {
 			char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", sig->param_count);
 			start = (guint8 *) mono_aot_get_trampoline (name);
-			g_free (name);
+			g_free_vb (name);
 		} else {
 			MonoTrampInfo *info;
 			start = get_delegate_invoke_impl (&info, FALSE, sig, FALSE);
@@ -7102,7 +7102,7 @@ mono_arch_get_seq_point_info (guint8 *code)
 		g_assert (ji);
 
 		// FIXME: Optimize the size
-		info = (SeqPointInfo *)g_malloc0 (sizeof (SeqPointInfo) + (ji->code_size * sizeof (gpointer)));
+		info = (SeqPointInfo *)g_malloc0_vb (sizeof (SeqPointInfo) + (ji->code_size * sizeof (gpointer)));
 
 		info->ss_tramp_addr = &ss_trampoline;
 
@@ -7215,8 +7215,8 @@ mono_arch_tailcall_supported (MonoCompile *cfg, MonoMethodSignature *caller_sig,
 		}
 	}
 
-	g_free (caller_info);
-	g_free (callee_info);
+	g_free_vb (caller_info);
+	g_free_vb (callee_info);
 
 	return(res);
 }

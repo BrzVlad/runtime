@@ -143,7 +143,7 @@ static char *get_string (char **in)
 		p++;
 	}
 	size_t len = p - start;
-	char *ret = (char *)g_malloc (len + 1);
+	char *ret = (char *)g_malloc_vb (len + 1);
 	memcpy (ret, start, len);
 	ret [len] = 0;
 	*in = p;
@@ -303,7 +303,7 @@ static int get_spec (char **in, MonoCallSpec *spec, char **errstr)
 	token = TOKEN_SEPARATOR;
 out:
 	if (extra != NULL) {
-		g_free (extra);
+		g_free_vb (extra);
 	}
 	return token;
 }
@@ -343,7 +343,7 @@ mono_callspec_parse (const char *options, MonoCallSpec *spec, char **errstr)
 
 void mono_callspec_cleanup (MonoCallSpec *spec)
 {
-	g_free (spec->ops);
+	g_free_vb (spec->ops);
 	memset (spec, 0, sizeof (*spec));
 }
 

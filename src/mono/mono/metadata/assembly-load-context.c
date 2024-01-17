@@ -206,7 +206,7 @@ mono_alc_cleanup (MonoAssemblyLoadContext *alc)
 	alc->pinvoke_scopes = NULL;
 	mono_coop_mutex_destroy (&alc->pinvoke_lock);
 
-	g_free (alc->name);
+	g_free_vb (alc->name);
 	alc->name = NULL;
 
 	// TODO: alc unloaded profiler event
@@ -216,7 +216,7 @@ static void
 mono_alc_free (MonoAssemblyLoadContext *alc)
 {
 	mono_alc_cleanup (alc);
-	g_free (alc);
+	g_free_vb (alc);
 }
 
 void
@@ -370,7 +370,7 @@ mono_alc_load_file (MonoAssemblyLoadContext *alc, MonoStringHandle fname, MonoAs
 	}
 
 leave:
-	g_free (filename);
+	g_free_vb (filename);
 	HANDLE_FUNCTION_RETURN_VAL (ass);
 }
 
@@ -500,7 +500,7 @@ invoke_resolve_method (MonoMethod *resolve_method, MonoAssemblyLoadContext *alc,
 		result = MONO_HANDLE_GETVAL (assm, assembly);
 
 leave:
-	g_free (aname_str);
+	g_free_vb (aname_str);
 	HANDLE_FUNCTION_RETURN_VAL (result);
 }
 

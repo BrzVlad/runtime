@@ -89,7 +89,7 @@ find_method_slow (MonoClass *klass, const char *name, const char *qname, const c
 		      MonoMethodSignature *sig, gboolean ignore_cmods, MonoError *error)
 {
 	gpointer iter = NULL;
-	MethodLookupResultInfo *result = (MethodLookupResultInfo *)g_malloc0 (sizeof (MethodLookupResultInfo));
+	MethodLookupResultInfo *result = (MethodLookupResultInfo *)g_malloc0_vb (sizeof (MethodLookupResultInfo));
 	int i = -1;
 	MonoMethod *m = NULL;
 	gboolean matched = FALSE;
@@ -185,7 +185,7 @@ find_method_in_class_unsafe_accessor (MonoClass *klass, const char *name, const 
 		return result->m;
 	}
 
-	g_free (result);
+	g_free_vb (result);
 	return NULL;
 }
 

@@ -1545,13 +1545,13 @@ mini_get_gsharedvt_in_sig_wrapper (MonoMethodSignature *sig)
 	res = (MonoMethod*)g_hash_table_lookup (cache, sig);
 	gshared_unlock ();
 	if (res) {
-		g_free (sig);
+		g_free_vb (sig);
 		return res;
 	}
 
 	/* Create the signature for the wrapper */
 	// FIXME:
-	csig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 1) * sizeof (MonoType*)));
+	csig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 1) * sizeof (MonoType*)));
 	memcpy (csig, sig, mono_metadata_signature_size (sig));
 	csig->param_count ++;
 	csig->params [sig->param_count] = mono_get_int_type ();
@@ -1561,7 +1561,7 @@ mini_get_gsharedvt_in_sig_wrapper (MonoMethodSignature *sig)
 	param_names [sig->param_count] = g_strdup ("ftndesc");
 
 	/* Create the signature for the gsharedvt callconv */
-	gsharedvt_sig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
+	gsharedvt_sig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
 	memcpy (gsharedvt_sig, sig, mono_metadata_signature_size (sig));
 	pindex = 0;
 	/* The return value is returned using an explicit vret argument */
@@ -1620,8 +1620,8 @@ mini_get_gsharedvt_in_sig_wrapper (MonoMethodSignature *sig)
 
 	res = mono_mb_create (mb, csig, sig->param_count + 16, info);
 	for (int i = 0; i < sig->param_count + 1; ++i)
-		g_free (param_names [i]);
-	g_free (param_names);
+		g_free_vb (param_names [i]);
+	g_free_vb (param_names);
 
 	gshared_lock ();
 	cached = (MonoMethod*)g_hash_table_lookup (cache, sig);
@@ -1659,13 +1659,13 @@ mini_get_gsharedvt_out_sig_wrapper (MonoMethodSignature *sig)
 	res = (MonoMethod*)g_hash_table_lookup (cache, sig);
 	gshared_unlock ();
 	if (res) {
-		g_free (sig);
+		g_free_vb (sig);
 		return res;
 	}
 
 	/* Create the signature for the wrapper */
 	// FIXME:
-	csig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
+	csig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
 	memcpy (csig, sig, mono_metadata_signature_size (sig));
 	pindex = 0;
 	char ** const param_names = g_new0 (char*, sig->param_count + 2);
@@ -1695,7 +1695,7 @@ mini_get_gsharedvt_out_sig_wrapper (MonoMethodSignature *sig)
 	csig->param_count = pindex;
 
 	/* Create the signature for the normal callconv */
-	normal_sig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
+	normal_sig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
 	memcpy (normal_sig, sig, mono_metadata_signature_size (sig));
 	normal_sig->param_count ++;
 	normal_sig->params [sig->param_count] = mono_get_int_type ();
@@ -1755,8 +1755,8 @@ mini_get_gsharedvt_out_sig_wrapper (MonoMethodSignature *sig)
 
 	res = mono_mb_create (mb, csig, sig->param_count + 16, info);
 	for (int i = 0; i < sig->param_count + 1; ++i)
-		g_free (param_names [i]);
-	g_free (param_names);
+		g_free_vb (param_names [i]);
+	g_free_vb (param_names);
 
 	gshared_lock ();
 	cached = (MonoMethod*)g_hash_table_lookup (cache, sig);
@@ -1810,7 +1810,7 @@ mini_get_interp_in_wrapper (MonoMethodSignature *sig)
 	res = (MonoMethod*)g_hash_table_lookup (cache, sig);
 	gshared_unlock ();
 	if (res) {
-		g_free (sig);
+		g_free_vb (sig);
 		return res;
 	}
 
@@ -1829,7 +1829,7 @@ mini_get_interp_in_wrapper (MonoMethodSignature *sig)
 #endif
 
 	/* Create the signature for the wrapper */
-	csig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + (sig->param_count * sizeof (MonoType*)));
+	csig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + (sig->param_count * sizeof (MonoType*)));
 	memcpy (csig, sig, mono_metadata_signature_size (sig));
 
 	for (i = 0; i < sig->param_count; i++) {
@@ -1844,7 +1844,7 @@ mini_get_interp_in_wrapper (MonoMethodSignature *sig)
 		 * The called function has the following signature:
 		 * interp_entry_general (gpointer this_arg, gpointer res, gpointer *args, gpointer rmethod)
 		 */
-		entry_sig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + (4 * sizeof (MonoType*)));
+		entry_sig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + (4 * sizeof (MonoType*)));
 		entry_sig->ret = mono_get_void_type ();
 		entry_sig->param_count = 4;
 		entry_sig->params [0] = int_type;
@@ -1858,7 +1858,7 @@ mini_get_interp_in_wrapper (MonoMethodSignature *sig)
 		 * The called function has the following signature:
 		 * void entry(<optional this ptr>, <optional return ptr>, <arguments>, <extra arg>)
 		 */
-		entry_sig = g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
+		entry_sig = g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + ((sig->param_count + 2) * sizeof (MonoType*)));
 		memcpy (entry_sig, sig, mono_metadata_signature_size (sig));
 		pindex = 0;
 		/* The return value is returned using an explicit vret argument */
@@ -2054,7 +2054,7 @@ mini_get_interp_lmf_wrapper (const char *name, gpointer target)
 	gshared_unlock ();
 	mono_mb_free (mb);
 
-	g_free (wrapper_name);
+	g_free_vb (wrapper_name);
 
 	return res;
 }
@@ -2062,7 +2062,7 @@ mini_get_interp_lmf_wrapper (const char *name, gpointer target)
 MonoMethodSignature*
 mini_get_gsharedvt_out_sig_wrapper_signature (gboolean has_this, gboolean has_ret, int param_count)
 {
-	MonoMethodSignature *sig = g_malloc0 (sizeof (MonoMethodSignature) + ((param_count + 3) * sizeof (MonoType*)));
+	MonoMethodSignature *sig = g_malloc0_vb (sizeof (MonoMethodSignature) + ((param_count + 3) * sizeof (MonoType*)));
 	guint16 pindex;
 	int i;
 	MonoType *int_type = mono_get_int_type ();
@@ -2631,7 +2631,7 @@ instantiate_info (MonoMemoryManager *mem_manager, MonoRuntimeGenericContextInfoT
 		int i, offset, align, size;
 
 		// FIXME:
-		res = (MonoGSharedVtMethodRuntimeInfo *)g_malloc0 (sizeof (MonoGSharedVtMethodRuntimeInfo) + (info->num_entries * sizeof (gpointer)));
+		res = (MonoGSharedVtMethodRuntimeInfo *)g_malloc0_vb (sizeof (MonoGSharedVtMethodRuntimeInfo) + (info->num_entries * sizeof (gpointer)));
 
 		offset = 0;
 		for (i = 0; i < info->num_entries; ++i) {
@@ -4235,7 +4235,7 @@ get_shared_gparam_name (MonoTypeEnum constraint, const char *name)
 		for (size_t i = 0; i < len; ++i)
 			tname [i] = GINT_TO_CHAR (toupper (tname [i]));
 		res = g_strdup_printf ("%s_%s", name, tname);
-		g_free (tname);
+		g_free_vb (tname);
 		return res;
 	}
 }
@@ -4311,7 +4311,7 @@ mini_get_shared_gparam (MonoType *t, MonoType *constraint)
 	constraint = mono_metadata_type_dup (NULL, constraint);
 	name = get_shared_gparam_name (constraint->type, ((MonoGenericParamFull*)copy)->info.name);
 	copy->param.info.name = mono_mem_manager_strdup (mm, name);
-	g_free (name);
+	g_free_vb (name);
 
 	copy->param.owner = par->owner;
 	g_assert (!par->owner->is_anonymous);
@@ -4408,7 +4408,7 @@ get_shared_inst (MonoGenericInst *inst, MonoGenericInst *shared_inst, MonoGeneri
 	}
 
 	res = mono_metadata_get_generic_inst (inst->type_argc, type_argv);
-	g_free (type_argv);
+	g_free_vb (type_argv);
 	return res;
 }
 
@@ -4545,7 +4545,7 @@ mini_get_rgctx_entry_slot (MonoJumpInfoRgctxEntry *entry)
 		break;
 	case MONO_PATCH_INFO_GSHAREDVT_CALL: {
 		// FIXME:
-		MonoJumpInfoGSharedVtCall *call_info = (MonoJumpInfoGSharedVtCall *)g_malloc0 (sizeof (MonoJumpInfoGSharedVtCall));
+		MonoJumpInfoGSharedVtCall *call_info = (MonoJumpInfoGSharedVtCall *)g_malloc0_vb (sizeof (MonoJumpInfoGSharedVtCall));
 
 		memcpy (call_info, entry->data->data.gsharedvt, sizeof (MonoJumpInfoGSharedVtCall));
 		entry_data = call_info;
@@ -4557,10 +4557,10 @@ mini_get_rgctx_entry_slot (MonoJumpInfoRgctxEntry *entry)
 		int i;
 
 		// FIXME:
-		info = (MonoGSharedVtMethodInfo *)g_malloc0 (sizeof (MonoGSharedVtMethodInfo));
+		info = (MonoGSharedVtMethodInfo *)g_malloc0_vb (sizeof (MonoGSharedVtMethodInfo));
 		info->method = oinfo->method;
 		info->num_entries = oinfo->num_entries;
-		info->entries = (MonoRuntimeGenericContextInfoTemplate *)g_malloc0 (sizeof (MonoRuntimeGenericContextInfoTemplate) * info->num_entries);
+		info->entries = (MonoRuntimeGenericContextInfoTemplate *)g_malloc0_vb (sizeof (MonoRuntimeGenericContextInfoTemplate) * info->num_entries);
 		for (i = 0; i < oinfo->num_entries; ++i) {
 			MonoRuntimeGenericContextInfoTemplate *otemplate = &oinfo->entries [i];
 			MonoRuntimeGenericContextInfoTemplate *template_ = &info->entries [i];
@@ -4574,7 +4574,7 @@ mini_get_rgctx_entry_slot (MonoJumpInfoRgctxEntry *entry)
 		MonoJumpInfoVirtMethod *info;
 		MonoJumpInfoVirtMethod *oinfo = entry->data->data.virt_method;
 
-		info = (MonoJumpInfoVirtMethod *)g_malloc0 (sizeof (MonoJumpInfoVirtMethod));
+		info = (MonoJumpInfoVirtMethod *)g_malloc0_vb (sizeof (MonoJumpInfoVirtMethod));
 		memcpy (info, oinfo, sizeof (MonoJumpInfoVirtMethod));
 		entry_data = info;
 		break;
@@ -4583,7 +4583,7 @@ mini_get_rgctx_entry_slot (MonoJumpInfoRgctxEntry *entry)
 		MonoDelegateClassMethodPair *info;
 		MonoDelegateClassMethodPair *oinfo = entry->data->data.del_tramp;
 
-		info = (MonoDelegateClassMethodPair *)g_malloc0 (sizeof (MonoDelegateClassMethodPair));
+		info = (MonoDelegateClassMethodPair *)g_malloc0_vb (sizeof (MonoDelegateClassMethodPair));
 		memcpy (info, oinfo, sizeof (MonoDelegateClassMethodPair));
 		entry_data = info;
 		break;
@@ -4607,11 +4607,11 @@ mini_get_rgctx_entry_slot (MonoJumpInfoRgctxEntry *entry)
 		case MONO_PATCH_INFO_GSHAREDVT_CALL:
 		case MONO_PATCH_INFO_VIRT_METHOD:
 		case MONO_PATCH_INFO_DELEGATE_INFO:
-			g_free (entry_data);
+			g_free_vb (entry_data);
 			break;
 		case MONO_PATCH_INFO_GSHAREDVT_METHOD: {
-			g_free (((MonoGSharedVtMethodInfo *) entry_data)->entries);
-			g_free (entry_data);
+			g_free_vb (((MonoGSharedVtMethodInfo *) entry_data)->entries);
+			g_free_vb (entry_data);
 			break;
 		}
 		default :

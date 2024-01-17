@@ -265,9 +265,9 @@ rehash (MonoWeakHashTable *hash)
 	}
 
 	if (!(hash->gc_type & MONO_HASH_KEY_GC))
-		g_free (old_keys);
+		g_free_vb (old_keys);
 	if (!(hash->gc_type & MONO_HASH_VALUE_GC))
-		g_free (old_values);
+		g_free_vb (old_values);
 }
 
 /**
@@ -311,10 +311,10 @@ mono_weak_hash_table_destroy (MonoWeakHashTable *hash)
 	g_assert (hash);
 
 	if (!(hash->gc_type & MONO_HASH_KEY_GC))
-		g_free (hash->keys);
+		g_free_vb (hash->keys);
 	if (!(hash->gc_type & MONO_HASH_VALUE_GC))
-		g_free (hash->values);
-	g_free (hash);
+		g_free_vb (hash->values);
+	g_free_vb (hash);
 }
 
 static void

@@ -1909,7 +1909,7 @@ emit_array_address_ilgen (MonoMethodBuilder *mb, int rank, int elem_size)
 	/* throw exception */
 	mono_mb_emit_exception (mb, "IndexOutOfRangeException", NULL);
 
-	g_free (branch_positions);
+	g_free_vb (branch_positions);
 }
 
 static void
@@ -2777,7 +2777,7 @@ emit_managed_wrapper_ilgen (MonoMethodBuilder *mb, MonoMethodSignature *invoke_s
 
 	if (!emit_managed_wrapper_validate_signature (sig, mspecs, error)) {
 		if (closed)
-			g_free (sig);
+			g_free_vb (sig);
 		return;
 	}
 
@@ -3011,7 +3011,7 @@ emit_managed_wrapper_ilgen (MonoMethodBuilder *mb, MonoMethodSignature *invoke_s
 	}
 
 	if (closed)
-		g_free (sig);
+		g_free_vb (sig);
 }
 
 static void
@@ -3336,7 +3336,7 @@ emit_native_icall_wrapper_ilgen (MonoMethodBuilder *mb, MonoMethod *method, Mono
 			}
 		}
 	}
-	g_free (handles_locals);
+	g_free_vb (handles_locals);
 
 	if (need_gc_safe)
 		gc_safe_transition_builder_cleanup (&gc_safe_transition_builder);

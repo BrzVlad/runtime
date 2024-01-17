@@ -48,7 +48,7 @@ new_base_ilgen (MonoClass *klass, MonoWrapperType type, gboolean dynamic)
 	m->wrapper_type = type;
 
 	mb->code_size = 40;
-	mb->code = (unsigned char *)g_malloc (mb->code_size);
+	mb->code = (unsigned char *)g_malloc_vb (mb->code_size);
 	mb->init_locals = TRUE;
 	mb->dynamic = dynamic;
 
@@ -71,22 +71,22 @@ free_ilgen (MonoMethodBuilder *mb)
 
 	for (GList *l = mb->locals_list; l; l = l->next) {
 		/* Allocated in mono_mb_add_local () */
-		g_free (l->data);
+		g_free_vb (l->data);
 	}
 	g_list_free (mb->locals_list);
 	if (!mb->dynamic)
-		g_free (mb->method);
+		g_free_vb (mb->method);
 	if (!mb->no_dup_name)
-		g_free (mb->name);
-	g_free (mb->code);
-	g_free (mb);
+		g_free_vb (mb->name);
+	g_free_vb (mb->code);
+	g_free_vb (mb);
 }
 
 static gpointer
 mb_alloc0 (MonoMethodBuilder *mb, int size)
 {
 	if (mb->dynamic)
-		return g_malloc0 (size);
+		return g_malloc0_vb (size);
 	else if (mb->mem_manager)
 		return mono_mem_manager_alloc0 (mb->mem_manager, size);
 	else
@@ -144,7 +144,7 @@ create_method_ilgen (MonoMethodBuilder *mb, MonoMethodSignature *signature, int 
 			size_t size = mono_sizeof_type (type);
 			header->locals [i] = mono_mem_manager_alloc0 (mb->mem_manager, (guint)size);
 			memcpy (header->locals [i], type, size);
-			g_free (type);
+			g_free_vb (type);
 		} else {
 			header->locals [i] = type;
 		}
@@ -332,7 +332,7 @@ mono_mb_emit_byte (MonoMethodBuilder *mb, guint8 op)
 {
 	if (mb->pos >= mb->code_size) {
 		mb->code_size += mb->code_size >> 1;
-		mb->code = (unsigned char *)g_realloc (mb->code, mb->code_size);
+		mb->code = (unsigned char *)g_realloc_vb (mb->code, mb->code_size);
 	}
 
 	mb->code [mb->pos++] = op;
@@ -361,7 +361,7 @@ mono_mb_emit_i4 (MonoMethodBuilder *mb, gint32 data)
 {
 	if ((mb->pos + 4) >= mb->code_size) {
 		mb->code_size += mb->code_size >> 1;
-		mb->code = (unsigned char *)g_realloc (mb->code, mb->code_size);
+		mb->code = (unsigned char *)g_realloc_vb (mb->code, mb->code_size);
 	}
 
 	mono_mb_patch_addr (mb, mb->pos, data);
@@ -373,7 +373,7 @@ mono_mb_emit_i8 (MonoMethodBuilder *mb, gint64 data)
 {
 	if ((mb->pos + 8) >= mb->code_size) {
 		mb->code_size += mb->code_size >> 1;
-		mb->code = (unsigned char *)g_realloc (mb->code, mb->code_size);
+		mb->code = (unsigned char *)g_realloc_vb (mb->code, mb->code_size);
 	}
 
 	mono_mb_patch_addr (mb, mb->pos, GINT64_TO_INT (data));
@@ -389,7 +389,7 @@ mono_mb_emit_i2 (MonoMethodBuilder *mb, gint16 data)
 {
 	if ((mb->pos + 2) >= mb->code_size) {
 		mb->code_size += mb->code_size >> 1;
-		mb->code = (unsigned char *)g_realloc (mb->code, mb->code_size);
+		mb->code = (unsigned char *)g_realloc_vb (mb->code, mb->code_size);
 	}
 
 	mb->code [mb->pos] = data & 0xff;

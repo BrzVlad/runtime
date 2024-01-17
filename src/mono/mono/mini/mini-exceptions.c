@@ -631,7 +631,7 @@ mono_find_jit_info (MonoJitTlsData *jit_tls, MonoJitInfo *res, MonoJitInfo *prev
 		if (trace) {
 			char *fname = mono_method_full_name (jinfo_get_method (res), TRUE);
 			*trace = g_strdup_printf ("in (unmanaged) %s", fname);
-			g_free (fname);
+			g_free_vb (fname);
 		}
 	}
 
@@ -744,7 +744,7 @@ mono_find_jit_info_ext (MonoJitTlsData *jit_tls,
 		if (trace && frame->method) {
 			char *fname = mono_method_full_name (frame->method, TRUE);
 			*trace = g_strdup_printf ("in (unmanaged) %s", fname);
-			g_free (fname);
+			g_free_vb (fname);
 		}
 	}
 
@@ -1135,7 +1135,7 @@ mono_get_trace (MonoException *exc, gint32 skip, MonoBoolean need_file_info)
 			sf->method = NULL;
 			s = mono_method_get_name_full (method, TRUE, FALSE, MONO_TYPE_NAME_FORMAT_REFLECTION);
 			MonoString *name = mono_string_new_checked (s, error);
-			g_free (s);
+			g_free_vb (s);
 			if (!is_ok (error))
 				goto fail;
 			MONO_OBJECT_SETREF_INTERNAL (sf, internal_method_name, name);
@@ -1635,12 +1635,12 @@ wrap_non_exception_throws (MonoMethod *m)
 			if (named_type != 0x54)
 				continue;
 			name_len = mono_metadata_decode_blob_size (p, &p);
-			name = (char *)g_malloc (name_len + 1);
+			name = (char *)g_malloc_vb (name_len + 1);
 			memcpy (name, p, name_len);
 			name [name_len] = 0;
 			p += name_len;
 			g_assert (!strcmp (name, "WrapNonExceptionThrows"));
-			g_free (name);
+			g_free_vb (name);
 			/* The value is a BOOLEAN */
 			val = *p;
 		}
@@ -1983,7 +1983,7 @@ handle_exception_first_pass (MonoContext *ctx, MonoObject *obj, gint32 *out_filt
 					if (enable_trace) {
 						char *name = mono_method_get_full_name (method);
 						g_print ("[%p:] EXCEPTION running filter clause %d in '%s'.\n", (void*)(gsize)mono_native_thread_id_get (), i, name);
-						g_free (name);
+						g_free_vb (name);
 					}
 
 					if (frame.type == FRAME_TYPE_IL_STATE) {
@@ -2151,26 +2151,26 @@ mono_handle_exception_internal (MonoContext *ctx, MonoObject *obj, gboolean resu
 			char *to_name = mono_type_get_full_name (jit_tls->class_cast_to);
 			char *msg = g_strdup_printf ("Unable to cast object of type '%s' to type '%s'.", from_name, to_name);
 			mono_ex->message = mono_string_new_checked (msg, error);
-			g_free (from_name);
-			g_free (to_name);
+			g_free_vb (from_name);
+			g_free_vb (to_name);
 			if (!is_ok (error)) {
 				mono_runtime_printf_err ("Error creating class cast exception message '%s'\n", msg);
 				mono_error_assert_ok (error);
 			}
-			g_free (msg);
+			g_free_vb (msg);
 		}
 		if (!strcmp (m_class_get_name (mono_ex->object.vtable->klass), "ArrayTypeMismatchException")) {
 			char *from_name = mono_type_get_full_name (jit_tls->class_cast_from);
 			char *to_name = mono_type_get_full_name (jit_tls->class_cast_to);
 			char *msg = g_strdup_printf ("Source array of type '%s' cannot be cast to destination array type '%s'.", from_name, to_name);
 			mono_ex->message = mono_string_new_checked (msg, error);
-			g_free (from_name);
-			g_free (to_name);
+			g_free_vb (from_name);
+			g_free_vb (to_name);
 			if (!is_ok (error)) {
 				mono_runtime_printf_err ("Error creating array type mismatch exception message '%s'\n", msg);
 				mono_error_assert_ok (error);
 			}
-			g_free (msg);
+			g_free_vb (msg);
 		}
 	}
 
@@ -2222,7 +2222,7 @@ mono_handle_exception_internal (MonoContext *ctx, MonoObject *obj, gboolean resu
 				}
 			}
 			g_print ("[%p:] EXCEPTION handling: %s.%s: %s\n", (void*)(gsize)mono_native_thread_id_get (), m_class_get_name_space (mono_object_class (obj)), m_class_get_name (mono_object_class (obj)), msg);
-			g_free (msg);
+			g_free_vb (msg);
 			if (mono_ex && mono_trace_eval_exception (mono_object_class (mono_ex))) {
 				enable_trace = TRUE;
 				mono_print_thread_dump_from_ctx (ctx);
@@ -2839,7 +2839,7 @@ print_overflow_stack_frame (StackFrameInfo *frame, MonoContext *ctx, gpointer da
 
 		location = mono_debug_print_stack_frame (method, frame->native_offset, NULL);
 		mono_runtime_printf_err ("  %s", location);
-		g_free (location);
+		g_free_vb (location);
 
 		if (user_data->count == 1) {
 			mono_runtime_printf_err ("  <...>");
@@ -2902,7 +2902,7 @@ print_stack_frame_to_string (StackFrameInfo *frame, MonoContext *ctx, gpointer d
 	if (method) {
 		gchar *location = mono_debug_print_stack_frame (method, frame->native_offset, NULL);
 		g_string_append_printf (p, "  %s\n", location);
-		g_free (location);
+		g_free_vb (location);
 	} else
 		g_string_append_printf (p, "  at <unknown> <0x%05x>\n", frame->native_offset);
 
