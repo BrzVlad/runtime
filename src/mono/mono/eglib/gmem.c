@@ -30,35 +30,50 @@
 #include <string.h>
 #include <glib.h>
 #include <eglib-remap.h> // Remove the cast macros and restore the rename macros.
+#include <malloc.h>
 #undef malloc
 #undef realloc
 #undef free
 #undef calloc
 
-#if defined (ENABLE_OVERRIDABLE_ALLOCATORS)
+size_t total_malloc_memory = 0;
+size_t total_alloced_memory = 0;
+size_t total_freed_memory = 0;
 
-static GMemVTable sGMemVTable = { malloc, realloc, free, calloc };
+size_t verbose_malloc_memory = 0;
 
-void
-g_mem_set_vtable (GMemVTable* vtable)
+typedef struct {
+	const char *filename;
+	gint64 balance;
+} MallocEntry;
+
+MallocEntry malloc_entries [2048];
+int num_malloc_entries = 0;
+
+static int comparer (const void *a, const void *b)
 {
-	sGMemVTable.calloc = vtable->calloc ? vtable->calloc : calloc;
-	sGMemVTable.realloc = vtable->realloc ? vtable->realloc : realloc;
-	sGMemVTable.malloc = vtable->malloc ? vtable->malloc : malloc;
-	sGMemVTable.free = vtable->free ? vtable->free : free;
+	MallocEntry *m1 = (MallocEntry*)a;
+	MallocEntry *m2 = (MallocEntry*)b;
+
+	if (m1->balance > m2->balance)
+		return 1;
+	else if (m1->balance == m2->balance)
+		return 0;
+	else
+		return -1;
 }
 
-void
-g_mem_get_vtable (GMemVTable* vtable)
+void print_malloc_entries (void)
 {
-	*vtable = sGMemVTable;
-}
+	qsort (malloc_entries, num_malloc_entries, sizeof (MallocEntry), comparer);
+	gint64 total_balance = 0;
+	for (int i = 0; i < num_malloc_entries; i++) {
+		fprintf (stderr, "Entry %d, name %s, balance %ld\n", i, malloc_entries [i].filename, malloc_entries [i].balance);
+		total_balance += malloc_entries [i].balance;
+	}
 
-#define G_FREE_INTERNAL sGMemVTable.free
-#define G_REALLOC_INTERNAL sGMemVTable.realloc
-#define G_CALLOC_INTERNAL sGMemVTable.calloc
-#define G_MALLOC_INTERNAL sGMemVTable.malloc
-#else
+	fprintf (stderr, "Total balance %ld\n", total_balance);
+}
 
 void
 g_mem_get_vtable (GMemVTable* vtable)
@@ -71,14 +86,64 @@ g_mem_set_vtable (GMemVTable* vtable)
 {
 }
 
-#define G_FREE_INTERNAL free
-#define G_REALLOC_INTERNAL realloc
-#define G_CALLOC_INTERNAL calloc
-#define G_MALLOC_INTERNAL malloc
-#endif
+static void report_balance (const char *name, int balance)
+{
+	for (int i = 0; i < num_malloc_entries; i++) {
+		if (strcmp (name, malloc_entries [i].filename) == 0) {
+			malloc_entries [i].balance += balance;
+			return;
+		}
+	}
+	malloc_entries [num_malloc_entries].filename = name;
+	malloc_entries [num_malloc_entries].balance = balance;
+	num_malloc_entries++;
+}
+
+#define G_FREE_INTERNAL(_ptr) do {	\
+		size_t usable_size = malloc_usable_size (_ptr);	\
+		report_balance (filename, -usable_size);	\
+		__sync_fetch_and_sub (&verbose_malloc_memory, usable_size); \
+		free (_ptr);		\
+	} while (0)
+#define G_REALLOC_INTERNAL(_obj,_size,_ret) do {	\
+		size_t usable_size = malloc_usable_size (_obj);	\
+		report_balance (filename, -usable_size);	\
+		__sync_fetch_and_sub (&verbose_malloc_memory, usable_size); \
+		_ret = realloc (_obj, _size);		\
+		usable_size = malloc_usable_size (_ret);	\
+		report_balance (filename, usable_size);	\
+		__sync_fetch_and_add (&verbose_malloc_memory, usable_size); \
+	} while (0)
+#define G_CALLOC_INTERNAL(_n,_s,_ret) do {	\
+		_ret = calloc (_n, _s);		\
+		size_t usable_size = malloc_usable_size (_ret);	\
+		report_balance (filename, usable_size);	\
+		__sync_fetch_and_add (&verbose_malloc_memory, usable_size); \
+	} while (0)
+#define G_MALLOC_INTERNAL(_size,_ret) do {	\
+		_ret = malloc (_size);		\
+		size_t usable_size = malloc_usable_size (_ret);	\
+		report_balance (filename, usable_size);	\
+		__sync_fetch_and_add (&verbose_malloc_memory, usable_size); \
+	} while (0)
+
 void
 g_free (void *ptr)
 {
+	const char *filename = "gmem.c:free";
+	__sync_fetch_and_sub (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_freed_memory, malloc_usable_size (ptr));
+
+	if (ptr != NULL)
+		G_FREE_INTERNAL (ptr);
+}
+
+void
+g_free_verbose (void *ptr, const char *filename)
+{
+	__sync_fetch_and_sub (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_freed_memory, malloc_usable_size (ptr));
+
 	if (ptr != NULL)
 		G_FREE_INTERNAL (ptr);
 }
@@ -91,7 +156,7 @@ g_memdup (gconstpointer mem, guint byte_size)
 	if (mem == NULL)
 		return NULL;
 
-	ptr = g_malloc (byte_size);
+	ptr = g_malloc_verbose (byte_size, "gmem.c:memdup");
 	if (ptr != NULL)
 		memcpy (ptr, mem, byte_size);
 
@@ -101,11 +166,35 @@ g_memdup (gconstpointer mem, guint byte_size)
 gpointer g_realloc (gpointer obj, gsize size)
 {
 	gpointer ptr;
+	const char *filename = "gmem.c:realloc";
+
 	if (!size) {
 		g_free (obj);
 		return 0;
 	}
-	ptr = G_REALLOC_INTERNAL (obj, size);
+	__sync_fetch_and_sub (&total_malloc_memory, malloc_usable_size (obj));
+	__sync_fetch_and_add (&total_freed_memory, malloc_usable_size (obj));
+	G_REALLOC_INTERNAL (obj, size, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
+	if (ptr)
+		return ptr;
+	g_error ("Could not allocate %i bytes", size);
+}
+
+gpointer g_realloc_verbose (gpointer obj, gsize size, const char *filename)
+{
+	gpointer ptr;
+
+	if (!size) {
+		g_free (obj);
+		return 0;
+	}
+	__sync_fetch_and_sub (&total_malloc_memory, malloc_usable_size (obj));
+	__sync_fetch_and_add (&total_freed_memory, malloc_usable_size (obj));
+	G_REALLOC_INTERNAL (obj, size, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
 	if (ptr)
 		return ptr;
 	g_error ("Could not allocate %i bytes", size);
@@ -114,43 +203,112 @@ gpointer g_realloc (gpointer obj, gsize size)
 gpointer
 g_malloc (gsize x)
 {
+	const char *filename = "gmem.c:malloc";
 	gpointer ptr;
 	if (!x)
 		return 0;
-	ptr = G_MALLOC_INTERNAL (x);
+	G_MALLOC_INTERNAL (x, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
 	if (ptr)
 		return ptr;
 	g_error ("Could not allocate %i bytes", x);
 }
 
-gpointer g_calloc (gsize n, gsize x)
+gpointer
+g_malloc_verbose (gsize x, const char *filename)
 {
 	gpointer ptr;
+	if (!x)
+		return 0;
+	G_MALLOC_INTERNAL (x, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
+	if (ptr)
+		return ptr;
+	g_error ("Could not allocate %i bytes", x);
+
+	return ptr;
+}
+
+gpointer
+g_calloc (gsize n, gsize x)
+{
+	gpointer ptr;
+	const char *filename = "gmem.c:calloc";
 	if (!x || !n)
 		return 0;
-	ptr = G_CALLOC_INTERNAL (n, x);
+	G_CALLOC_INTERNAL (n, x, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
 	if (ptr)
 		return ptr;
 	g_error ("Could not allocate %i (%i * %i) bytes", x*n, n, x);
 }
+
+gpointer
+g_calloc_verbose (gsize n, gsize x, const char *filename)
+{
+	gpointer ptr;
+	if (!x || !n)
+		return 0;
+	G_CALLOC_INTERNAL (n, x, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
+	if (ptr)
+		return ptr;
+	g_error ("Could not allocate %i (%i * %i) bytes", x*n, n, x);
+}
+
 gpointer g_malloc0 (gsize x)
 {
 	return g_calloc (1,x);
 }
 
+gpointer g_malloc0_verbose (gsize x, const char *filename)
+{
+	return g_calloc_verbose (1, x, filename);
+}
+
 gpointer g_try_malloc (gsize x)
 {
-	if (x)
-		return G_MALLOC_INTERNAL (x);
+	if (x) {
+		const char *filename = "gmem.c:try_malloc";
+		gpointer ptr;
+		G_MALLOC_INTERNAL (x, ptr);
+		__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+		__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
+		return ptr;
+	}
 	return 0;
 }
 
+gpointer g_try_malloc_verbose (gsize x, const char *filename)
+{
+	if (x) {
+		gpointer ptr;
+		G_MALLOC_INTERNAL (x, ptr);
+		__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+		__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
+		return ptr;
+	}
+	return 0;
+}
 
 gpointer g_try_realloc (gpointer obj, gsize size)
 {
+	const char *filename = "gmem.c:try_realloc";
 	if (!size) {
+		__sync_fetch_and_sub (&total_malloc_memory, malloc_usable_size (obj));
+		__sync_fetch_and_add (&total_freed_memory, malloc_usable_size (obj));
 		G_FREE_INTERNAL (obj);
 		return 0;
 	}
-	return G_REALLOC_INTERNAL (obj, size);
+	gpointer ptr;
+	__sync_fetch_and_sub (&total_malloc_memory, malloc_usable_size (obj));
+	__sync_fetch_and_add (&total_freed_memory, malloc_usable_size (obj));
+	G_REALLOC_INTERNAL (obj, size, ptr);
+	__sync_fetch_and_add (&total_malloc_memory, malloc_usable_size (ptr));
+	__sync_fetch_and_add (&total_alloced_memory, malloc_usable_size (ptr));
+	return ptr;
 }
