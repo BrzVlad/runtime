@@ -244,7 +244,7 @@ mono_get_method_from_ip_u (void *ip)
 		if (user_data.method) {
 			char *mname = mono_method_full_name (user_data.method, TRUE);
 			res = g_strdup_printf ("<%p - JIT trampoline for %s>", ip, mname);
-			g_free (mname);
+			g_free_vb (mname);
 			return res;
 		}
 		else
@@ -267,8 +267,8 @@ mono_get_method_from_ip_u (void *ip)
 	res = g_strdup_printf (" %s [{%p} + 0x%x%s] %s (%p %p) [%p - %s]", method_name, method, (int)((char*)ip - (char*)ji->code_start), in_interp, file_loc ? file_loc : "", ji->code_start, (char*)ji->code_start + ji->code_size, domain, domain->friendly_name);
 
 	mono_debug_free_source_location (location);
-	g_free (method_name);
-	g_free (file_loc);
+	g_free_vb (method_name);
+	g_free_vb (file_loc);
 
 	return res;
 }
@@ -343,7 +343,7 @@ mono_print_method_from_ip (void *ip)
 		if (user_data.method) {
 			char *mname = mono_method_full_name (user_data.method, TRUE);
 			printf ("IP %p is a JIT trampoline for %s\n", ip, mname);
-			g_free (mname);
+			g_free_vb (mname);
 			return;
 		}
 
@@ -370,7 +370,7 @@ mono_print_method_from_ip (void *ip)
 	fflush (stdout);
 
 	mono_debug_free_source_location (source);
-	g_free (method);
+	g_free_vb (method);
 }
 
 /*
@@ -486,13 +486,13 @@ mono_tramp_info_create (const char *name, guint8 *code, guint32 code_size, MonoJ
 void
 mono_tramp_info_free (MonoTrampInfo *info)
 {
-	g_free (info->name);
+	g_free_vb (info->name);
 
 	// FIXME: ji
 	mono_free_unwind_info (info->unwind_ops);
 	if (info->owns_uw_info)
-		g_free (info->uw_info);
-	g_free (info);
+		g_free_vb (info->uw_info);
+	g_free_vb (info);
 }
 
 static void
@@ -543,7 +543,7 @@ mono_tramp_info_register_internal (MonoTrampInfo *info, MonoMemoryManager *mem_m
 			guint8 *temp = copy->uw_info;
 			copy->uw_info = mono_mem_manager_alloc (mem_manager, copy->uw_info_len);
 			memcpy (copy->uw_info, temp, copy->uw_info_len);
-			g_free (temp);
+			g_free_vb (temp);
 		}
 	} else {
 		/* Trampolines from aot have the unwind ops already encoded */
@@ -620,7 +620,7 @@ mono_debug_count (void)
 		char *value = g_getenv ("COUNT");
 		if (value) {
 			int_val = atoi (value);
-			g_free (value);
+			g_free_vb (value);
 			has_value = TRUE;
 		}
 		inited = TRUE;
@@ -912,7 +912,7 @@ mono_thread_abort (MonoObject *obj)
 	/* MonoJitTlsData *jit_tls = mono_tls_get_jit_tls (); */
 
 	/* handle_remove should be eventually called for this thread, too
-	g_free (jit_tls);*/
+	g_free_vb (jit_tls);*/
 
 	if ((obj->vtable->klass == mono_defaults.threadabortexception_class) ||
 			((obj->vtable->klass) == mono_class_try_get_appdomain_unloaded_exception_class () &&
@@ -969,8 +969,8 @@ free_jit_tls_data (MonoJitTlsData *jit_tls)
 	if (jit_tls->interp_context)
 		mini_get_interp_callbacks ()->free_context (jit_tls->interp_context);
 
-	g_free (jit_tls->first_lmf);
-	g_free (jit_tls);
+	g_free_vb (jit_tls->first_lmf);
+	g_free_vb (jit_tls);
 }
 
 static void
@@ -1093,7 +1093,7 @@ mono_print_ji (const MonoJumpInfo *ji)
 	case MONO_PATCH_INFO_LLVMONLY_INTERP_ENTRY: {
 		char *s = mono_method_get_full_name (ji->data.method);
 		printf ("[%s %s]", type, s);
-		g_free (s);
+		g_free_vb (s);
 		break;
 	}
 	case MONO_PATCH_INFO_JIT_ICALL_ID:
@@ -1103,7 +1103,7 @@ mono_print_ji (const MonoJumpInfo *ji)
 	case MONO_PATCH_INFO_VTABLE: {
 		char *name = mono_class_full_name (ji->data.klass);
 		printf ("[%s %s]", type, name);
-		g_free (name);
+		g_free_vb (name);
 		break;
 	}
 	default:
@@ -2007,7 +2007,7 @@ mono_emit_jit_map (MonoJitInfo *jinfo)
 	if (perf_map_file) {
 		char *name = mono_method_full_name (jinfo_get_method (jinfo), TRUE);
 		mono_emit_jit_tramp (jinfo->code_start, jinfo->code_size, name);
-		g_free (name);
+		g_free_vb (name);
 	}
 }
 
@@ -2370,7 +2370,7 @@ unref_jit_entry (JitCompilationEntry *entry)
 		return;
 	if (entry->has_cond)
 		mono_coop_cond_destroy (&entry->cond);
-	g_free (entry);
+	g_free_vb (entry);
 }
 
 /*
@@ -2503,7 +2503,7 @@ create_jit_info_for_trampoline (MonoMethod *wrapper, MonoTrampInfo *info)
 	jinfo->unwind_info = mono_cache_unwind_info (uw_info, info_len);
 
 	if (!info->uw_info)
-		g_free (uw_info);
+		g_free_vb (uw_info);
 
 	return jinfo;
 }
@@ -2630,7 +2630,7 @@ compile_special (MonoMethod *method, MonoError *error)
 
 		full_name = mono_method_full_name (method, TRUE);
 		mono_error_set_invalid_program (error, "Unrecognizable runtime implemented method '%s'", full_name);
-		g_free (full_name);
+		g_free_vb (full_name);
 		return NULL;
 	}
 
@@ -2814,14 +2814,14 @@ lookup_start:
 		if (mono_class_is_open_constructed_type (m_class_get_byval_arg (method->klass))) {
 			char *full_name = mono_type_get_full_name (method->klass);
 			mono_error_set_invalid_operation (error, "Could not execute the method because the containing type '%s', is not fully instantiated.", full_name);
-			g_free (full_name);
+			g_free_vb (full_name);
 			return NULL;
 		}
 
 		if (mono_aot_only) {
 			char *fullname = mono_method_get_full_name (method);
 			mono_error_set_execution_engine (error, "Attempting to JIT compile method '%s' while running in aot-only mode. See https://docs.microsoft.com/xamarin/ios/internals/limitations for more information.\n", fullname);
-			g_free (fullname);
+			g_free_vb (fullname);
 
 			return NULL;
 		}
@@ -3072,7 +3072,7 @@ mono_jit_free_method (MonoMethod *method)
 		char *type = mono_type_full_name (m_class_get_byval_arg (method->klass));
 		char *type_and_method = g_strdup_printf ("%s.%s", type, method->name);
 
-		g_free (type);
+		g_free_vb (type);
 		mono_arch_invalidate_method (ji->ji, (gpointer)invalidated_delegate_trampoline, (gpointer)type_and_method);
 		destroy = FALSE;
 	}
@@ -3087,7 +3087,7 @@ mono_jit_free_method (MonoMethod *method)
 
 	if (destroy)
 		mono_code_manager_destroy (ji->code_mp);
-	g_free (ji);
+	g_free_vb (ji);
 }
 
 gpointer
@@ -3178,7 +3178,7 @@ mono_get_optimizations_for_method (MonoMethod *method, guint32 opt)
 	if (bisect_methods_hash) {
 		char *name = mono_method_full_name (method, TRUE);
 		void *res = g_hash_table_lookup (bisect_methods_hash, name);
-		g_free (name);
+		g_free_vb (name);
 		if (res)
 			return opt | bisect_opt;
 	}
@@ -3330,12 +3330,12 @@ create_runtime_invoke_info (MonoMethod *method, gpointer compiled_method, gboole
 				MonoMethod *wrapper = mini_get_gsharedvt_out_sig_wrapper (sig);
 				MonoMethodSignature *wrapper_sig = mini_get_gsharedvt_out_sig_wrapper_signature (sig->hasthis, sig->ret->type != MONO_TYPE_VOID, sig->param_count);
 
-				info->wrapper_arg = g_malloc0 (2 * sizeof (gpointer));
+				info->wrapper_arg = g_malloc0_vb (2 * sizeof (gpointer));
 				info->wrapper_arg [0] = mini_llvmonly_add_method_wrappers (method, info->compiled_method, FALSE, FALSE, &(info->wrapper_arg [1]));
 
 				/* Pass has_rgctx == TRUE since the wrapper has an extra arg */
 				invoke = mono_marshal_get_runtime_invoke_for_sig (wrapper_sig);
-				g_free (wrapper_sig);
+				g_free_vb (wrapper_sig);
 
 				info->compiled_method = mono_jit_compile_method (wrapper, error);
 				if (!is_ok (error))
@@ -3348,7 +3348,7 @@ create_runtime_invoke_info (MonoMethod *method, gpointer compiled_method, gboole
 				info->wrapper_arg = (gpointer*)(mono_method_needs_static_rgctx_invoke (method, TRUE) ? mini_method_get_rgctx (method) : NULL);
 
 				invoke = mono_marshal_get_runtime_invoke_for_sig (wrapper_sig);
-				g_free (wrapper_sig);
+				g_free_vb (wrapper_sig);
 			}
 		}
 		info->runtime_invoke = mono_jit_compile_method (invoke, error);
@@ -3359,7 +3359,7 @@ create_runtime_invoke_info (MonoMethod *method, gpointer compiled_method, gboole
 	ret = info;
 	info = NULL;
 exit:
-	g_free (info);
+	g_free_vb (info);
 	return ret;
 }
 
@@ -3560,7 +3560,7 @@ mono_jit_runtime_invoke (MonoMethod *method, void *obj, void **params, MonoObjec
 		info2 = (RuntimeInvokeInfo *)mono_conc_hashtable_insert (jit_mm->runtime_invoke_hash, method, info);
 		jit_mm_unlock (jit_mm);
 		if (info2) {
-			g_free (info);
+			g_free_vb (info);
 			info = info2;
 		}
 	}
@@ -3988,7 +3988,7 @@ mini_get_vtable_trampoline (MonoVTable *vt, int slot_index)
 
 			if (vtable_trampolines)
 				memcpy (new_table, vtable_trampolines, vtable_trampolines_size * sizeof (gpointer));
-			g_free (vtable_trampolines);
+			g_free_vb (vtable_trampolines);
 			mono_memory_barrier ();
 			vtable_trampolines = (void **)new_table;
 			vtable_trampolines_size = new_size;
@@ -4141,7 +4141,7 @@ mono_get_delegate_virtual_invoke_impl (MonoMethodSignature *sig, MonoMethod *met
 			new_cache = g_new0 (guint8*, new_cache_size);
 			if (cache)
 				memcpy (new_cache, cache, cache_size * sizeof (guint8*));
-			g_free (cache);
+			g_free_vb (cache);
 
 			mono_memory_barrier ();
 			cache = new_cache;
@@ -4269,7 +4269,7 @@ mini_parse_debug_options (void)
 		return;
 
 	args = g_strsplit (options, ",", -1);
-	g_free (options);
+	g_free_vb (options);
 
 	for (ptr = args; ptr && *ptr; ptr++) {
 		const char *arg = *ptr;
@@ -4409,7 +4409,7 @@ dynamic_method_info_free (gpointer key, gpointer value, gpointer user_data)
 {
 	MonoJitDynamicMethodInfo *di = (MonoJitDynamicMethodInfo *)value;
 	mono_code_manager_destroy (di->code_mp);
-	g_free (di);
+	g_free_vb (di);
 }
 
 static void
@@ -4421,7 +4421,7 @@ runtime_invoke_info_free (gpointer value)
 	if (info->dyn_call_info)
 		mono_arch_dyn_call_free (info->dyn_call_info);
 #endif
-	g_free (info);
+	g_free_vb (info);
 }
 
 static void
@@ -4476,7 +4476,7 @@ free_jit_mem_manager (MonoMemoryManager *mem_manager)
 		g_ptr_array_free (info->jit_infos, TRUE);
 	}
 
-	g_free (info);
+	g_free_vb (info);
 	mem_manager->runtime_info = NULL;
 }
 
@@ -4821,7 +4821,7 @@ mini_init (const char *filename)
 	if (g_hasenv ("MONO_PROFILE")) {
 		gchar *profile_env = g_getenv ("MONO_PROFILE");
 		mini_add_profiler_argument (profile_env);
-		g_free (profile_env);
+		g_free_vb (profile_env);
 	}
 
 	if (profile_options)
@@ -5248,9 +5248,9 @@ mono_runtime_print_stats (void)
 static void
 jit_stats_cleanup (void)
 {
-	g_free (mono_jit_stats.max_ratio_method);
+	g_free_vb (mono_jit_stats.max_ratio_method);
 	mono_jit_stats.max_ratio_method = NULL;
-	g_free (mono_jit_stats.biggest_method);
+	g_free_vb (mono_jit_stats.biggest_method);
 	mono_jit_stats.biggest_method = NULL;
 }
 
@@ -5359,7 +5359,7 @@ mono_precompile_assembly (MonoAssembly *ass, void *user_data)
 		if (mini_verbose > 1) {
 			char * desc = mono_method_full_name (method, TRUE);
 			g_print ("Compiling %d %s\n", count, desc);
-			g_free (desc);
+			g_free_vb (desc);
 		}
 		mono_compile_method_checked (method, error);
 		if (!is_ok (error)) {
@@ -5534,7 +5534,7 @@ mini_alloc_jinfo (MonoJitMemoryManager *jit_mm, int size)
 {
 	if (jit_mm->mem_manager->collectible) {
 		/* These are freed by mono_jit_info_table_remove () in an async way, so they have to be malloc-ed */
-		MonoJitInfo *ji = (MonoJitInfo*)g_malloc0 (size);
+		MonoJitInfo *ji = (MonoJitInfo*)g_malloc0_vb (size);
 		jit_mm_lock (jit_mm);
 		if (!jit_mm->jit_infos)
 			jit_mm->jit_infos = g_ptr_array_new ();

@@ -413,14 +413,14 @@ bundled_resources_chained_free_func (void *resource, void *free_data)
 	if (node && node->next)
 		bundled_resources_chained_free_func (resource, node->next);
 
-	g_free (free_data);
+	g_free_vb (free_data);
 }
 
 static void
 bundled_resources_free_func (void *resource, void *free_data)
 {
 	bundled_resources_chained_free_func (resource, free_data);
-	g_free (resource);
+	g_free_vb (resource);
 }
 
 static void

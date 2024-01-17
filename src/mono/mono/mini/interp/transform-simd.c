@@ -783,12 +783,12 @@ lookup_packedsimd_intrinsic (const char *name, MonoType *arg1)
 	// Ensure we have a sorted version of the intrinsics table
 	if (!sorted_packedsimd_intrinsic_infos) {
 		int buf_size = sizeof(unsorted_packedsimd_intrinsic_infos);
-		PackedSimdIntrinsicInfo *temp_sorted = g_malloc0 (buf_size);
+		PackedSimdIntrinsicInfo *temp_sorted = g_malloc0_vb (buf_size);
 		memcpy (temp_sorted, unsorted_packedsimd_intrinsic_infos, buf_size);
 		mono_qsort (temp_sorted, num_intrinsics, sizeof(PackedSimdIntrinsicInfo), compare_packedsimd_intrinsic_info);
 		mono_atomic_cas_ptr ((gpointer*)&sorted_packedsimd_intrinsic_infos, (gpointer)temp_sorted, NULL);
 		if (sorted_packedsimd_intrinsic_infos != temp_sorted)
-			g_free (temp_sorted);
+			g_free_vb (temp_sorted);
 	}
 
 	// Binary search by name to find a suitable starting location for our search

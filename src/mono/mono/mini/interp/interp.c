@@ -119,7 +119,7 @@ mono_interp_exec_method (InterpFrame *frame, ThreadContext *context, FrameClause
 static FrameDataFragment*
 frame_data_frag_new (int size)
 {
-	FrameDataFragment *frag = (FrameDataFragment*)g_malloc (size);
+	FrameDataFragment *frag = (FrameDataFragment*)g_malloc_vb (size);
 
 	frag->pos = (guint8*)&frag->data;
 	frag->end = (guint8*)frag + size;
@@ -132,7 +132,7 @@ frame_data_frag_free (FrameDataFragment *frag)
 {
 	while (frag) {
 		FrameDataFragment *next = frag->next;
-		g_free (frag);
+		g_free_vb (frag);
 		frag = next;
 	}
 }
@@ -145,7 +145,7 @@ frame_data_allocator_init (FrameDataAllocator *stack, int size)
 	frag = frame_data_frag_new (size);
 	stack->first = stack->current = frag;
 	stack->infos_capacity = 4;
-	stack->infos = (FrameDataInfo*)g_malloc (stack->infos_capacity * sizeof (FrameDataInfo));
+	stack->infos = (FrameDataInfo*)g_malloc_vb (stack->infos_capacity * sizeof (FrameDataInfo));
 }
 
 static void
@@ -184,7 +184,7 @@ frame_data_allocator_alloc (FrameDataAllocator *stack, InterpFrame *frame, int s
 		/* First allocation by this frame. Save the markers for restore */
 		if (infos_len == stack->infos_capacity) {
 			stack->infos_capacity = infos_len * 2;
-			stack->infos = (FrameDataInfo*)g_realloc (stack->infos, stack->infos_capacity * sizeof (FrameDataInfo));
+			stack->infos = (FrameDataInfo*)g_realloc_vb (stack->infos, stack->infos_capacity * sizeof (FrameDataInfo));
 		}
 		stack->infos [infos_len].frame = frame;
 		stack->infos [infos_len].frag = current;
@@ -320,9 +320,9 @@ debug_enter (InterpFrame *frame, int *tracing)
 		output_indent ();
 		mn = mono_method_full_name (method, FALSE);
 		g_print ("(%p) Entering %s (", mono_thread_internal_current (), mn);
-		g_free (mn);
+		g_free_vb (mn);
 		g_print  ("%s)\n", args);
-		g_free (args);
+		g_free_vb (args);
 	}
 }
 
@@ -333,9 +333,9 @@ debug_enter (InterpFrame *frame, int *tracing)
 		output_indent ();	\
 		mn = mono_method_full_name (frame->imethod->method, FALSE); \
 		g_print  ("(%p) Leaving %s", mono_thread_internal_current (),  mn);	\
-		g_free (mn); \
+		g_free_vb (mn); \
 		g_print  (" => %s\n", args);	\
-		g_free (args);	\
+		g_free_vb (args);	\
 		debug_indent_level--;	\
 		if (tracing == 3) global_tracing = 0; \
 	}
@@ -444,7 +444,7 @@ interp_free_context (gpointer ctx)
 	context->stack_start = NULL;
 	mono_compiler_barrier ();
 	frame_data_allocator_free (&context->data_stack);
-	g_free (context);
+	g_free_vb (context);
 }
 
 static gboolean
@@ -1542,14 +1542,14 @@ build_args_from_sig (InterpMethodArguments *margs, MonoMethodSignature *sig, Bui
 		if (margs->ilen <= 8)
 			margs->iargs = margs->iargs_buf;
 		else
-			margs->iargs = g_malloc0 (sizeof (gpointer) * margs->ilen);
+			margs->iargs = g_malloc0_vb (sizeof (gpointer) * margs->ilen);
 	}
 
 	if (margs->flen > 0) {
 		if (margs->flen <= 8)
 			margs->fargs = margs->fargs_buf;
 		else
-			margs->fargs = g_malloc0 (sizeof (double) * margs->flen);
+			margs->fargs = g_malloc0_vb (sizeof (double) * margs->flen);
 	}
 
 	for (int i = 0; i < sig->param_count; i++) {
@@ -1833,7 +1833,7 @@ ves_pinvoke_method (
 		mono_arch_get_native_call_context_ret (&ccontext, &frame, sig, call_info);
 	}
 
-	g_free (ccontext.stack);
+	g_free_vb (ccontext.stack);
 #else
 	// Only the vt address has been returned, we need to copy the entire content on interp stack
 	if (!context->has_resume_state && MONO_TYPE_ISSTRUCT (call_info->ret_mono_type)) {
@@ -1842,9 +1842,9 @@ ves_pinvoke_method (
 	}
 
 	if (margs.iargs != margs.iargs_buf)
-		g_free (margs.iargs);
+		g_free_vb (margs.iargs);
 	if (margs.fargs != margs.fargs_buf)
-		g_free (margs.fargs);
+		g_free_vb (margs.fargs);
 #endif
 	goto exit_pinvoke; // prevent unused label warning in some configurations
 exit_pinvoke:
@@ -2932,7 +2932,7 @@ do_transform_method (InterpMethod *imethod, InterpFrame *frame, ThreadContext *c
 	if (imethod->method) {
 		char* mn = mono_method_full_name (imethod->method, TRUE);
 		g_print ("(%p) Transforming %s\n", mono_thread_internal_current (), mn);
-		g_free (mn);
+		g_free_vb (mn);
 	}
 #endif
 
@@ -3445,8 +3445,8 @@ interp_create_method_pointer (MonoMethod *method, gboolean compile, MonoError *e
 		char *s = mono_method_get_full_name (orig_method);
 		char *msg = g_strdup_printf ("No native to managed transition for method '%s', missing [UnmanagedCallersOnly] attribute.", s);
 		mono_error_set_platform_not_supported (error, msg);
-		g_free (s);
-		g_free (msg);
+		g_free_vb (s);
+		g_free_vb (msg);
 		return NULL;
 	}
 #endif
@@ -3558,7 +3558,7 @@ static long opcode_counts[MINT_LASTOP];
 		output_indent (); \
 		char *mn = mono_method_full_name (frame->imethod->method, FALSE); \
 		g_print ("(%p) %s -> IL_%04x: %-10s\n", mono_thread_internal_current (), mn, (gint32)(ip - frame->imethod->code), mono_interp_opname (*ip)); \
-		g_free (mn); \
+		g_free_vb (mn); \
 	}
 #else
 #define DUMP_INSTR()
@@ -7463,7 +7463,7 @@ MINT_IN_CASE(MINT_BRTRUE_I8_SP) ZEROP_SP(gint64, !=); MINT_IN_BREAK;
 					mono_trace_enter_method (frame->imethod->method, frame->imethod->jinfo, prof_ctx);
 				if (flag & PROFILING_FLAG)
 					MONO_PROFILER_RAISE (method_enter, (frame->imethod->method, prof_ctx));
-				g_free (prof_ctx);
+				g_free_vb (prof_ctx);
 			} else if ((flag & PROFILING_FLAG) && MONO_PROFILER_ENABLED (method_enter)) {
 				MONO_PROFILER_RAISE (method_enter, (frame->imethod->method, NULL));
 			}
@@ -7495,7 +7495,7 @@ MINT_IN_CASE(MINT_BRTRUE_I8_SP) ZEROP_SP(gint64, !=); MINT_IN_BREAK;
 					mono_trace_leave_method (frame->imethod->method, frame->imethod->jinfo, prof_ctx);
 				if (flag & PROFILING_FLAG)
 					MONO_PROFILER_RAISE (method_leave, (frame->imethod->method, prof_ctx));
-				g_free (prof_ctx);
+				g_free_vb (prof_ctx);
 			} else if ((flag & PROFILING_FLAG) && MONO_PROFILER_ENABLED (method_enter)) {
 				MONO_PROFILER_RAISE (method_leave, (frame->imethod->method, NULL));
 			}
@@ -8771,7 +8771,7 @@ interp_jit_info_foreach (InterpJitInfoFunc func, gpointer user_data)
 			if (copy_jit_info_data.jit_info_array) {
 				for (int j = 0; j < copy_jit_info_data.next; ++j)
 					func (copy_jit_info_data.jit_info_array [j], user_data);
-				g_free (copy_jit_info_data.jit_info_array);
+				g_free_vb (copy_jit_info_data.jit_info_array);
 			}
 		}
 

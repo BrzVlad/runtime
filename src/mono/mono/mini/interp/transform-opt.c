@@ -539,7 +539,7 @@ dfs_visit (TransformData *td)
 	int dfs_index = 0;
 	int next_stack_index = 0;
 	td->bblocks = (InterpBasicBlock**)mono_mempool_alloc0 (td->opt_mempool, sizeof (InterpBasicBlock*) * td->bb_count);
-	InterpBasicBlock **stack = (InterpBasicBlock**)g_malloc0 (sizeof (InterpBasicBlock*) * td->bb_count);
+	InterpBasicBlock **stack = (InterpBasicBlock**)g_malloc0_vb (sizeof (InterpBasicBlock*) * td->bb_count);
 
 	g_assert (!td->entry_bb->in_count);
 	stack [next_stack_index++] = td->entry_bb;
@@ -564,7 +564,7 @@ dfs_visit (TransformData *td)
 		}
 	}
 
-	g_free (stack);
+	g_free_vb (stack);
 	return dfs_index;
 }
 
@@ -1143,7 +1143,7 @@ insert_phi_nodes (TransformData *td)
 			GSList *old_head = workset;
 			InterpBasicBlock *bb = (InterpBasicBlock*)workset->data;
 			workset = workset->next;
-			g_free (old_head);
+			g_free_vb (old_head);
 			g_assert (is_bblock_ssa_cfg (td, bb));
 			int j;
 			mono_bitset_foreach_bit (bb->dfrontier, j, td->bb_count) {
@@ -1373,14 +1373,14 @@ rename_vars_in_bb_end (TransformData *td, InterpBasicBlock *bb)
 				ext_index = td->renamed_fixed_vars [ext_index].renamable_var_ext_index;
 			GSList *prev_head = td->renamable_vars [ext_index].ssa_stack;
 			td->renamable_vars [ext_index].ssa_stack = prev_head->next;
-			g_free (prev_head);
+			g_free_vb (prev_head);
 		} else if (ins->opcode == MINT_DEAD_PHI) {
 			unsigned int ext_index;
 			mono_bitset_foreach_bit (ins->info.dead_phi_vars, ext_index, td->renamable_vars_size) {
 				if (td->renamable_vars [ext_index].ssa_fixed) {
 					GSList *prev_head = td->renamable_vars [ext_index].ssa_stack;
 					td->renamable_vars [ext_index].ssa_stack = prev_head->next;
-					g_free (prev_head);
+					g_free_vb (prev_head);
 				}
 			}
 			interp_clear_ins (ins);
@@ -1393,8 +1393,8 @@ static void
 rename_vars (TransformData *td)
 {
 	int next_stack_index = 0;
-	InterpBasicBlock **stack = (InterpBasicBlock**)g_malloc0 (sizeof (InterpBasicBlock*) * td->bblocks_count_no_eh);
-	gboolean *bb_status = (gboolean*)g_malloc0 (sizeof (InterpBasicBlock*) * td->bblocks_count_no_eh);
+	InterpBasicBlock **stack = (InterpBasicBlock**)g_malloc0_vb (sizeof (InterpBasicBlock*) * td->bblocks_count_no_eh);
+	gboolean *bb_status = (gboolean*)g_malloc0_vb (sizeof (InterpBasicBlock*) * td->bblocks_count_no_eh);
 
 	stack [next_stack_index++] = td->entry_bb;
 
@@ -1421,8 +1421,8 @@ rename_vars (TransformData *td)
 		}
 	}
 
-	g_free (stack);
-	g_free (bb_status);
+	g_free_vb (stack);
+	g_free_vb (bb_status);
 
 	if (td->verbose_level) {
 		g_print ("\nFIXED SSA VARS LIVENESS LIMIT:\n");
@@ -1752,7 +1752,7 @@ interp_link_bblocks (TransformData *td, InterpBasicBlock *from, InterpBasicBlock
 static void
 interp_mark_reachable_bblocks (TransformData *td)
 {
-	InterpBasicBlock **queue = g_malloc0 (td->bb_count * sizeof (InterpBasicBlock*));
+	InterpBasicBlock **queue = g_malloc0_vb (td->bb_count * sizeof (InterpBasicBlock*));
 	InterpBasicBlock *current;
 	int cur_index = 0;
 	int next_position = 0;
@@ -1796,7 +1796,7 @@ retry:
 			goto retry;
 	}
 
-	g_free (queue);
+	g_free_vb (queue);
 }
 
 /**
@@ -2799,7 +2799,7 @@ interp_cprop (TransformData *td)
 	// FIXME
 	// There is no need to zero, if we pay attention to phi args vars. They
 	// can be used before the definition.
-	td->var_values = (InterpVarValue*) g_malloc0 (td->vars_size * sizeof (InterpVarValue));
+	td->var_values = (InterpVarValue*) g_malloc0_vb (td->vars_size * sizeof (InterpVarValue));
 
 	// Traverse in dfs order. This guarantees that we always reach the definition first before the
 	// use of the var. Exception is only for phi nodes, where we don't care about the definition
@@ -3953,7 +3953,7 @@ optimization_retry:
 	if (td->opt_mempool != NULL)
 		mono_mempool_destroy (td->opt_mempool);
 	if (td->var_values != NULL) {
-		g_free (td->var_values);
+		g_free_vb (td->var_values);
 		td->var_values = NULL;
 	}
 	td->opt_mempool = mono_mempool_new ();

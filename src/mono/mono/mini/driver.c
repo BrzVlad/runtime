@@ -190,9 +190,9 @@ parse_optimizations (guint32 opt, const char* p, gboolean cpu_opts)
 			}
 		}
 
-		g_free (arg);
+		g_free_vb (arg);
 	}
-	g_free (parts);
+	g_free_vb (parts);
 
 	return opt;
 }
@@ -477,7 +477,7 @@ mini_regression_step (MonoImage *image, int verbose, int *total_run, int *total,
 	mono_set_defaults (verbose, opt_flags);
 	n = mono_opt_descr (opt_flags);
 	g_print ("Test run: image=%s, opts=%s\n", mono_image_get_filename (image), n);
-	g_free (n);
+	g_free_vb (n);
 	cfailed = failed = run = code_size = 0;
 	comp_time = elapsed = 0.0;
 	int local_skip_index = 0;
@@ -657,7 +657,7 @@ mini_regression (MonoImage *image, int verbose, int *total_run)
 
 			method_name = mono_method_full_name (mono_current_single_method, TRUE);
 			g_print ("Current single method: %s\n", method_name);
-			g_free (method_name);
+			g_free_vb (method_name);
 
 			mini_regression_step (image, verbose, total_run, &total,
 								  0, timer);
@@ -1006,7 +1006,7 @@ free_jit_info_data (ThreadData *td, JitInfoData *free)
 			JitInfoData *next = free->next->next;
 
 			//g_free (free->next->ji);
-			g_free (free->next);
+			g_free_vb (free->next);
 			free->next = next;
 
 			--td->num_frees;
@@ -1232,7 +1232,7 @@ compile_all_methods_thread_main_inner (CompileAllThreadArgs *args)
 		if (!sig) {
 			char * desc = mono_method_full_name (method, TRUE);
 			g_print ("Could not retrieve method signature for %s\n", desc);
-			g_free (desc);
+			g_free_vb (desc);
 			fail_count ++;
 			continue;
 		}
@@ -1244,7 +1244,7 @@ compile_all_methods_thread_main_inner (CompileAllThreadArgs *args)
 		if (verbose) {
 			char * desc = mono_method_full_name (method, TRUE);
 			g_print ("Compiling %d %s\n", count, desc);
-			g_free (desc);
+			g_free_vb (desc);
 		}
 		if (mono_use_interpreter) {
 			mini_get_interp_callbacks ()->create_method_pointer (method, TRUE, error);
@@ -1472,7 +1472,7 @@ load_agent (MonoDomain *domain, char *desc)
 	agent_assembly = mono_assembly_request_open (agent, &req, &open_status);
 	if (!agent_assembly) {
 		fprintf (stderr, "Cannot open agent assembly '%s': %s.\n", agent, mono_image_strerror (open_status));
-		g_free (agent);
+		g_free_vb (agent);
 		return 2;
 	}
 
@@ -1484,7 +1484,7 @@ load_agent (MonoDomain *domain, char *desc)
 	entry = mono_image_get_entry_point (image);
 	if (!entry) {
 		g_print ("Assembly '%s' doesn't have an entry point.\n", mono_image_get_filename (image));
-		g_free (agent);
+		g_free_vb (agent);
 		return 1;
 	}
 
@@ -1492,7 +1492,7 @@ load_agent (MonoDomain *domain, char *desc)
 	if (method == NULL){
 		g_print ("The entry point method of assembly '%s' could not be loaded due to %s\n", agent, mono_error_get_message (error));
 		mono_error_cleanup (error);
-		g_free (agent);
+		g_free_vb (agent);
 		return 1;
 	}
 
@@ -1511,7 +1511,7 @@ load_agent (MonoDomain *domain, char *desc)
 	if (!main_args) {
 		g_print ("Could not allocate array for main args of assembly '%s' due to %s\n", agent, mono_error_get_message (error));
 		mono_error_cleanup (error);
-		g_free (agent);
+		g_free_vb (agent);
 		return 1;
 	}
 
@@ -1522,11 +1522,11 @@ load_agent (MonoDomain *domain, char *desc)
 	if (!is_ok (error)) {
 		g_print ("The entry point method of assembly '%s' could not execute due to %s\n", agent, mono_error_get_message (error));
 		mono_error_cleanup (error);
-		g_free (agent);
+		g_free_vb (agent);
 		return 1;
 	}
 
-	g_free (agent);
+	g_free_vb (agent);
 	return 0;
 }
 
@@ -1808,7 +1808,7 @@ mono_jit_parse_options (int argc, char * argv[])
 		} else if (strncmp (argv [i], "--stats=", 8) == 0) {
 			enable_runtime_stats ();
 			if (mono_stats_method_desc)
-				g_free (mono_stats_method_desc);
+				g_free_vb (mono_stats_method_desc);
 			mono_stats_method_desc = parse_qualified_method_name (argv [i] + 8);
 		} else if (strcmp (argv [i], "--break") == 0) {
 			if (i+1 >= argc){
@@ -1858,7 +1858,7 @@ mono_jit_parse_options (int argc, char * argv[])
 		mono_set_verbose_level (mini_verbose_level);
 
 	/* Free the copy */
-	g_free (argv);
+	g_free_vb (argv);
 }
 
 static void
@@ -2053,7 +2053,7 @@ mono_main (int argc, char* argv[])
 			char *full_opts = g_strdup_printf ("-all,%s", argv [i] + 16);
 			action = DO_SINGLE_METHOD_REGRESSION;
 			mono_single_method_regression_opt = parse_optimizations (opt, full_opts, TRUE);
-			g_free (full_opts);
+			g_free_vb (full_opts);
 		} else if (strcmp (argv [i], "--verbose") == 0 || strcmp (argv [i], "-v") == 0) {
 			mini_verbose_level++;
 		} else if (strcmp (argv [i], "--version=number") == 0) {
@@ -2064,14 +2064,14 @@ mono_main (int argc, char* argv[])
 			char *gc_descr;
 
 			g_print ("Mono JIT compiler version %s\nCopyright (C) Novell, Inc, Xamarin Inc and Contributors. www.mono-project.com\n", build);
-			g_free (build);
+			g_free_vb (build);
 			char *info = mono_get_version_info ();
 			g_print (info);
-			g_free (info);
+			g_free_vb (info);
 
 			gc_descr = mono_gc_get_description ();
 			g_print ("\tGC:            %s\n", gc_descr);
-			g_free (gc_descr);
+			g_free_vb (gc_descr);
 			return 0;
 		} else if (strcmp (argv [i], "--help") == 0 || strcmp (argv [i], "-h") == 0) {
 			mini_usage ();
@@ -2107,7 +2107,7 @@ mono_main (int argc, char* argv[])
 			}
 			char *bisect_opt_string = g_strndup (param, sep - param);
 			guint32 bisect_opt = parse_optimizations (0, bisect_opt_string, FALSE);
-			g_free (bisect_opt_string);
+			g_free_vb (bisect_opt_string);
 			mono_set_bisect_methods (bisect_opt, sep + 1);
 		} else if (strncmp (argv [i], "--gc=", 5) == 0) {
 			// ignore
@@ -2188,7 +2188,7 @@ mono_main (int argc, char* argv[])
 		} else if (strncmp (argv [i], "--stats=", 8) == 0) {
 			enable_runtime_stats ();
 			if (mono_stats_method_desc)
-				g_free (mono_stats_method_desc);
+				g_free_vb (mono_stats_method_desc);
 			mono_stats_method_desc = parse_qualified_method_name (argv [i] + 8);
 #ifndef DISABLE_AOT
 		} else if (strcmp (argv [i], "--aot") == 0) {
@@ -2199,7 +2199,7 @@ mono_main (int argc, char* argv[])
 			mono_compile_aot = TRUE;
 			if (aot_options) {
 				char *tmp = g_strdup_printf ("%s,%s", aot_options, &argv [i][6]);
-				g_free (aot_options);
+				g_free_vb (aot_options);
 				aot_options = tmp;
 			} else {
 				aot_options = g_strdup (&argv [i][6]);
@@ -2214,7 +2214,7 @@ mono_main (int argc, char* argv[])
 			while (*split) {
 				char *tmp = *split;
 				mono_aot_paths = g_list_append (mono_aot_paths, g_strdup (tmp));
-				g_free (tmp);
+				g_free_vb (tmp);
 				split++;
 			}
 		} else if (strncmp (argv [i], "--path=", 7) == 0) {
@@ -2392,7 +2392,7 @@ mono_main (int argc, char* argv[])
 			int orig_argc = argc;
 
 			mono_parse_response_options (response_options, &argc, &argv, FALSE);
-			g_free (response_content);
+			g_free_vb (response_content);
 
 			/* Parse newly added options */
 			int n = argc;
@@ -3086,7 +3086,7 @@ mono_win32_parse_options (const char *options, int *ref_argc, char **ref_argv []
 			LocalFree (argv);
 		}
 
-		g_free (optionsw);
+		g_free_vb (optionsw);
 	}
 
 	merge_parsed_options (array, ref_argc, ref_argv, prepend);
@@ -3146,7 +3146,7 @@ mono_parse_env_options (int *ref_argc, char **ref_argv [])
 	if (env_options == NULL)
 		return;
 	ret = mono_parse_options_from (env_options, ref_argc, ref_argv);
-	g_free (env_options);
+	g_free_vb (env_options);
 	if (ret == NULL)
 		return;
 	fprintf (stderr, "%s", ret);

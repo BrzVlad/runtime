@@ -254,7 +254,7 @@ get_delegate_virtual_invoke_impl (MonoTrampInfo **info, gboolean load_imt_reg, i
 
 	tramp_name = mono_get_delegate_virtual_invoke_impl_name (load_imt_reg, offset);
 	*info = mono_tramp_info_create (tramp_name, start, GPTRDIFF_TO_UINT32 (code - start), NULL, unwind_ops);
-	g_free (tramp_name);
+	g_free_vb (tramp_name);
 
 	return start;
 }
@@ -281,7 +281,7 @@ mono_arch_get_delegate_invoke_impls (void)
 		code = (guint8*)get_delegate_invoke_impl (FALSE, i, &code_len);
 		tramp_name = g_strdup_printf ("delegate_invoke_impl_target_%d", i);
 		res = g_slist_prepend (res, mono_tramp_info_create (tramp_name, code, code_len, NULL, NULL));
-		g_free (tramp_name);
+		g_free_vb (tramp_name);
 	}
 
 	for (int i = 0; i <= MAX_VIRTUAL_DELEGATE_OFFSET; ++i) {
@@ -334,7 +334,7 @@ mono_arch_get_delegate_invoke_impl (MonoMethodSignature *sig, gboolean has_targe
 		if (mono_ee_features.use_aot_trampolines) {
 			char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", sig->param_count);
 			start = (guint8*)mono_aot_get_trampoline (name);
-			g_free (name);
+			g_free_vb (name);
 		} else {
 			start = (guint8*)get_delegate_invoke_impl (FALSE, sig->param_count, NULL);
 		}
@@ -1824,7 +1824,7 @@ get_call_info (MonoMemPool *mp, MonoMethodSignature *sig)
 	if (mp)
 		cinfo = mono_mempool_alloc0 (mp, size);
 	else
-		cinfo = g_malloc0 (size);
+		cinfo = g_malloc0_vb (size);
 
 	cinfo->nargs = n;
 	cinfo->pinvoke = sig->pinvoke;
@@ -1986,7 +1986,7 @@ mono_arch_get_interp_native_call_info (MonoMemoryManager *mem_manager, MonoMetho
 		int size = call_info_size (sig);
 		gpointer res = mono_mem_manager_alloc0 (mem_manager, size);
 		memcpy (res, cinfo, size);
-		g_free (cinfo);
+		g_free_vb (cinfo);
 		return res;
 	} else {
 		return cinfo;
@@ -1997,7 +1997,7 @@ void
 mono_arch_free_interp_native_call_info (gpointer call_info)
 {
 	/* Allocated by get_call_info () */
-	g_free (call_info);
+	g_free_vb (call_info);
 }
 
 /* Set arguments in the ccontext (for i2n entry) */
@@ -2013,7 +2013,7 @@ mono_arch_set_native_call_context_args (CallContext *ccontext, gpointer frame, M
 
 	ccontext->stack_size = ALIGN_TO (cinfo->stack_usage, MONO_ARCH_FRAME_ALIGNMENT);
 	if (ccontext->stack_size)
-		ccontext->stack = (guint8*)g_calloc (1, ccontext->stack_size);
+		ccontext->stack = (guint8*)g_calloc_vb (1, ccontext->stack_size);
 
 	if (sig->ret->type != MONO_TYPE_VOID) {
 		ainfo = &cinfo->ret;
@@ -2234,7 +2234,7 @@ mono_arch_dyn_call_prepare (MonoMethodSignature *sig)
 	cinfo = get_call_info (NULL, sig);
 
 	if (!dyn_call_supported (cinfo, sig)) {
-		g_free (cinfo);
+		g_free_vb (cinfo);
 		return NULL;
 	}
 
@@ -2267,9 +2267,9 @@ mono_arch_dyn_call_free (MonoDynCallInfo *info)
 {
 	ArchDynCallInfo *ainfo = (ArchDynCallInfo*)info;
 
-	g_free (ainfo->cinfo);
-	g_free (ainfo->param_types);
-	g_free (ainfo);
+	g_free_vb (ainfo->cinfo);
+	g_free_vb (ainfo->param_types);
+	g_free_vb (ainfo);
 }
 
 int
@@ -3445,8 +3445,8 @@ mono_arch_tailcall_supported (MonoCompile *cfg, MonoMethodSignature *caller_sig,
 			&& IS_SUPPORTED_TAILCALL (ainfo [i].storage != ArgVtypeByRefOnStack);
 	}
 
-	g_free (caller_info);
-	g_free (callee_info);
+	g_free_vb (caller_info);
+	g_free_vb (callee_info);
 
 	return res;
 }
@@ -6191,7 +6191,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 
 	sig = mono_method_signature_internal (method);
 	cfg->code_size = 256 + sig->param_count * 64;
-	code = cfg->native_code = g_malloc (cfg->code_size);
+	code = cfg->native_code = g_malloc_vb (cfg->code_size);
 
 	/* This can be unaligned */
 	cfg->stack_offset = ALIGN_TO (cfg->stack_offset, MONO_ARCH_FRAME_ALIGNMENT);
@@ -6741,7 +6741,7 @@ mono_arch_get_seq_point_info (guint8 *code)
 		ji = mini_jit_info_table_find (code);
 		g_assert (ji);
 
-		info = g_malloc0 (sizeof (SeqPointInfo) + (ji->code_size / 4) * sizeof(guint8*));
+		info = g_malloc0_vb (sizeof (SeqPointInfo) + (ji->code_size / 4) * sizeof(guint8*));
 
 		info->ss_tramp_addr = &ss_trampoline;
 

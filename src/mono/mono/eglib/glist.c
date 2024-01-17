@@ -69,7 +69,7 @@ g_list_prepend (GList *list, gpointer data)
 void
 g_list_free_1 (GList *list)
 {
-	g_free (list);
+	g_free_vb (list);
 }
 
 void

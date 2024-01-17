@@ -388,15 +388,15 @@ mono_class_setup_fields (MonoClass *klass)
 			char *type_name = mono_type_full_name (field->type);
 
 			mono_class_set_type_load_failure (klass, "Invalid type %s for instance field %s:%s", type_name, class_name, field->name);
-			g_free (class_name);
-			g_free (type_name);
+			g_free_vb (class_name);
+			g_free_vb (type_name);
 			break;
 		}
 		if (m_type_is_byref (field->type)) {
 			if (!m_class_is_byreflike (klass)) {
 				char *class_name = mono_type_get_full_name (klass);
 				mono_class_set_type_load_failure (klass, "Type %s is not a ByRefLike type so ref field, '%s', is invalid", class_name, field->name);
-				g_free (class_name);
+				g_free_vb (class_name);
 				break;
 			}
 		}
@@ -821,7 +821,7 @@ has_inline_array_attribute_value_func (MonoImage *image, uint32_t method_token, 
 		mono_error_assert_ok (&error);
 		g_assert (decoded_attr->named_args_num == 0 && decoded_attr->typed_args_num == 1);
 		attr->value = GUINT_TO_POINTER (*(guint32 *)decoded_attr->typed_args [0]->value.primitive);
-		g_free (decoded_attr);
+		g_free_vb (decoded_attr);
 	} else {
 		g_warning ("Can't find custom attr constructor image: %s mtoken: 0x%08x due to: %s", image->name, method_token, mono_error_get_message (&error));
 	}
@@ -891,7 +891,7 @@ check_valid_generic_inst_arguments (MonoGenericInst *inst, MonoError *error)
 		if (!mono_type_is_valid_generic_argument (inst->type_argv [i])) {
 			char *type_name = mono_type_full_name (inst->type_argv [i]);
 			mono_error_set_invalid_program (error, "generic type cannot be instantiated with type '%s'", type_name);
-			g_free (type_name);
+			g_free_vb (type_name);
 			return FALSE;
 		}
 	}
@@ -978,7 +978,7 @@ mono_class_create_generic_inst (MonoGenericClass *gclass)
 		if (!check_valid_generic_inst_arguments (gclass->context.class_inst, error_inst)) {
 			char *gklass_name = mono_type_get_full_name (gklass);
 			mono_class_set_type_load_failure (klass, "Could not instantiate %s due to %s", gklass_name, mono_error_get_message (error_inst));
-			g_free (gklass_name);
+			g_free_vb (gklass_name);
 			mono_error_cleanup (error_inst);
 		}
 	}
@@ -1158,7 +1158,7 @@ mono_class_create_bounded_array (MonoClass *eclass, guint32 rank, gboolean bound
 
 	nsize = strlen (eclass->name);
 	int maxrank = MIN (rank, 32);
-	name = (char *)g_malloc (nsize + 2 + maxrank + 1);
+	name = (char *)g_malloc_vb (nsize + 2 + maxrank + 1);
 	memcpy (name, eclass->name, nsize);
 	name [nsize] = '[';
 	if (maxrank > 1)
@@ -1169,7 +1169,7 @@ mono_class_create_bounded_array (MonoClass *eclass, guint32 rank, gboolean bound
 	name [nsize + maxrank + bounded + 1] = 0;
 	klass->name = mm ? mono_mem_manager_strdup (mm, name) : mono_image_strdup (image, name);
 	klass->name_hash = mono_metadata_str_hash (klass->name);
-	g_free (name);
+	g_free_vb (name);
 
 	klass->type_token = 0;
 	klass->parent = parent;
@@ -1183,7 +1183,7 @@ mono_class_create_bounded_array (MonoClass *eclass, guint32 rank, gboolean bound
 		/* .NET Core throws a type load exception: "Could not create array type 'fullname[]'" */
 		char *full_name = mono_type_get_full_name (eclass);
 		mono_class_set_type_load_failure (klass, "Could not create array type '%s[]'", full_name);
-		g_free (full_name);
+		g_free_vb (full_name);
 	} else if (eclass->enumtype && !mono_class_enum_basetype_internal (eclass)) {
 		MonoGCHandle ref_info_handle = mono_class_get_ref_info_handle (eclass);
 		if (!ref_info_handle || eclass->wastypebuilder) {
@@ -1235,7 +1235,7 @@ mono_class_create_bounded_array (MonoClass *eclass, guint32 rank, gboolean bound
 		mono_error_set_type_load_class (prepared_error, klass, "%s has too many dimensions.", name);
 		mono_class_set_failure (klass, mono_error_box (prepared_error, klass->image));
 		mono_error_cleanup (prepared_error);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	mono_loader_lock ();
@@ -1525,7 +1525,7 @@ mono_class_create_ptr (MonoType *type)
 	result->name = mm ? mono_mem_manager_strdup (mm, name) : mono_image_strdup (image, name);
 	result->name_hash = mono_metadata_str_hash (result->name);
 	result->class_kind = MONO_CLASS_POINTER;
-	g_free (name);
+	g_free_vb (name);
 
 	MONO_PROFILER_RAISE (class_loading, (result));
 
@@ -1620,7 +1620,7 @@ mono_class_create_fnptr (MonoMethodSignature *sig)
 
 	cached = (MonoClass *)g_hash_table_lookup (ptr_hash, sig);
 	if (cached) {
-		g_free (result);
+		g_free_vb (result);
 		mono_loader_unlock ();
 		return cached;
 	}
@@ -2019,7 +2019,7 @@ validate_struct_fields_overlaps (guint8 *layout_check, int layout_size, MonoClas
 			}
 
 			gboolean is_valid = validate_struct_fields_overlaps (layout_check, layout_size, embedded_class, embedded_offsets, embedded_fields_count, invalid_field_offset);
-			g_free (embedded_offsets);
+			g_free_vb (embedded_offsets);
 
 			if (!is_valid) {
 				// overwrite whatever was in the invalid_field_offset with the offset of the currently checked field
@@ -2396,7 +2396,7 @@ mono_class_layout_fields (MonoClass *klass, int base_instance_size, int packing_
 			if (!validate_struct_fields_overlaps (layout_check, real_size, klass, field_offsets, top, &invalid_field_offset)) {
 				mono_class_set_type_load_failure (klass, "Could not load type '%s' because it contains an object field at offset %d that is incorrectly aligned or overlapped by a non-object field.", klass->name, invalid_field_offset);
 			}
-			g_free (layout_check);
+			g_free_vb (layout_check);
 		}
 
 		instance_size = MAX (real_size, instance_size);
@@ -2628,8 +2628,8 @@ mono_class_layout_fields (MonoClass *klass, int base_instance_size, int packing_
 	klass->fields_inited = 1;
 	mono_loader_unlock ();
 
-	g_free (field_offsets);
-	g_free (fields_has_references);
+	g_free_vb (field_offsets);
+	g_free_vb (fields_has_references);
 }
 
 static int finalize_slot = -1;
@@ -2930,7 +2930,7 @@ mono_get_unique_iid (MonoClass *klass)
 			generic_id = 0;
 		}
 		printf ("Interface: assigned id %d to %s|%s|%d\n", iid, klass->image->assembly_name, type_name, generic_id);
-		g_free (type_name);
+		g_free_vb (type_name);
 	}
 #endif
 
@@ -3486,7 +3486,7 @@ mono_class_setup_methods (MonoClass *klass)
 				char *method = mono_method_full_name (gklass->methods [i], TRUE);
 				mono_class_set_type_load_failure (klass, "Could not inflate method %s due to %s", method, mono_error_get_message (error));
 
-				g_free (method);
+				g_free_vb (method);
 				mono_error_cleanup (error);
 				return;
 			}
@@ -3855,7 +3855,7 @@ mono_class_setup_events (MonoClass *klass)
 					} else {
 						while (event->other [n])
 							n++;
-						event->other = (MonoMethod **)g_realloc (event->other, (n + 2) * sizeof (MonoMethod*));
+						event->other = (MonoMethod **)g_realloc_vb (event->other, (n + 2) * sizeof (MonoMethod*));
 					}
 					event->other [n] = method;
 					/* NULL terminated */

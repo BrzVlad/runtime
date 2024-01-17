@@ -705,7 +705,7 @@ mono_img_writer_destroy (MonoImageWriter *w)
 {
 	// FIXME: Free all the stuff
 	mono_mempool_destroy (w->mempool);
-	g_free (w);
+	g_free_vb (w);
 }
 
 gboolean

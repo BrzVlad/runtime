@@ -36,7 +36,7 @@ void
 mono_loaded_images_free (MonoLoadedImages *li)
 {
 	mono_loaded_images_cleanup (li, FALSE);
-	g_free (li);
+	g_free_vb (li);
 }
 
 GHashTable *

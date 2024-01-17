@@ -357,7 +357,7 @@ mono_arch_get_restore_context (MonoTrampInfo **info, gboolean aot)
 		GSList *l;
 
 		for (l = unwind_ops; l; l = l->next)
-			g_free (l->data);
+			g_free_vb (l->data);
 		g_slist_free (unwind_ops);
 	}
 
@@ -437,7 +437,7 @@ mono_arch_get_call_filter (MonoTrampInfo **info, gboolean aot)
 		GSList *l;
 
 		for (l = unwind_ops; l; l = l->next)
-			g_free (l->data);
+			g_free_vb (l->data);
 		g_slist_free (unwind_ops);
 	}
 
@@ -681,7 +681,7 @@ get_throw_trampoline (const char *name, gboolean rethrow, gboolean llvm, gboolea
 		GSList *l;
 
 		for (l = unwind_ops; l; l = l->next)
-			g_free (l->data);
+			g_free_vb (l->data);
 		g_slist_free (unwind_ops);
 	}
 
@@ -987,7 +987,7 @@ mono_x86_get_signal_exception_trampoline (MonoTrampInfo **info, gboolean aot)
 		GSList *l;
 
 		for (l = unwind_ops; l; l = l->next)
-			g_free (l->data);
+			g_free_vb (l->data);
 		g_slist_free (unwind_ops);
 	}
 

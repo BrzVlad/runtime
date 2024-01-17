@@ -29,7 +29,7 @@ mono_core_trusted_platform_assemblies_free (MonoCoreTrustedPlatformAssemblies *a
 		return;
 	g_strfreev (a->basenames);
 	g_strfreev (a->assembly_filepaths);
-	g_free (a);
+	g_free_vb (a);
 }
 
 static void
@@ -38,7 +38,7 @@ mono_core_lookup_paths_free (MonoCoreLookupPaths *dl)
 	if (!dl)
 		return;
 	g_strfreev (dl->dirs);
-	g_free (dl);
+	g_free_vb (dl);
 }
 
 static gboolean
@@ -141,24 +141,24 @@ mono_core_preload_hook (MonoAssemblyLoadContext *alc, MonoAssemblyName *aname, c
 				if (n < strlen(".dll"))
 					continue;
 				n -= strlen(".dll");
-				char *fullpath2 = g_malloc (n + strlen(".webcil") + 1);
+				char *fullpath2 = g_malloc_vb (n + strlen(".webcil") + 1);
 				g_strlcpy (fullpath2, fullpath, n + 1);
 				g_strlcpy (fullpath2 + n, ".webcil", strlen(".webcil") + 1);
 				if (g_file_test (fullpath2, G_FILE_TEST_IS_REGULAR)) {
 					MonoImageOpenStatus status;
 					result = mono_assembly_request_open (fullpath2, &req, &status);
 				}
-				g_free (fullpath2);
+				g_free_vb (fullpath2);
 				if (result)
 					break;
-				char *fullpath3 = g_malloc (n + strlen(MONO_WEBCIL_IN_WASM_EXTENSION) + 1);
+				char *fullpath3 = g_malloc_vb (n + strlen(MONO_WEBCIL_IN_WASM_EXTENSION) + 1);
 				g_strlcpy (fullpath3, fullpath, n + 1);
 				g_strlcpy (fullpath3 + n, MONO_WEBCIL_IN_WASM_EXTENSION, strlen(MONO_WEBCIL_IN_WASM_EXTENSION) + 1);
 				if (g_file_test (fullpath3, G_FILE_TEST_IS_REGULAR)) {
 					MonoImageOpenStatus status;
 					result = mono_assembly_request_open (fullpath3, &req, &status);
 				}
-				g_free (fullpath3);
+				g_free_vb (fullpath3);
 				if (result)
 					break;
 			}
@@ -167,7 +167,7 @@ mono_core_preload_hook (MonoAssemblyLoadContext *alc, MonoAssemblyName *aname, c
 	}
 
 leave:
-	g_free (basename);
+	g_free_vb (basename);
 
 	if (!result) {
 		mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_ASSEMBLY, "netcore preload hook: did not find '%s'.", aname->name);

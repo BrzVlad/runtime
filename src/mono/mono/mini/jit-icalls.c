@@ -1317,7 +1317,7 @@ mono_get_native_calli_wrapper (MonoImage *image, MonoMethodSignature *sig, gpoin
 	for (int i = sig->param_count; i >= 0; i--)
 		if (mspecs [i])
 			mono_metadata_free_marshal_spec (mspecs [i]);
-	g_free (mspecs);
+	g_free_vb (mspecs);
 
 	gpointer compiled_ptr = mono_compile_method_checked (m, error);
 	mono_error_set_pending_exception (error);
@@ -1654,8 +1654,8 @@ mono_throw_method_access (MonoMethod *caller, MonoMethod *callee)
 
 	mono_error_set_generic_error (error, "System", "MethodAccessException", "Method `%s' is inaccessible from method `%s'", callee_name, caller_name);
 	mono_error_set_pending_exception (error);
-	g_free (callee_name);
-	g_free (caller_name);
+	g_free_vb (callee_name);
+	g_free_vb (caller_name);
 }
 
 void
@@ -1700,7 +1700,7 @@ mono_throw_type_load (MonoClass* klass)
 	} else {
 		char* klass_name = mono_type_get_full_name (klass);
 		mono_error_set_type_load_class (error, klass, "Attempting to load invalid type '%s'.", klass_name);
-		g_free (klass_name);
+		g_free_vb (klass_name);
 	}
 	
 	mono_error_set_pending_exception (error);

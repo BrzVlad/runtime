@@ -408,8 +408,8 @@ field_access_failure (MonoCompile *cfg, MonoMethod *method, MonoClassField *fiel
 	char *field_fname = mono_field_full_name (field);
 	mono_cfg_set_exception (cfg, MONO_EXCEPTION_MONO_ERROR);
 	mono_error_set_generic_error (cfg->error, "System", "FieldAccessException", "Field `%s' is inaccessible from method `%s'\n", field_fname, method_fname);
-	g_free (method_fname);
-	g_free (field_fname);
+	g_free_vb (method_fname);
+	g_free_vb (field_fname);
 }
 
 static MONO_NEVER_INLINE void
@@ -3347,7 +3347,7 @@ handle_alloc (MonoCompile *cfg, MonoClass *klass, gboolean for_box, int context_
 		char* full_name = mono_type_get_full_name (klass);
 		mono_cfg_set_exception (cfg, MONO_EXCEPTION_MONO_ERROR);
 		mono_error_set_member_access (cfg->error, "Cannot create an abstract class: %s", full_name);
-		g_free (full_name);
+		g_free_vb (full_name);
 		return NULL;
 	}
 
@@ -4072,7 +4072,7 @@ mono_method_check_inlining (MonoCompile *cfg, MonoMethod *method)
 			inline_limit = atoi (inlinelimit);
 			llvm_jit_inline_limit = inline_limit;
 			llvm_aot_inline_limit = inline_limit;
-			g_free (inlinelimit);
+			g_free_vb (inlinelimit);
 		} else {
 			inline_limit = INLINE_LENGTH_LIMIT;
 			llvm_jit_inline_limit = LLVM_JIT_INLINE_LENGTH_LIMIT;
@@ -4600,7 +4600,7 @@ check_inline_called_method_name_limit (MonoMethod *called_method)
 		char *called_method_name = mono_method_full_name (called_method, TRUE);
 
 		strncmp_result = strncmp (called_method_name, limit, strlen (limit));
-		g_free (called_method_name);
+		g_free_vb (called_method_name);
 
 		//return (strncmp_result <= 0);
 		return (strncmp_result == 0);
@@ -4630,7 +4630,7 @@ check_inline_caller_method_name_limit (MonoMethod *caller_method)
 		char *caller_method_name = mono_method_full_name (caller_method, TRUE);
 
 		strncmp_result = strncmp (caller_method_name, limit, strlen (limit));
-		g_free (caller_method_name);
+		g_free_vb (caller_method_name);
 
 		//return (strncmp_result <= 0);
 		return (strncmp_result == 0);
@@ -5341,8 +5341,8 @@ set_exception_type_from_invalid_il (MonoCompile *cfg, MonoMethod *method, guchar
 	else
 		method_code = mono_disasm_code_one (NULL, method, ip, NULL);
 	mono_cfg_set_exception_invalid_program (cfg, g_strdup_printf ("Invalid IL code in %s: %s\n", method_fname, method_code));
- 	g_free (method_fname);
- 	g_free (method_code);
+ 	g_free_vb (method_fname);
+ 	g_free_vb (method_code);
 	cfg->headers_to_free = g_slist_prepend_mempool (cfg->mempool, cfg->headers_to_free, header);
 }
 
@@ -6486,7 +6486,7 @@ mono_method_to_ir (MonoCompile *cfg, MonoMethod *method, MonoBasicBlock *start_b
 				if (GINT_TO_UINT32(sps [i].il_offset) < header->code_size)
 					mono_bitset_set_fast (seq_point_locs, sps [i].il_offset);
 			}
-			g_free (sps);
+			g_free_vb (sps);
 
 			MonoDebugMethodAsyncInfo* asyncMethod = mono_debug_lookup_method_async_debug_info (method);
 			if (asyncMethod) {
@@ -12295,7 +12295,7 @@ all_bbs_done:
 		/* Method is too large */
 		mname = mono_method_full_name (method, TRUE);
 		mono_cfg_set_exception_invalid_program (cfg, g_strdup_printf ("Method %s is too complex.", mname));
-		g_free (mname);
+		g_free_vb (mname);
 	}
 
 	if ((cfg->verbose_level > 2) && (cfg->method == method))
@@ -13711,10 +13711,10 @@ mono_spill_global_vars (MonoCompile *cfg, gboolean *need_local_opts)
 		cfg->gsharedvt_locals_var_ins->inst_imm = 0;
 	}
 
-	g_free (live_range_start);
-	g_free (live_range_end);
-	g_free (live_range_start_bb);
-	g_free (live_range_end_bb);
+	g_free_vb (live_range_start);
+	g_free_vb (live_range_end);
+	g_free_vb (live_range_start_bb);
+	g_free_vb (live_range_end_bb);
 }
 
 /**

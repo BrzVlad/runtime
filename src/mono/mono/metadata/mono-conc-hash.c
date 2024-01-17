@@ -73,9 +73,9 @@ conc_table_free (gpointer ptr)
 	if (table->gc_type & MONO_HASH_VALUE_GC)
 		mono_gc_deregister_root ((char*)table->values);
 
-	g_free (table->keys);
-	g_free (table->values);
-	g_free (table);
+	g_free_vb (table->keys);
+	g_free_vb (table->values);
+	g_free_vb (table);
 }
 
 static void
@@ -325,7 +325,7 @@ mono_conc_g_hash_table_destroy (MonoConcGHashTable *hash_table)
 		}
 	}
 	conc_table_free ((gpointer)hash_table->table);
-	g_free (hash_table);
+	g_free_vb (hash_table);
 }
 
 /* Return NULL on success or the old value in failure */

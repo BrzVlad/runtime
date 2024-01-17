@@ -89,7 +89,7 @@ verify_cprop_ldloc_stloc (TransformData *td)
 static void
 new_test (const char *name, TestVerifier verifier)
 {
-	TestItem *ti = g_malloc (sizeof (TestItem));
+	TestItem *ti = g_malloc_vb (sizeof (TestItem));
 	ti->test_name = name;
 	ti->verify_td = verifier;
 
@@ -163,14 +163,14 @@ transform_method (MonoDomain *domain, MonoImage *image, TestItem *ti)
 	td->verbose_level = determine_verbose_level (td);
 	td->mempool = mp;
 	td->rtm = rtm;
-	td->clause_indexes = (int*)g_malloc (header->code_size * sizeof (int));
+	td->clause_indexes = (int*)g_malloc_vb (header->code_size * sizeof (int));
 	td->data_items = NULL;
 	td->data_hash = g_hash_table_new (NULL, NULL);
 	/* TODO: init more fields of `td` */
 
 	mono_test_interp_method_compute_offsets (td, rtm, signature, header);
 
-	td->stack = (StackInfo*)g_malloc0 ((header->max_stack + 1) * sizeof (td->stack [0]));
+	td->stack = (StackInfo*)g_malloc0_vb ((header->max_stack + 1) * sizeof (td->stack [0]));
 	td->stack_capacity = header->max_stack + 1;
 	td->sp = td->stack;
 	td->max_stack_height = 0;

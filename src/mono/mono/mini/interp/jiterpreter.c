@@ -715,7 +715,7 @@ static TraceInfo *
 trace_info_allocate_segment (gint32 index) {
 	g_assert (index < MAX_TRACE_SEGMENTS);
 
-	TraceInfo *segment = (TraceInfo *)g_malloc0 (sizeof(TraceInfo) * TRACE_SEGMENT_SIZE);
+	TraceInfo *segment = (TraceInfo *)g_malloc0_vb (sizeof(TraceInfo) * TRACE_SEGMENT_SIZE);
 
 #ifdef DISABLE_THREADS
 	trace_segments[index] = segment;
@@ -724,7 +724,7 @@ trace_info_allocate_segment (gint32 index) {
 	TraceInfo *expected = NULL;
 	static_assert (sizeof(atomic_uintptr_t) == sizeof(trace_segments[index]) && ATOMIC_POINTER_LOCK_FREE == 2, "");
 	if (!atomic_compare_exchange_strong ((atomic_uintptr_t *)&trace_segments[index], (uintptr_t *)&expected, (uintptr_t)segment)) {
-		g_free (segment);
+		g_free_vb (segment);
 		return expected;
 	} else {
 		return segment;
@@ -1419,7 +1419,7 @@ mono_jiterp_monitor_trace (const guint16 *ip, void *_frame, void *locals)
 			if (mono_opt_jiterpreter_trace_monitoring_log > 0) {
 				char * full_name = mono_method_get_full_name (frame->imethod->method);
 				g_print ("trace #%d @%d '%s' rejected; average_penalty %f > %f\n", opcode->trace_index, ip, full_name, average_penalty, threshold);
-				g_free (full_name);
+				g_free_vb (full_name);
 			}
 		}
 	}

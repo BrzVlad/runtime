@@ -139,8 +139,8 @@ doc_free (gpointer key)
 {
 	MonoDebugSourceInfo *info = (MonoDebugSourceInfo *)key;
 
-	g_free (info->source_file);
-	g_free (info);
+	g_free_vb (info->source_file);
+	g_free_vb (info);
 }
 
 MonoPPDBFile*
@@ -186,7 +186,7 @@ mono_ppdb_load_file (MonoImage *image, const guint8 *raw_contents, int size)
 	if (ppdb_data) {
 		/* Embedded PPDB data */
 		/* ppdb_size is the uncompressed size */
-		guint8 *data = g_malloc0 (ppdb_size);
+		guint8 *data = g_malloc0_vb (ppdb_size);
 		z_stream stream;
 
 		memset (&stream, 0, sizeof (stream));
@@ -219,15 +219,15 @@ mono_ppdb_load_file (MonoImage *image, const guint8 *raw_contents, int size)
 			s = g_strdup (filename);
 			s [strlen (filename) - 4] = '\0';
 			ppdb_filename = g_strdup_printf ("%s.pdb", s);
-			g_free (s);
+			g_free_vb (s);
 		} else {
 			ppdb_filename = g_strdup_printf ("%s.pdb", filename);
 		}
 
 		ppdb_image = mono_image_open_metadata_only (alc, ppdb_filename, &status);
-		g_free (ppdb_filename);
+		g_free_vb (ppdb_filename);
 	}
-	g_free (to_free);
+	g_free_vb (to_free);
 	if (!ppdb_image)
 		return NULL;
 
@@ -258,7 +258,7 @@ mono_ppdb_close (MonoPPDBFile *ppdb)
 	mono_image_close (ppdb->image);
 	g_hash_table_destroy (ppdb->doc_hash);
 	g_hash_table_destroy (ppdb->method_hash);
-	g_free (ppdb);
+	g_free_vb (ppdb);
 }
 
 MonoDebugMethodInfo *
@@ -519,7 +519,7 @@ mono_ppdb_get_seq_points_internal (MonoImage *image, MonoPPDBFile *ppdb, MonoMet
 		char *method_name = mono_method_full_name (method, FALSE);
 		g_error ("Method idx %d is greater than number of rows (%d) in PPDB MethodDebugInformation table, for method %s in '%s'. Likely a malformed PDB file.",
 		 method_idx - 1, table_info_get_rows (methodbody_table), method_name, image->name);
-		g_free (method_name);
+		g_free_vb (method_name);
 	}
 
 	mono_metadata_decode_row (methodbody_table, method_idx - 1, cols, MONO_METHODBODY_SIZE);
@@ -892,7 +892,7 @@ mono_ppdb_get_sourcelink (MonoDebugHandle *handle)
 	if (!blob)
 		return NULL;
 	int blob_len = mono_metadata_decode_blob_size (blob, &blob);
-	res = g_malloc (blob_len + 1);
+	res = g_malloc_vb (blob_len + 1);
 	memcpy (res, blob, blob_len);
 	res [blob_len] = '\0';
 	return res;

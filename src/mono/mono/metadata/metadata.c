@@ -1750,19 +1750,19 @@ mono_metadata_parse_array_internal (MonoImage *m, MonoGenericContainer *containe
 	if (!etype)
 		return NULL;
 
-	array = transient ? (MonoArrayType *)g_malloc0 (sizeof (MonoArrayType)) : (MonoArrayType *)mono_image_alloc0 (m, sizeof (MonoArrayType));
+	array = transient ? (MonoArrayType *)g_malloc0_vb (sizeof (MonoArrayType)) : (MonoArrayType *)mono_image_alloc0 (m, sizeof (MonoArrayType));
 	array->eklass = mono_class_from_mono_type_internal (etype);
 	array->rank = GUINT32_TO_UINT8 (mono_metadata_decode_value (ptr, &ptr));
 
 	array->numsizes = GUINT32_TO_UINT8 (mono_metadata_decode_value (ptr, &ptr));
 	if (array->numsizes)
-		array->sizes = transient ? (int *)g_malloc0 (sizeof (int) * array->numsizes) : (int *)mono_image_alloc0 (m, sizeof (int) * array->numsizes);
+		array->sizes = transient ? (int *)g_malloc0_vb (sizeof (int) * array->numsizes) : (int *)mono_image_alloc0 (m, sizeof (int) * array->numsizes);
 	for (i = 0; i < array->numsizes; ++i)
 		array->sizes [i] = mono_metadata_decode_value (ptr, &ptr);
 
 	array->numlobounds = GUINT32_TO_UINT8 (mono_metadata_decode_value (ptr, &ptr));
 	if (array->numlobounds)
-		array->lobounds = transient ? (int *)g_malloc0 (sizeof (int) * array->numlobounds) : (int *)mono_image_alloc0 (m, sizeof (int) * array->numlobounds);
+		array->lobounds = transient ? (int *)g_malloc0_vb (sizeof (int) * array->numlobounds) : (int *)mono_image_alloc0 (m, sizeof (int) * array->numlobounds);
 	for (i = 0; i < array->numlobounds; ++i)
 		array->lobounds [i] = mono_metadata_decode_signed_value (ptr, &ptr);
 
@@ -1793,9 +1793,9 @@ mono_metadata_parse_array (MonoImage *m, const char *ptr, const char **rptr)
 void
 mono_metadata_free_array (MonoArrayType *array)
 {
-	g_free (array->sizes);
-	g_free (array->lobounds);
-	g_free (array);
+	g_free_vb (array->sizes);
+	g_free_vb (array->lobounds);
+	g_free_vb (array);
 }
 
 /*
@@ -2055,7 +2055,7 @@ alloc_type_with_cmods (MonoImage *m, gboolean transient, int count)
 	MonoType *type;
 	uint8_t count8 = GINT_TO_UINT8 (count);
 	size_t size = mono_sizeof_type_with_mods (count8, FALSE);
-	type = transient ? (MonoType *)g_malloc0 (size) : (MonoType *)mono_image_alloc0 (m, (guint)size);
+	type = transient ? (MonoType *)g_malloc0_vb (size) : (MonoType *)mono_image_alloc0 (m, (guint)size);
 	type->has_cmods = TRUE;
 
 	MonoCustomModContainer *cmods = mono_type_get_cmods (type);
@@ -2255,7 +2255,7 @@ mono_metadata_parse_type_internal (MonoImage *m, MonoGenericContainer *container
 
 	// Otherwise return the type we decoded
 	if (!allocated) { // Type was allocated on the stack, so we need to copy it to safety
-		type = transient ? (MonoType *)g_malloc (MONO_SIZEOF_TYPE) : (MonoType *)mono_image_alloc (m, MONO_SIZEOF_TYPE);
+		type = transient ? (MonoType *)g_malloc_vb (MONO_SIZEOF_TYPE) : (MonoType *)mono_image_alloc (m, MONO_SIZEOF_TYPE);
 		memcpy (type, &stype, MONO_SIZEOF_TYPE);
 	}
 	g_assert (type != &stype);
@@ -2442,7 +2442,7 @@ mono_metadata_signature_dup_internal (MonoImage *image, MonoMemPool *mp, MonoMem
 	} else if (mem_manager) {
 		ret = (MonoMethodSignature *)mono_mem_manager_alloc (mem_manager, (guint)sigsize);
 	} else {
-		ret = (MonoMethodSignature *)g_malloc (sigsize);
+		ret = (MonoMethodSignature *)g_malloc_vb (sigsize);
 	}
 
 	memcpy (ret, sig, sig_header_size - padding);
@@ -2696,7 +2696,7 @@ mono_metadata_parse_method_signature_full (MonoImage *m, MonoGenericContainer *c
 		method->ret = mono_metadata_parse_type_checked (m, container, pattrs ? pattrs [0] : 0, FALSE, ptr, &ptr, error);
 		if (!method->ret) {
 			mono_metadata_free_method_signature (method);
-			g_free (pattrs);
+			g_free_vb (pattrs);
 			return NULL;
 		}
 		is_open = mono_class_is_open_constructed_type (method->ret);
@@ -2704,7 +2704,7 @@ mono_metadata_parse_method_signature_full (MonoImage *m, MonoGenericContainer *c
 			/* calling convention encoded in modopts */
 			metadata_signature_set_modopt_call_conv (method, method->ret, error);
 			if (!is_ok (error)) {
-				g_free (pattrs);
+				g_free_vb (pattrs);
 				return NULL;
 			}
 		}
@@ -2714,12 +2714,12 @@ mono_metadata_parse_method_signature_full (MonoImage *m, MonoGenericContainer *c
 		if (*ptr == MONO_TYPE_SENTINEL) {
 			if (method->call_convention != MONO_CALL_VARARG || def) {
 				mono_error_set_bad_image (error, m, "Found sentinel for methoddef or no vararg");
-				g_free (pattrs);
+				g_free_vb (pattrs);
 				return NULL;
 			}
 			if (method->sentinelpos >= 0) {
 				mono_error_set_bad_image (error, m, "Found sentinel twice in the same signature.");
-				g_free (pattrs);
+				g_free_vb (pattrs);
 				return NULL;
 			}
 			method->sentinelpos = i;
@@ -2728,7 +2728,7 @@ mono_metadata_parse_method_signature_full (MonoImage *m, MonoGenericContainer *c
 		method->params [i] = mono_metadata_parse_type_checked (m, container, pattrs ? pattrs [i+1] : 0, FALSE, ptr, &ptr, error);
 		if (!method->params [i]) {
 			mono_metadata_free_method_signature (method);
-			g_free (pattrs);
+			g_free_vb (pattrs);
 			return NULL;
 		}
 		if (!is_open)
@@ -2744,7 +2744,7 @@ mono_metadata_parse_method_signature_full (MonoImage *m, MonoGenericContainer *c
 	if (def && (method->call_convention == MONO_CALL_VARARG))
 		method->sentinelpos = method->param_count;
 
-	g_free (pattrs);
+	g_free_vb (pattrs);
 
 	if (rptr)
 		*rptr = ptr;
@@ -2820,7 +2820,7 @@ mono_metadata_free_inflated_signature (MonoMethodSignature *sig)
 		if (sig->params [i])
 			mono_metadata_free_type (sig->params [i]);
 	}
-	g_free (sig);
+	g_free_vb (sig);
 }
 
 static gboolean
@@ -2874,7 +2874,7 @@ dump_ginst (MonoGenericInst *ginst)
 			g_print (", ");
 		name = mono_type_get_name (ginst->type_argv [i]);
 		g_print ("%s", name);
-		g_free (name);
+		g_free_vb (name);
 	}
 	g_print (">");
 }*/
@@ -3018,7 +3018,7 @@ static void
 collect_data_free (CollectData *data)
 {
 	if (data->images != data->image_buf)
-		g_free (data->images);
+		g_free_vb (data->images);
 }
 
 static void
@@ -3031,7 +3031,7 @@ enlarge_data (CollectData *data)
 	g_assert_not_reached ();
 	memcpy (d, data->images, data->images_len);
 	if (data->images != data->image_buf)
-		g_free (data->images);
+		g_free_vb (data->images);
 	data->images = d;
 	data->images_len = new_len;
 }
@@ -3616,7 +3616,7 @@ mono_metadata_inflate_generic_inst (MonoGenericInst *ginst, MonoGenericContext *
 cleanup:
 	for (guint i = 0; i < count; i++)
 		mono_metadata_free_type (type_argv [i]);
-	g_free (type_argv);
+	g_free_vb (type_argv);
 
 	return nginst;
 }
@@ -3652,7 +3652,7 @@ mono_metadata_parse_generic_inst (MonoImage *m, MonoGenericContainer *container,
 cleanup:
 	for (i = 0; i < parse_count; i++)
 		mono_metadata_free_type (type_argv [i]);
-	g_free (type_argv);
+	g_free_vb (type_argv);
 
 	return ginst;
 }
@@ -4157,7 +4157,7 @@ mono_metadata_free_type (MonoType *type)
 		break;
 	}
 
-	g_free (type);
+	g_free_vb (type);
 }
 
 #if 0
@@ -4216,7 +4216,7 @@ parse_section_data (MonoImage *m, int *num_clauses, const unsigned char *ptr, Mo
 			int i;
 			*num_clauses = is_fat ? sect_data_len / 24: sect_data_len / 12;
 			/* we could just store a pointer if we don't need to byteswap */
-			clauses = (MonoExceptionClause *)g_malloc0 (sizeof (MonoExceptionClause) * (*num_clauses));
+			clauses = (MonoExceptionClause *)g_malloc0_vb (sizeof (MonoExceptionClause) * (*num_clauses));
 			for (i = 0; i < *num_clauses; ++i) {
 				MonoExceptionClause *ec = &clauses [i];
 				guint32 tof_value;
@@ -4244,7 +4244,7 @@ parse_section_data (MonoImage *m, int *num_clauses, const unsigned char *ptr, Mo
 					if (tof_value) {
 						ec->data.catch_class = mono_class_get_checked (m, tof_value, error);
 						if (!is_ok (error)) {
-							g_free (clauses);
+							g_free_vb (clauses);
 							return NULL;
 						}
 					}
@@ -4382,7 +4382,7 @@ mono_metadata_parse_mh_full (MonoImage *m, MonoGenericContainer *container, cons
 
 	switch (format) {
 	case METHOD_HEADER_TINY_FORMAT:
-		mh = (MonoMethodHeader *)g_malloc0 (MONO_SIZEOF_METHOD_HEADER);
+		mh = (MonoMethodHeader *)g_malloc0_vb (MONO_SIZEOF_METHOD_HEADER);
 		ptr++;
 		mh->max_stack = 8;
 		mh->is_transient = TRUE;
@@ -4443,14 +4443,14 @@ mono_metadata_parse_mh_full (MonoImage *m, MonoGenericContainer *container, cons
 			g_warning ("wrong signature for locals blob");
 		locals_ptr++;
 		len = GUINT32_TO_UINT16 (mono_metadata_decode_value (locals_ptr, &locals_ptr));
-		mh = (MonoMethodHeader *)g_malloc0 (MONO_SIZEOF_METHOD_HEADER + len * sizeof (MonoType*) + num_clauses * sizeof (MonoExceptionClause));
+		mh = (MonoMethodHeader *)g_malloc0_vb (MONO_SIZEOF_METHOD_HEADER + len * sizeof (MonoType*) + num_clauses * sizeof (MonoExceptionClause));
 		mh->num_locals = len;
 		for (i = 0; i < len; ++i) {
 			mh->locals [i] = mono_metadata_parse_type_internal (m, container, 0, TRUE, locals_ptr, &locals_ptr, error);
 			goto_if_nok (error, fail);
 		}
 	} else {
-		mh = (MonoMethodHeader *)g_malloc0 (MONO_SIZEOF_METHOD_HEADER + num_clauses * sizeof (MonoExceptionClause));
+		mh = (MonoMethodHeader *)g_malloc0_vb (MONO_SIZEOF_METHOD_HEADER + num_clauses * sizeof (MonoExceptionClause));
 	}
 	mh->code = code;
 	mh->code_size = code_size;
@@ -4460,14 +4460,14 @@ mono_metadata_parse_mh_full (MonoImage *m, MonoGenericContainer *container, cons
 	if (clauses) {
 		MonoExceptionClause* clausesp = (MonoExceptionClause*)&mh->locals [mh->num_locals];
 		memcpy (clausesp, clauses, num_clauses * sizeof (MonoExceptionClause));
-		g_free (clauses);
+		g_free_vb (clauses);
 		mh->clauses = clausesp;
 		mh->num_clauses = num_clauses;
 	}
 	return mh;
 fail:
-	g_free (clauses);
-	g_free (mh);
+	g_free_vb (clauses);
+	g_free_vb (mh);
 	return NULL;
 
 }
@@ -4509,7 +4509,7 @@ mono_metadata_free_mh (MonoMethodHeader *mh)
 	if (mh && mh->is_transient) {
 		for (i = 0; i < mh->num_locals; ++i)
 			mono_metadata_free_type (mh->locals [i]);
-		g_free (mh);
+		g_free_vb (mh);
 	}
 }
 
@@ -5234,7 +5234,7 @@ mono_backtrace (int limit)
 	for (i =0; i < limit; ++i) {
 		g_print ("\t%s\n", names [i]);
 	}
-	g_free (names);
+	g_free_vb (names);
 }
 #endif
 
@@ -6099,7 +6099,7 @@ do_metadata_type_dup_append_cmods (MonoImage *image, const MonoType *o, const Mo
 		uint8_t total_cmods = o_cmods->count + extra_cmods->count;
 		gboolean aggregate = FALSE;
 		size_t sizeof_dup = mono_sizeof_type_with_mods (total_cmods, aggregate);
-		MonoType *r = image ? (MonoType *)mono_image_alloc0 (image, (guint)sizeof_dup) : (MonoType *)g_malloc0 (sizeof_dup);
+		MonoType *r = image ? (MonoType *)mono_image_alloc0 (image, (guint)sizeof_dup) : (MonoType *)g_malloc0_vb (sizeof_dup);
 
 		mono_type_with_mods_init (r, total_cmods, aggregate);
 
@@ -6143,7 +6143,7 @@ do_metadata_type_dup_append_cmods (MonoImage *image, const MonoType *o, const Mo
 		/* FIXME: if image, and the images of the custom modifiers from
 		 * o and cmods_source are all different, we need an image
 		 * set... */
-		MonoType *r = image ? (MonoType *)mono_image_alloc0 (image, (guint)sizeof_dup) : (MonoType*)g_malloc0 (sizeof_dup);
+		MonoType *r = image ? (MonoType *)mono_image_alloc0 (image, (guint)sizeof_dup) : (MonoType*)g_malloc0_vb (sizeof_dup);
 
 		mono_type_with_mods_init (r, total_cmods, aggregate);
 
@@ -6196,7 +6196,7 @@ mono_metadata_type_dup_with_cmods (MonoImage *image, const MonoType *o, const Mo
 		sizeof_header = MAX(sizeof_o, sizeof_cmods_source);
 	uint8_t *r_bytes = NULL;
 
-	r = image ? (MonoType *)mono_image_alloc (image, (guint)sizeof_r) : (MonoType *)g_malloc (sizeof_r);
+	r = image ? (MonoType *)mono_image_alloc (image, (guint)sizeof_r) : (MonoType *)g_malloc_vb (sizeof_r);
 	r_bytes = (uint8_t *)r;
 
 	if (cmods_source->has_cmods) {
@@ -6849,10 +6849,10 @@ mono_metadata_free_marshal_spec (MonoMarshalSpec *spec)
 		return;
 
 	if (spec->native == MONO_NATIVE_CUSTOM) {
-		g_free (spec->data.custom_data.custom_name);
-		g_free (spec->data.custom_data.cookie);
+		g_free_vb (spec->data.custom_data.custom_name);
+		g_free_vb (spec->data.custom_data.cookie);
 	}
-	g_free (spec);
+	g_free_vb (spec);
 }
 
 /**
@@ -7196,7 +7196,7 @@ mono_class_get_overrides_full (MonoImage *image, guint32 type_token, MonoMethod 
 	}
 
 	if (!is_ok (error)) {
-		g_free (result);
+		g_free_vb (result);
 		*overrides = NULL;
 		if (num_overrides)
 			*num_overrides = 0;
@@ -7488,8 +7488,8 @@ mono_get_shared_generic_inst (MonoGenericContainer *container)
 
 	nginst = mono_metadata_get_generic_inst (container->type_argc, type_argv);
 
-	g_free (type_argv);
-	g_free (helper);
+	g_free_vb (type_argv);
+	g_free_vb (helper);
 
 	return nginst;
 }

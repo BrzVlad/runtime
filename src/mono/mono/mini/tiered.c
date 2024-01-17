@@ -71,7 +71,7 @@ compiler_thread (void)
 					g_hash_table_remove (callsites_hash [patch_kind], ppc->target_method);
 					g_slist_free (patchsites);
 				}
-				g_free (ppc);
+				g_free_vb (ppc);
 			}
 			g_slist_free (ppcs);
 		}

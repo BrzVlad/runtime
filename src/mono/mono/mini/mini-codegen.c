@@ -150,9 +150,9 @@ mono_regstate_assign (MonoRegState *rs)
 #endif
 
 	if (rs->next_vreg > rs->vassign_size) {
-		g_free (rs->vassign);
+		g_free_vb (rs->vassign);
 		rs->vassign_size = MAX (rs->next_vreg, 256);
-		rs->vassign = (gint32 *)g_malloc (rs->vassign_size * sizeof (gint32));
+		rs->vassign = (gint32 *)g_malloc_vb (rs->vassign_size * sizeof (gint32));
 	}
 
 	memset (rs->isymbolic, 0, MONO_MAX_IREGS * sizeof (rs->isymbolic [0]));
@@ -578,7 +578,7 @@ mono_print_ins_index_strbuf (int i, MonoInst *ins)
 		if ((method = call->method)) {
 			char *full_name = mono_method_get_full_name (method);
 			g_string_append_printf (sbuf, " [%s]", full_name);
-			g_free (full_name);
+			g_free_vb (full_name);
 		} else if (call->fptr_is_patch) {
 			MonoJumpInfo *ji = (MonoJumpInfo*)call->fptr;
 
@@ -724,7 +724,7 @@ mono_print_ins_index_strbuf (int i, MonoInst *ins)
 		if (ins->klass) {
 			char *s = mono_class_full_name (ins->klass);
 			g_string_append_printf (sbuf, " [%s]", s);
-			g_free (s);
+			g_free_vb (s);
 		}
 		break;
 	}
@@ -2632,8 +2632,8 @@ mono_regstate_new (void)
 
 void
 mono_regstate_free (MonoRegState *rs) {
-	g_free (rs->vassign);
-	g_free (rs);
+	g_free_vb (rs->vassign);
+	g_free_vb (rs);
 }
 
 #endif /* DISABLE_JIT */

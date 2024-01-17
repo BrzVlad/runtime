@@ -54,7 +54,7 @@ g_ptr_array_grow(GPtrArrayPriv *array, guint length)
 	}
 
 	array->size = MAX(array->size, 16);
-	array->pdata = g_realloc(array->pdata, array->size * sizeof(gpointer));
+	array->pdata = g_realloc_vb (array->pdata, array->size * sizeof(gpointer));
 }
 
 GPtrArray *
@@ -87,12 +87,12 @@ g_ptr_array_free(GPtrArray *array, gboolean free_seg)
 	g_assert (array);
 
 	if(free_seg) {
-		g_free(array->pdata);
+		g_free_vb (array->pdata);
 	} else {
 		data = array->pdata;
 	}
 
-	g_free(array);
+	g_free_vb (array);
 
 	return data;
 }

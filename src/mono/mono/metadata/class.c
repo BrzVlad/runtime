@@ -208,7 +208,7 @@ mono_class_from_typeref_checked (MonoImage *image, guint32 type_token, MonoError
 		mono_assembly_get_assemblyref (image, idx - 1, &aname);
 		human_name = mono_stringify_assembly_name (&aname);
 		mono_error_set_simple_file_not_found (error, human_name);
-		g_free (human_name);
+		g_free_vb (human_name);
 		return NULL;
 	}
 
@@ -276,7 +276,7 @@ _mono_type_get_assembly_name (MonoClass *klass, GString *str)
 
 	name = mono_stringify_assembly_name (&ta->aname);
 	g_string_append_printf (str, ", %s", name);
-	g_free (name);
+	g_free_vb (name);
 }
 
 static void
@@ -291,7 +291,7 @@ escape_special_chars (const char* identifier)
 {
 	size_t id_len = strlen (identifier);
 	// Assume the worst case, and thus only allocate once
-	char *res = g_malloc (id_len * 2 + 1);
+	char *res = g_malloc_vb (id_len * 2 + 1);
 	char *res_ptr = res;
 	for (const char *s = identifier; *s != 0; s++) {
 		switch (*s) {
@@ -453,7 +453,7 @@ mono_type_get_name_recurse (MonoType *type, GString *str, gboolean is_recursed,
 			else {
 				char *escaped = mono_identifier_escape_type_name_chars (klass_name_space);
 				g_string_append (str, escaped);
-				g_free (escaped);
+				g_free_vb (escaped);
 			}
 			g_string_append_c (str, '.');
 		}
@@ -465,7 +465,7 @@ mono_type_get_name_recurse (MonoType *type, GString *str, gboolean is_recursed,
 		} else {
 			char *escaped = mono_identifier_escape_type_name_chars (klass_name);
 			g_string_append (str, escaped);
-			g_free (escaped);
+			g_free_vb (escaped);
 		}
 		if (is_recursed)
 			break;
@@ -755,8 +755,8 @@ inflate_generic_type (MonoImage *image, MonoType *type, MonoGenericContext *cont
 			char *tname = mono_type_full_name (type);
 			char *vname = mono_type_full_name (inst->type_argv[num]);
 			printf ("\n\n\tsubstitution for '%s' with '%s' yields...\n", tname, vname);
-			g_free (tname);
-			g_free (vname);
+			g_free_vb (tname);
+			g_free_vb (vname);
 			append_cmods = TRUE;
 		}
 #endif
@@ -768,7 +768,7 @@ inflate_generic_type (MonoImage *image, MonoType *type, MonoGenericContext *cont
 		if (append_cmods) {
 			char *ntname = mono_type_full_name (nt);
 			printf ("\tyields '%s'\n\n\n", ntname);
-			g_free (ntname);
+			g_free_vb (ntname);
 		}
 #endif
 		return nt;
@@ -919,7 +919,7 @@ inflate_generic_custom_modifiers (MonoImage *image, const MonoType *type, MonoGe
 	if (changed) {
 		char *full_name = mono_type_full_name ((MonoType*)type);
 		printf ("\n\n\tcustom modifier on '%s' affected by subsititution\n\n\n", full_name);
-		g_free (full_name);
+		g_free_vb (full_name);
 	}
 #endif
 	if (changed) {
@@ -1152,9 +1152,9 @@ free_inflated_method (MonoMethodInflated *imethod)
 		mono_metadata_free_inflated_signature (method->signature);
 
 	if (method->wrapper_type)
-		g_free (((MonoMethodWrapper*)method)->method_data);
+		g_free_vb (((MonoMethodWrapper*)method)->method_data);
 
-	g_free (method);
+	g_free_vb (method);
 }
 
 /**
@@ -1229,7 +1229,7 @@ mono_class_inflate_generic_method_full_checked (MonoMethod *method, MonoClass *k
 	mono_mem_manager_unlock (mm);
 
 	if (cached) {
-		g_free (iresult);
+		g_free_vb (iresult);
 		return (MonoMethod*)cached;
 	}
 
@@ -1241,7 +1241,7 @@ mono_class_inflate_generic_method_full_checked (MonoMethod *method, MonoClass *k
 	if (!sig) {
 		char *name = mono_type_get_full_name (method->klass);
 		mono_error_set_bad_image (error, mono_method_get_image (method), "Could not resolve signature of method %s:%s", name, method->name);
-		g_free (name);
+		g_free_vb (name);
 		goto fail;
 	}
 
@@ -1262,7 +1262,7 @@ mono_class_inflate_generic_method_full_checked (MonoMethod *method, MonoClass *k
 		MonoMethodWrapper *resw = (MonoMethodWrapper*)result;
 		int len = GPOINTER_TO_INT (((void**)mw->method_data) [0]);
 
-		resw->method_data = (void **)g_malloc (sizeof (gpointer) * (len + 1));
+		resw->method_data = (void **)g_malloc_vb (sizeof (gpointer) * (len + 1));
 		memcpy (resw->method_data, mw->method_data, sizeof (gpointer) * (len + 1));
 		if (mw->inflate_wrapper_data) {
 			mono_mb_inflate_generic_wrapper_data (context, (gpointer*)resw->method_data, error);
@@ -1343,7 +1343,7 @@ mono_class_inflate_generic_method_full_checked (MonoMethod *method, MonoClass *k
 	return (MonoMethod*)cached;
 
 fail:
-	g_free (iresult);
+	g_free_vb (iresult);
 	return NULL;
 }
 
@@ -6678,14 +6678,14 @@ mono_field_resolve_type (MonoClassField *field, MonoError *error)
 		if (!is_ok (error)) {
 			char *full_name = mono_type_get_full_name (gtd);
 			mono_class_set_type_load_failure (klass, "Could not load generic type of field '%s:%s' (%d) due to: %s", full_name, gfield->name, field_idx, mono_error_get_message (error));
-			g_free (full_name);
+			g_free_vb (full_name);
 		}
 
 		ftype = mono_class_inflate_generic_type_no_copy (image, gtype, mono_class_get_context (klass), error);
 		if (!is_ok (error)) {
 			char *full_name = mono_type_get_full_name (klass);
 			mono_class_set_type_load_failure (klass, "Could not load instantiated type of field '%s:%s' (%d) due to: %s", full_name, field->name, field_idx, mono_error_get_message (error));
-			g_free (full_name);
+			g_free_vb (full_name);
 		}
 	} else {
 		const char *sig;
@@ -6722,7 +6722,7 @@ mono_field_resolve_type (MonoClassField *field, MonoError *error)
 		if (!ftype) {
 			char *full_name = mono_type_get_full_name (klass);
 			mono_class_set_type_load_failure (klass, "Could not load type of field '%s:%s' (%d) due to: %s", full_name, field->name, field_idx, mono_error_get_message (error));
-			g_free (full_name);
+			g_free_vb (full_name);
 		}
 	}
 	mono_memory_barrier ();

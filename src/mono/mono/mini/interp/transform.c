@@ -257,7 +257,7 @@ realloc_stack (TransformData *td)
 	ptrdiff_t sppos = td->sp - td->stack;
 
 	td->stack_capacity *= 2;
-	td->stack = (StackInfo*) g_realloc (td->stack, td->stack_capacity * sizeof (td->stack [0]));
+	td->stack = (StackInfo*) g_realloc_vb (td->stack, td->stack_capacity * sizeof (td->stack [0]));
 	td->sp = td->stack + sppos;
 }
 
@@ -363,7 +363,7 @@ interp_make_var_renamable (TransformData *td, int var)
 		td->renamable_vars_capacity *= 2;
 		if (td->renamable_vars_capacity == 0)
 			td->renamable_vars_capacity = 2;
-		td->renamable_vars = (InterpRenamableVar*) g_realloc (td->renamable_vars, td->renamable_vars_capacity * sizeof (InterpRenamableVar));
+		td->renamable_vars = (InterpRenamableVar*) g_realloc_vb (td->renamable_vars, td->renamable_vars_capacity * sizeof (InterpRenamableVar));
 	}
 
 	int ext_index = td->renamable_vars_size;
@@ -390,7 +390,7 @@ interp_create_renamed_fixed_var (TransformData *td, int var_index, int renamable
 		td->renamed_fixed_vars_capacity *= 2;
 		if (td->renamed_fixed_vars_capacity == 0)
 			td->renamed_fixed_vars_capacity = 2;
-		td->renamed_fixed_vars = (InterpRenamedFixedVar*) g_realloc (td->renamed_fixed_vars, td->renamed_fixed_vars_capacity * sizeof (InterpRenamedFixedVar));
+		td->renamed_fixed_vars = (InterpRenamedFixedVar*) g_realloc_vb (td->renamed_fixed_vars, td->renamed_fixed_vars_capacity * sizeof (InterpRenamedFixedVar));
 	}
 
 	int ext_index = td->renamed_fixed_vars_size;
@@ -420,7 +420,7 @@ interp_create_var_explicit (TransformData *td, MonoType *type, int size)
 		td->vars_capacity *= 2;
 		if (td->vars_capacity == 0)
 			td->vars_capacity = 16;
-		td->vars = (InterpVar*) g_realloc (td->vars, td->vars_capacity * sizeof (InterpVar));
+		td->vars = (InterpVar*) g_realloc_vb (td->vars, td->vars_capacity * sizeof (InterpVar));
 	}
 	int mt = mono_mint_type (type);
 	InterpVar *local = &td->vars [td->vars_size];
@@ -1155,7 +1155,7 @@ get_data_item_wide_index (TransformData *td, void *ptr, gboolean *new_slot)
 	}
 	if (td->max_data_items == td->n_data_items) {
 		td->max_data_items = td->n_data_items == 0 ? 16 : 2 * td->max_data_items;
-		td->data_items = (gpointer*)g_realloc (td->data_items, td->max_data_items * sizeof(td->data_items [0]));
+		td->data_items = (gpointer*)g_realloc_vb (td->data_items, td->max_data_items * sizeof(td->data_items [0]));
 	}
 	index = td->n_data_items;
 	td->data_items [index] = ptr;
@@ -1197,7 +1197,7 @@ get_data_item_index_nonshared (TransformData *td, void *ptr)
 	guint index;
 	if (td->max_data_items == td->n_data_items) {
 		td->max_data_items = td->n_data_items == 0 ? 16 : 2 * td->max_data_items;
-		td->data_items = (gpointer*)g_realloc (td->data_items, td->max_data_items * sizeof(td->data_items [0]));
+		td->data_items = (gpointer*)g_realloc_vb (td->data_items, td->max_data_items * sizeof(td->data_items [0]));
 	}
 	index = td->n_data_items;
 	td->data_items [index] = ptr;
@@ -1336,7 +1336,7 @@ interp_generate_ipe_bad_fallthru (TransformData *td)
 	char *method_code = mono_disasm_code_one (NULL, td->method, td->ip, NULL);
 	mono_error_set_invalid_program (bad_fallthru_error, "Invalid IL (conditional fallthru past end of method) due to: %s", method_code);
 	interp_generate_ipe_throw_with_msg (td, bad_fallthru_error);
-	g_free (method_code);
+	g_free_vb (method_code);
 	mono_error_cleanup (bad_fallthru_error);
 }
 
@@ -1396,7 +1396,7 @@ interp_dump_ins_data (InterpInst *ins, gint32 ins_offset, const guint16 *data, i
 		InterpMethod *imethod = (InterpMethod*)data_items [*(guint16*)data];
 		char *name = mono_method_full_name (imethod->method, TRUE);
 		g_string_append_printf (str, " %s", name);
-		g_free (name);
+		g_free_vb (name);
 		break;
 	}
 	case MintOpInt:
@@ -1500,7 +1500,7 @@ interp_dump_compacted_ins (const guint16 *ip, const guint16 *start, gpointer *da
 	char *ins_data = interp_dump_ins_data (NULL, ins_offset, ip, opcode, data_items);
 	g_print ("%s%s\n", str->str, ins_data);
 	g_string_free (str, TRUE);
-	g_free (ins_data);
+	g_free_vb (ins_data);
 }
 
 static void
@@ -1561,7 +1561,7 @@ interp_dump_ins (InterpInst *ins, gpointer *data_items)
 	} else {
 		char *descr = interp_dump_ins_data (ins, ins->il_offset, &ins->data [0], ins->opcode, data_items);
 		g_string_append_printf (str, "%s", descr);
-		g_free (descr);
+		g_free_vb (descr);
 	}
 	g_print ("%s\n", str->str);
 	g_string_free (str, TRUE);
@@ -1591,7 +1591,7 @@ mono_interp_print_code (InterpMethod *imethod)
 
 	char *name = mono_method_full_name (imethod->method, 1);
 	g_print ("Method : %s\n", name);
-	g_free (name);
+	g_free_vb (name);
 
 	start = (guint8*) jinfo->code_start;
 	interp_dump_code ((const guint16*)start, (const guint16*)(start + jinfo->code_size), imethod->data_items);
@@ -2967,10 +2967,10 @@ interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHe
 
 	prev_n_data_items = td->n_data_items;
 	prev_in_offsets = td->in_offsets;
-	td->in_offsets = (int*)g_malloc0((header->code_size + 1) * sizeof(int));
+	td->in_offsets = (int*)g_malloc0_vb ((header->code_size + 1) * sizeof(int));
 
 	/* Inlining pops the arguments, restore the stack */
-	prev_param_area = (StackInfo*)g_malloc (nargs * sizeof (StackInfo));
+	prev_param_area = (StackInfo*)g_malloc_vb (nargs * sizeof (StackInfo));
 	memcpy (prev_param_area, &td->sp [-nargs], nargs * sizeof (StackInfo));
 
 	int const prev_code_size = td->code_size;
@@ -3043,10 +3043,10 @@ interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHe
 	td->aggressive_inlining = prev_aggressive_inlining;
 	td->has_inlined_one_call = prev_has_inlined_one_call;
 
-	g_free (td->in_offsets);
+	g_free_vb (td->in_offsets);
 	td->in_offsets = prev_in_offsets;
 
-	g_free (prev_param_area);
+	g_free_vb (prev_param_area);
 	return ret;
 }
 
@@ -3915,8 +3915,8 @@ interp_field_from_token (MonoMethod *method, guint32 token, MonoClass **klass, M
 		char *method_fname = mono_method_full_name (method, TRUE);
 		char *field_fname = mono_field_full_name (field);
 		mono_error_set_generic_error (error, "System", "FieldAccessException", "Field `%s' is inaccessible from method `%s'\n", field_fname, method_fname);
-		g_free (method_fname);
-		g_free (field_fname);
+		g_free_vb (method_fname);
+		g_free_vb (field_fname);
 		return NULL;
 	}
 
@@ -4350,12 +4350,12 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 	// 64 vars * 72 bytes = 4608 bytes. Many methods need less than this
 	int target_vars_capacity = num_locals + 64;
 
-	imethod->local_offsets = (guint32*)g_malloc (num_il_locals * sizeof(guint32));
-	td->vars = (InterpVar*)g_malloc0 (target_vars_capacity * sizeof (InterpVar));
+	imethod->local_offsets = (guint32*)g_malloc_vb (num_il_locals * sizeof(guint32));
+	td->vars = (InterpVar*)g_malloc0_vb (target_vars_capacity * sizeof (InterpVar));
 	td->vars_size = num_locals;
 	td->vars_capacity = target_vars_capacity;
 
-	td->renamable_vars = (InterpRenamableVar*)g_malloc (target_vars_capacity * sizeof (InterpRenamableVar));
+	td->renamable_vars = (InterpRenamableVar*)g_malloc_vb (target_vars_capacity * sizeof (InterpRenamableVar));
 	td->renamable_vars_size = 0;
 	td->renamable_vars_capacity = target_vars_capacity;
 	offset = 0;
@@ -4417,7 +4417,7 @@ interp_method_compute_offsets (TransformData *td, InterpMethod *imethod, MonoMet
 	td->il_locals_size = offset - td->il_locals_offset;
 	td->total_locals_size = offset;
 
-	imethod->clause_data_offsets = (guint32*)g_malloc (header->num_clauses * sizeof (guint32));
+	imethod->clause_data_offsets = (guint32*)g_malloc_vb (header->num_clauses * sizeof (guint32));
 	td->clause_vars = (int*)mono_mempool_alloc (td->mempool, sizeof (int) * header->num_clauses);
 	for (guint i = 0; i < header->num_clauses; i++) {
 		int var = interp_create_var (td, mono_get_object_type ());
@@ -4931,7 +4931,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 				if (GINT_TO_UINT32(sps [i].il_offset) < header->code_size)
 					mono_bitset_set_fast (seq_point_locs, sps [i].il_offset);
 			}
-			g_free (sps);
+			g_free_vb (sps);
 
 			MonoDebugMethodAsyncInfo* asyncMethod = mono_debug_lookup_method_async_debug_info (method);
 			if (asyncMethod) {
@@ -4966,8 +4966,8 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			char *name = mono_method_full_name (method, TRUE);
 			g_print ("Method %s, optimized %d, original code:\n", name, td->optimized);
 			g_print ("%s\n", tmp);
-			g_free (tmp);
-			g_free (name);
+			g_free_vb (tmp);
+			g_free_vb (name);
 		}
 
 		if (td->optimized && !td->disable_ssa) {
@@ -5015,7 +5015,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 #endif
 	} else {
 		int local;
-		arg_locals = (guint32*) g_malloc ((!!signature->hasthis + signature->param_count) * sizeof (guint32));
+		arg_locals = (guint32*) g_malloc_vb ((!!signature->hasthis + signature->param_count) * sizeof (guint32));
 		/* Allocate locals to store inlined method args from stack */
 		for (int i = signature->param_count - 1; i >= 0; i--) {
 			MonoType *type = td->vars [td->sp [-1].var].type;
@@ -5035,7 +5035,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			store_local (td, local);
 		}
 
-		local_locals = (guint32*) g_malloc (header->num_locals * sizeof (guint32));
+		local_locals = (guint32*) g_malloc_vb (header->num_locals * sizeof (guint32));
 		for (int i = 0; i < header->num_locals; i++)
 			local_locals [i] = interp_create_var (td, header->locals [i]);
 	}
@@ -6272,7 +6272,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 			if (mono_class_get_flags (klass) & TYPE_ATTRIBUTE_ABSTRACT) {
 				char* full_name = mono_type_get_full_name (klass);
 				mono_error_set_member_access (error, "Cannot create an abstract class: %s", full_name);
-				g_free (full_name);
+				g_free_vb (full_name);
 				goto_if_nok (error, exit);
 			}
 
@@ -8374,8 +8374,8 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		mono_interp_pgo_method_was_tiered (method);
 
 exit_ret:
-	g_free (arg_locals);
-	g_free (local_locals);
+	g_free_vb (arg_locals);
+	g_free_vb (local_locals);
 	mono_bitset_free (il_targets);
 	mono_basic_block_free (original_bb);
 	td->dont_inline = g_list_remove (td->dont_inline, method);
@@ -9112,8 +9112,8 @@ retry:
 	td->code_size = header->code_size;
 	td->header = header;
 	td->max_code_size = td->code_size;
-	td->in_offsets = (int*)g_malloc0((header->code_size + 1) * sizeof(int));
-	td->clause_indexes = (int*)g_malloc (header->code_size * sizeof (int));
+	td->in_offsets = (int*)g_malloc0_vb ((header->code_size + 1) * sizeof(int));
+	td->clause_indexes = (int*)g_malloc_vb (header->code_size * sizeof (int));
 	td->mempool = mono_mempool_new ();
 	td->mem_manager = m_method_get_mem_manager (method);
 	td->n_data_items = 0;
@@ -9165,7 +9165,7 @@ retry:
 	interp_method_compute_offsets (td, rtm, mono_method_signature_internal (method), header, error);
 	goto_if_nok (error, exit);
 
-	td->stack = (StackInfo*)g_malloc0 ((header->max_stack + 1) * sizeof (td->stack [0]));
+	td->stack = (StackInfo*)g_malloc0_vb ((header->max_stack + 1) * sizeof (td->stack [0]));
 	td->stack_capacity = header->max_stack + 1;
 	td->sp = td->stack;
 	td->max_stack_height = 0;
@@ -9216,9 +9216,9 @@ retry:
 		if (td->disable_inlining && td->optimized) {
 			char *name = mono_method_get_full_name (method);
 			char *msg = g_strdup_printf ("Unable to run method '%s': locals size too big.", name);
-			g_free (name);
+			g_free_vb (name);
 			mono_error_set_generic_error (error, "System", "InvalidProgramException", "%s", msg);
-			g_free (msg);
+			g_free_vb (msg);
 			td->retry_compilation = FALSE;
 			goto exit;
 		} else {
@@ -9336,12 +9336,12 @@ retry:
 #endif
 
 exit:
-	g_free (td->in_offsets);
-	g_free (td->clause_indexes);
-	g_free (td->data_items);
-	g_free (td->stack);
-	g_free (td->vars);
-	g_free (td->local_ref_count);
+	g_free_vb (td->in_offsets);
+	g_free_vb (td->clause_indexes);
+	g_free_vb (td->data_items);
+	g_free_vb (td->stack);
+	g_free_vb (td->vars);
+	g_free_vb (td->local_ref_count);
 	g_hash_table_destroy (td->data_hash);
 #ifdef ENABLE_EXPERIMENT_TIERED
 	g_hash_table_destroy (td->patchsite_hash);

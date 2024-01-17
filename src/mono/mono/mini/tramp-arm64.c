@@ -462,7 +462,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 	buf_size = 64 + 16 * depth;
 	code = buf = mono_global_codeman_reserve (buf_size);
 
-	rgctx_null_jumps = g_malloc0 (sizeof (guint8*) * (depth + 2));
+	rgctx_null_jumps = g_malloc0_vb (sizeof (guint8*) * (depth + 2));
 	njumps = 0;
 
 	/* The vtable/mrgtx is in R0 */
@@ -509,7 +509,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 	for (i = 0; i < njumps; ++i)
 		mono_arm_patch (rgctx_null_jumps [i], code, MONO_R_ARM64_CBZ);
 
-	g_free (rgctx_null_jumps);
+	g_free_vb (rgctx_null_jumps);
 
 	/* Slowpath */
 
@@ -531,7 +531,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 	if (info) {
 		char *name = mono_get_rgctx_fetch_trampoline_name (slot);
 		*info = mono_tramp_info_create (name, buf, GPTRDIFF_TO_UINT32 (code - buf), ji, unwind_ops);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	return (gpointer)MINI_ADDR_TO_FTNPTR (buf);

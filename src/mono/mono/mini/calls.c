@@ -916,7 +916,7 @@ sig_to_rgctx_sig (MonoMethodSignature *sig)
 	MonoMethodSignature *res;
 	int i;
 
-	res = (MonoMethodSignature *)g_malloc (MONO_SIZEOF_METHOD_SIGNATURE + (sig->param_count + 1) * sizeof (MonoType*));
+	res = (MonoMethodSignature *)g_malloc_vb (MONO_SIZEOF_METHOD_SIGNATURE + (sig->param_count + 1) * sizeof (MonoType*));
 	memcpy (res, sig, MONO_SIZEOF_METHOD_SIGNATURE);
 	res->param_count = sig->param_count + 1;
 	for (i = 0; i < sig->param_count; ++i)

@@ -477,7 +477,7 @@ free_synch_cs (MonoCoopMutex *synch_cs)
 {
 	g_assert (synch_cs);
 	mono_coop_mutex_destroy (synch_cs);
-	g_free (synch_cs);
+	g_free_vb (synch_cs);
 }
 
 static void
@@ -486,7 +486,7 @@ free_longlived_thread_data (void *user_data)
 	MonoLongLivedThreadData *lltd = (MonoLongLivedThreadData*)user_data;
 	free_synch_cs (lltd->synch_cs);
 
-	g_free (lltd);
+	g_free_vb (lltd);
 }
 
 static void
@@ -1041,7 +1041,7 @@ mono_thread_detach_internal (MonoInternalThread *thread)
 
 	g_assert (thread->suspended);
 	mono_os_event_destroy (thread->suspended);
-	g_free (thread->suspended);
+	g_free_vb (thread->suspended);
 	thread->suspended = NULL;
 
 	if (mono_thread_cleanup_fn)
@@ -1140,7 +1140,7 @@ start_wrapper_internal (StartInfo *start_info, gsize *stack_ptr)
 
 		if (mono_atomic_dec_i32 (&start_info->ref) == 0) {
 			mono_coop_sem_destroy (&start_info->registered);
-			g_free (start_info);
+			g_free_vb (start_info);
 		}
 
 		return 0;
@@ -1175,7 +1175,7 @@ start_wrapper_internal (StartInfo *start_info, gsize *stack_ptr)
 
 	if (mono_atomic_dec_i32 (&start_info->ref) == 0) {
 		mono_coop_sem_destroy (&start_info->registered);
-		g_free (start_info);
+		g_free_vb (start_info);
 	}
 
 	/* start_info is not valid anymore */
@@ -1385,7 +1385,7 @@ create_thread (MonoThread *thread, MonoInternalThread *internal, MonoThreadStart
 #if HOST_WIN32
 		char *err_msg = g_strdup_printf ("0x%x", GetLastError ());
 		throw_thread_start_exception (err_msg, error);
-		g_free (err_msg);
+		g_free_vb (err_msg);
 #else
 		throw_thread_start_exception ("mono_thread_platform_create_thread() failed", error);
 #endif
@@ -1414,7 +1414,7 @@ create_thread (MonoThread *thread, MonoInternalThread *internal, MonoThreadStart
 done:
 	if (mono_atomic_dec_i32 (&start_info->ref) == 0) {
 		mono_coop_sem_destroy (&start_info->registered);
-		g_free (start_info);
+		g_free_vb (start_info);
 	}
 
 	return ret;
@@ -1778,7 +1778,7 @@ mono_thread_name_cleanup (MonoThreadName* name)
 	MonoThreadName const old_name = *name;
 	memset (name, 0, sizeof (*name));
 	if (old_name.free)
-		g_free (old_name.chars);
+		g_free_vb (old_name.chars);
 }
 
 /*
@@ -1902,7 +1902,7 @@ mono_thread_set_name (MonoInternalThread *this_obj,
 			mono_error_set_invalid_operation (error, "%s", "Thread.Name can only be set once.");
 
 		if (!constant)
-			g_free ((char*)name8);
+			g_free_vb ((char*)name8);
 		return;
 	}
 
@@ -3061,7 +3061,7 @@ dump_thread (MonoInternalThread *thread, ThreadDumpUserData *ud, FILE* output_fi
 		if (method) {
 			gchar *location = mono_debug_print_stack_frame (method, frame->native_offset, NULL);
 			g_string_append_printf (text, "  %s\n", location);
-			g_free (location);
+			g_free_vb (location);
 		} else {
 			g_string_append_printf (text, "  at <unknown> <0x%05x>\n", frame->native_offset);
 		}
@@ -3151,7 +3151,7 @@ mono_threads_perform_thread_dump (void)
 	if (output_file != NULL) {
 		fclose (output_file);
 	}
-	g_free (ud.frames);
+	g_free_vb (ud.frames);
 
 	thread_dump_requested = FALSE;
 }
@@ -3314,7 +3314,7 @@ mono_alloc_static_data (gpointer **static_data_ptr, guint32 offset, void *alloc_
 			continue;
 
 		if (mono_gc_user_markers_supported ())
-			static_data [i] = g_malloc0 (static_data_size [i]);
+			static_data [i] = g_malloc0_vb (static_data_size [i]);
 		else
 			static_data [i] = mono_gc_alloc_fixed (static_data_size [i], MONO_GC_DESCRIPTOR_NULL,
 												   MONO_ROOT_SOURCE_THREAD_STATIC,
@@ -3340,7 +3340,7 @@ mono_free_static_data (gpointer* static_data)
 		static_data [i] = NULL;
 		mono_memory_write_barrier ();
 		if (mono_gc_user_markers_supported ())
-			g_free (p);
+			g_free_vb (p);
 		else
 			mono_gc_free_fixed (p);
 	}
@@ -3471,7 +3471,7 @@ mono_alloc_special_static_data (guint32 static_type, guint32 size, guint32 align
 
 	if (item) {
 		offset = item->offset;
-		g_free (item);
+		g_free_vb (item);
 	} else {
 		offset = mono_alloc_static_data_slot (info, size, align);
 	}

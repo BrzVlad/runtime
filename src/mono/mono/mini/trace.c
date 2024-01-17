@@ -57,7 +57,7 @@ MonoCallSpec *mono_trace_set_options (const char *options)
 	char *errstr;
 	if (!mono_callspec_parse (options, &trace_spec, &errstr)) {
 		fprintf (stderr, "%s\n", errstr);
-		g_free (errstr);
+		g_free_vb (errstr);
 		return NULL;
 	}
 
@@ -163,7 +163,7 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 		ji = mini_jit_info_table_find ((char *)MONO_RETURN_ADDRESS ());
 
 	printf ("ENTER:%c %s(", frame_kind (ji), fname);
-	g_free (fname);
+	g_free_vb (fname);
 
 	sig = mono_method_signature_internal (method);
 
@@ -192,7 +192,7 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 					char *as = string_to_utf8 (s);
 
 					printf ("this:[STRING:%p:%s]", o, as);
-					g_free (as);
+					g_free_vb (as);
 				} else if (klass == mono_defaults.runtimetype_class) {
 					printf ("[this:[TYPE:%p:%s]]", o, mono_type_full_name (((MonoReflectionType*)o)->type));
 				} else {
@@ -246,7 +246,7 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 				as = string_to_utf8 (s);
 
 				printf ("[STRING:%p:%s]", s, as);
-				g_free (as);
+				g_free_vb (as);
 			} else
 				printf ("[STRING:null]");
 			break;
@@ -262,7 +262,7 @@ mono_trace_enter_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 					char *as = string_to_utf8 ((MonoString*)o);
 
 					printf ("[STRING:%p:%s]", o, as);
-					g_free (as);
+					g_free_vb (as);
 				} else if (klass == mono_defaults.int32_class) {
 					printf ("[INT32:%p:%d]", o, *(gint32 *)data);
 				} else if (klass == mono_defaults.runtimetype_class) {
@@ -337,7 +337,7 @@ mono_trace_leave_method (MonoMethod *method, MonoJitInfo *ji, MonoProfilerCallCo
 		ji = mini_jit_info_table_find ((char *)MONO_RETURN_ADDRESS ());
 
 	printf ("LEAVE:%c %s(", frame_kind (ji), fname);
-	g_free (fname);
+	g_free_vb (fname);
 
 	if (method->is_inflated && ji) {
 		gsctx = mono_jit_info_get_generic_sharing_context (ji);
@@ -469,8 +469,8 @@ mono_trace_tail_method (MonoMethod *method, MonoJitInfo *ji, MonoMethod *target)
 	printf ("TAILC:%c %s->%s\n", frame_kind (ji), fname, tname);
 	fflush (stdout);
 
-	g_free (fname);
-	g_free (tname);
+	g_free_vb (fname);
+	g_free_vb (tname);
 
 	mono_atomic_store_release (&output_lock, 0);
 }

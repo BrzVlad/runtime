@@ -633,7 +633,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 
 	unwind_ops = mono_arch_get_cie_program ();
 
-	rgctx_null_jumps = g_malloc (sizeof (guint8*) * (depth + 2));
+	rgctx_null_jumps = g_malloc_vb (sizeof (guint8*) * (depth + 2));
 	njumps = 0;
 
 	/* The vtable/mrgctx is in R0 */
@@ -684,7 +684,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 	for (i = 0; i < njumps; ++i)
 		arm_patch (rgctx_null_jumps [i], code);
 
-	g_free (rgctx_null_jumps);
+	g_free_vb (rgctx_null_jumps);
 
 	/* Slowpath */
 
@@ -715,7 +715,7 @@ mono_arch_create_rgctx_lazy_fetch_trampoline (guint32 slot, MonoTrampInfo **info
 
 	char *name = mono_get_rgctx_fetch_trampoline_name (slot);
 	*info = mono_tramp_info_create (name, buf, GPTRDIFF_TO_UINT32 (code - buf), ji, unwind_ops);
-	g_free (name);
+	g_free_vb (name);
 
 	return buf;
 }

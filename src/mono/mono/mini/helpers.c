@@ -254,7 +254,7 @@ MONO_RESTORE_WARNING
 	int unused G_GNUC_UNUSED;
 	char *cmd = g_strdup_printf (ARCH_PREFIX AS_CMD " %s -o %s", as_file, o_file);
 	unused = system (cmd);
-	g_free (cmd);
+	g_free_vb (cmd);
 	char *objdump_args = g_getenv ("MONO_OBJDUMP_ARGS");
 	if (!objdump_args)
 		objdump_args = g_strdup ("");
@@ -268,13 +268,13 @@ MONO_RESTORE_WARNING
 	 */
 	cmd = g_strdup_printf (ARCH_PREFIX "strip -s %s", o_file);
 	unused = system (cmd);
-	g_free (cmd);
+	g_free_vb (cmd);
 #endif
 
 	cmd = g_strdup_printf (ARCH_PREFIX DIS_CMD " %s %s", objdump_args, o_file);
 	unused = system (cmd);
-	g_free (cmd);
-	g_free (objdump_args);
+	g_free_vb (cmd);
+	g_free_vb (objdump_args);
 #else
 	g_assert_not_reached ();
 #endif /* HAVE_SYSTEM */
@@ -283,8 +283,8 @@ MONO_RESTORE_WARNING
 	unlink (o_file);
 	unlink (as_file);
 #endif
-	g_free (o_file);
-	g_free (as_file);
+	g_free_vb (o_file);
+	g_free_vb (as_file);
 #endif
 }
 

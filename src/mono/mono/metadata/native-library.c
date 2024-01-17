@@ -89,8 +89,8 @@ mono_loader_register_module_locking (const char *name, MonoDl *module)
 
 	result = (MonoDl *)g_hash_table_lookup (global_module_map, name);
 	if (result) {
-		g_free (module->full_name);
-		g_free (module);
+		g_free_vb (module->full_name);
+		g_free_vb (module);
 		goto exit;
 	}
 
@@ -177,12 +177,12 @@ pinvoke_probe_convert_status_to_error (MonoLookupPInvokeStatus *status, MonoErro
 		return;
 	case LOOKUP_PINVOKE_ERR_NO_LIB:
 		mono_error_set_generic_error (error, "System", "DllNotFoundException", "%s", status->err_arg);
-		g_free (status->err_arg);
+		g_free_vb (status->err_arg);
 		status->err_arg = NULL;
 		break;
 	case LOOKUP_PINVOKE_ERR_NO_SYM:
 		mono_error_set_generic_error (error, "System", "EntryPointNotFoundException", "%s", status->err_arg);
-		g_free (status->err_arg);
+		g_free_vb (status->err_arg);
 		status->err_arg = NULL;
 		break;
 	default:
@@ -290,7 +290,7 @@ netcore_probe_for_module_variations (const char *mdirname, const char *file_name
 		module = mono_dl_open_full (full_name, MONO_DL_LAZY, raw_flags, error);
 		if (!module)
 			mono_trace (G_LOG_LEVEL_DEBUG, MONO_TRACE_DLLIMPORT, "DllImport error loading library '%s': '%s'.", full_name, mono_error_get_message_without_fields (error));
-		g_free (full_name);
+		g_free_vb (full_name);
 		if (!module && !is_ok (error) && mono_error_get_error_code (error) == MONO_ERROR_BAD_IMAGE) {
 			mono_error_cleanup (bad_image_error);
 			mono_error_move (bad_image_error, error);
@@ -353,7 +353,7 @@ netcore_probe_for_module (MonoImage *image, const char *file_name, int flags, Mo
 		char *mdirname = g_path_get_dirname (image->filename);
 		if (mdirname)
 			module = netcore_probe_for_module_variations (mdirname, file_name, lflags, error);
-		g_free (mdirname);
+		g_free_vb (mdirname);
 	}
 
 	// Try without any path additions, if we didn't try it already
@@ -919,10 +919,10 @@ retry_with_libcoreclr:
 
 exit:
 	if (error_scope != new_scope) {
-		g_free ((char *)error_scope);
+		g_free_vb ((char *)error_scope);
 	}
-	g_free ((char *)new_import);
-	g_free ((char *)new_scope);
+	g_free_vb ((char *)new_import);
+	g_free_vb ((char *)new_scope);
 	return addr;
 }
 
@@ -995,7 +995,7 @@ pinvoke_probe_for_symbol (MonoDl *module, MonoMethodPInvoke *piinfo, const char 
 						char *mangled_stdcall_name = g_strdup_printf ("_%s@%d", mangled_name, param_count);
 
 						if (mangled_name != import)
-							g_free (mangled_name);
+							g_free_vb (mangled_name);
 
 						mangled_name = mangled_stdcall_name;
 					}
@@ -1016,7 +1016,7 @@ pinvoke_probe_for_symbol (MonoDl *module, MonoMethodPInvoke *piinfo, const char 
 					mono_error_cleanup (symbol_error);
 
 					if (mangled_name != import)
-						g_free (mangled_name);
+						g_free_vb (mangled_name);
 				}
 			}
 		}
@@ -1055,7 +1055,7 @@ ves_icall_System_Runtime_InteropServices_NativeLibrary_FreeLib (gpointer lib, Mo
 		g_hash_table_add (native_library_module_blocklist, module);
 		mono_dl_close (module, close_error);
 	} else {
-		MonoDl *raw_module = (MonoDl *) g_malloc0 (sizeof (MonoDl));
+		MonoDl *raw_module = (MonoDl *) g_malloc0_vb (sizeof (MonoDl));
 		if (raw_module) {
 			raw_module->handle = lib;
 			mono_dl_close (raw_module, close_error);
@@ -1111,7 +1111,7 @@ ves_icall_System_Runtime_InteropServices_NativeLibrary_GetSymbol (gpointer lib, 
 
 leave_nolock:
 	ERROR_LOCAL_END (local_error);
-	g_free (symbol_name);
+	g_free_vb (symbol_name);
 
 	return symbol;
 }
@@ -1124,8 +1124,8 @@ check_native_library_cache (MonoDl *module)
 
 	MonoDl *cached_module = netcore_handle_lookup (handle);
 	if (cached_module) {
-		g_free (module->full_name);
-		g_free (module);
+		g_free_vb (module->full_name);
+		g_free_vb (module);
 		mono_refcount_inc (cached_module);
 		return cached_module;
 	}
@@ -1171,7 +1171,7 @@ ves_icall_System_Runtime_InteropServices_NativeLibrary_LoadByName (MonoStringHan
 
 leave:
 	ERROR_LOCAL_END (local_error);
-	g_free (lib_name);
+	g_free_vb (lib_name);
 
 	return handle;
 }
@@ -1212,7 +1212,7 @@ ves_icall_System_Runtime_InteropServices_NativeLibrary_LoadFromPath (MonoStringH
 
 leave:
 	ERROR_LOCAL_END (local_error);
-	g_free (lib_path);
+	g_free_vb (lib_path);
 
 	return handle;
 }

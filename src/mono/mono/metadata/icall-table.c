@@ -311,7 +311,7 @@ mono_lookup_icall_symbol_internal (gpointer func)
 
 		gpointer old = mono_atomic_cas_ptr ((gpointer*)&static_functions_sorted, functions_sorted, NULL);
 		if (old)
-			g_free (functions_sorted);
+			g_free_vb (functions_sorted);
 	}
 
 	T const * const slot = (const T*)bsearch (func, static_functions_sorted, N, sizeof (T), mono_bsearch_icall_function_compare_indirect);

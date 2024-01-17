@@ -482,8 +482,8 @@ common_call_trampoline (host_mgreg_t *regs, guint8 *code, MonoMethod *m, MonoVTa
 				char *class_name = mono_class_full_name (vt->klass);
 				char *method_name = mono_method_full_name (imt_method, TRUE);
 				mono_error_set_ambiguous_implementation (error, "Could not call method '%s' with type '%s' because there are multiple incompatible interface methods overriding this method.", method_name, class_name);
-				g_free (class_name);
-				g_free (method_name);
+				g_free_vb (class_name);
+				g_free_vb (method_name);
 				return NULL;
 			}
 

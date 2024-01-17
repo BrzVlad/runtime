@@ -579,9 +579,9 @@ find_method (MonoClass *in_class, MonoClass *ic, const char* name, MonoMethodSig
 				ic_fqname = NULL;
 
 			result = find_method_in_class (in_ic, ic ? name : NULL, ic_qname, ic_fqname, sig, from_ic, error);
-			g_free (ic_class_name);
-			g_free (ic_fqname);
-			g_free (ic_qname);
+			g_free_vb (ic_class_name);
+			g_free_vb (ic_fqname);
+			g_free_vb (ic_qname);
 			if (result || !is_ok (error))
 				goto out;
 		}
@@ -599,9 +599,9 @@ find_method (MonoClass *in_class, MonoClass *ic, const char* name, MonoMethodSig
 		mono_error_set_method_missing (error, initial_class, name, sig, NULL);
 
  out:
-	g_free (class_name);
-	g_free (fqname);
-	g_free (qname);
+	g_free_vb (class_name);
+	g_free_vb (fqname);
+	g_free_vb (qname);
 	return result;
 }
 
@@ -615,7 +615,7 @@ inflate_generic_signature_checked (MonoImage *image, MonoMethodSignature *sig, M
 	if (!context)
 		return sig;
 
-	res = (MonoMethodSignature *)g_malloc0 (MONO_SIZEOF_METHOD_SIGNATURE + ((gint32)sig->param_count) * sizeof (MonoType*));
+	res = (MonoMethodSignature *)g_malloc0_vb (MONO_SIZEOF_METHOD_SIGNATURE + ((gint32)sig->param_count) * sizeof (MonoType*));
 	res->param_count = sig->param_count;
 	res->sentinelpos = -1;
 	res->ret = mono_class_inflate_generic_type_checked (sig->ret, context, error);
@@ -648,7 +648,7 @@ fail:
 		if (res->params [i])
 			mono_metadata_free_type (res->params [i]);
 	}
-	g_free (res);
+	g_free_vb (res);
 	return NULL;
 }
 
@@ -677,7 +677,7 @@ inflate_generic_header (MonoMethodHeader *header, MonoGenericContext *context, M
 	size_t locals_size = sizeof (gpointer) * header->num_locals;
 	size_t clauses_size = header->num_clauses * sizeof (MonoExceptionClause);
 	size_t header_size = MONO_SIZEOF_METHOD_HEADER + locals_size + clauses_size;
-	MonoMethodHeader *res = (MonoMethodHeader *)g_malloc0 (header_size);
+	MonoMethodHeader *res = (MonoMethodHeader *)g_malloc0_vb (header_size);
 	res->num_locals = header->num_locals;
 	res->clauses = (MonoExceptionClause *) &res->locals [res->num_locals] ;
 	memcpy (res->clauses, header->clauses, clauses_size);
@@ -707,7 +707,7 @@ inflate_generic_header (MonoMethodHeader *header, MonoGenericContext *context, M
 	}
 	return res;
 fail:
-	g_free (res);
+	g_free_vb (res);
 	return NULL;
 }
 
@@ -1235,8 +1235,8 @@ get_method_constrained (MonoImage *image, MonoMethod *method, MonoClass *constra
 		char *base_class_name = mono_type_get_full_name (base_class);
 		char *constrained_class_name = mono_type_get_full_name (constrained_class);
 		mono_error_set_invalid_operation (error, "constrained call: %s is not assignable from %s", base_class_name, constrained_class_name);
-		g_free (base_class_name);
-		g_free (constrained_class_name);
+		g_free_vb (base_class_name);
+		g_free_vb (constrained_class_name);
 		return NULL;
 	}
 
@@ -1391,17 +1391,17 @@ mono_free_method  (MonoMethod *method)
 
 		mono_image_property_remove (m_class_get_image (method->klass), method);
 
-		g_free ((char*)method->name);
+		g_free_vb ((char*)method->name);
 		if (mw->header) {
-			g_free ((char*)mw->header->code);
+			g_free_vb ((char*)mw->header->code);
 			for (i = 0; i < mw->header->num_locals; ++i)
-				g_free (mw->header->locals [i]);
-			g_free (mw->header->clauses);
-			g_free (mw->header);
+				g_free_vb (mw->header->locals [i]);
+			g_free_vb (mw->header->clauses);
+			g_free_vb (mw->header);
 		}
-		g_free (mw->method_data);
-		g_free (method->signature);
-		g_free (method);
+		g_free_vb (mw->method_data);
+		g_free_vb (method->signature);
+		g_free_vb (method);
 	}
 }
 
@@ -1942,7 +1942,7 @@ mono_method_signature_internal_slow (MonoMethod *m)
 		return sig;
 	char *type_name = mono_type_get_full_name (m->klass);
 	g_warning ("Could not load signature of %s:%s due to: %s", type_name, m->name, mono_error_get_message (error));
-	g_free (type_name);
+	g_free_vb (type_name);
 	mono_error_cleanup (error);
 	return NULL;
 }

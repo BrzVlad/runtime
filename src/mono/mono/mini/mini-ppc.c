@@ -389,7 +389,7 @@ get_delegate_invoke_impl (MonoTrampInfo **info, gboolean has_target, guint32 par
 	} else {
 		char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", param_count);
 		*info = mono_tramp_info_create (name, start, code - start, NULL, NULL);
-		g_free (name);
+		g_free_vb (name);
 	}
 
 	return start;
@@ -456,7 +456,7 @@ mono_arch_get_delegate_invoke_impl (MonoMethodSignature *sig, gboolean has_targe
 		if (mono_ee_features.use_aot_trampolines) {
 			char *name = g_strdup_printf ("delegate_invoke_impl_target_%d", sig->param_count);
 			start = (guint8*)mono_aot_get_trampoline (name);
-			g_free (name);
+			g_free_vb (name);
 		} else {
 			MonoTrampInfo *info;
 			start = get_delegate_invoke_impl (&info, FALSE, sig->param_count, FALSE);
@@ -1048,7 +1048,7 @@ get_call_info (MonoMethodSignature *sig)
 	int n = sig->hasthis + sig->param_count;
 	MonoType *simpletype;
 	guint32 stack_size = 0;
-	CallInfo *cinfo = g_malloc0 (sizeof (CallInfo) + sizeof (ArgInfo) * n);
+	CallInfo *cinfo = g_malloc0_vb (sizeof (CallInfo) + sizeof (ArgInfo) * n);
 	gboolean is_pinvoke = sig->pinvoke;
 
 	fr = PPC_FIRST_FPARG_REG;
@@ -1411,8 +1411,8 @@ mono_arch_tailcall_supported (MonoCompile *cfg, MonoMethodSignature *caller_sig,
 			/* An address on the callee's stack is passed as the argument */
 	}
 
-	g_free (caller_info);
-	g_free (callee_info);
+	g_free_vb (caller_info);
+	g_free_vb (callee_info);
 
 	return res;
 }
@@ -1775,7 +1775,7 @@ mono_arch_emit_call (MonoCompile *cfg, MonoCallInst *call)
 	cfg->param_area = MAX (PPC_MINIMAL_PARAM_AREA_SIZE, MAX (cfg->param_area, cinfo->stack_usage));
 	cfg->flags |= MONO_CFG_HAS_CALLS;
 
-	g_free (cinfo);
+	g_free_vb (cinfo);
 }
 
 #ifndef DISABLE_JIT
@@ -4921,7 +4921,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 
 	sig = mono_method_signature_internal (method);
 	cfg->code_size = 512 + sig->param_count * 32;
-	code = cfg->native_code = g_malloc (cfg->code_size);
+	code = cfg->native_code = g_malloc_vb (cfg->code_size);
 
 	cfa_offset = 0;
 
@@ -5392,7 +5392,7 @@ mono_arch_emit_prolog (MonoCompile *cfg)
 	}
 
 	set_code_cursor (cfg, code);
-	g_free (cinfo);
+	g_free_vb (cinfo);
 
 	return code;
 }

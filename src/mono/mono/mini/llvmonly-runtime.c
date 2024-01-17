@@ -976,7 +976,7 @@ mini_llvmonly_throw_aot_failed_exception (const char *name)
 {
 	char *msg = g_strdup_printf ("AOT Compilation failed for method '%s'.", name);
 	MonoException *ex = mono_get_exception_execution_engine (msg);
-	g_free (msg);
+	g_free_vb (msg);
 	mini_llvmonly_throw_exception ((MonoObject*)ex);
 }
 

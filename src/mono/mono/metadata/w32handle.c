@@ -396,7 +396,7 @@ w32handle_destroy (MonoW32Handle *handle_data)
 
 	memset (handle_specific, 0, mono_w32handle_ops_typesize (type));
 
-	g_free (handle_specific);
+	g_free_vb (handle_specific);
 }
 
 /* The handle must not be locked on entry to this function */
