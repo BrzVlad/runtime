@@ -2215,7 +2215,20 @@ interp_handle_intrinsics (TransformData *td, MonoMethod *target_method, MonoClas
 			td->ip += 5;
 			return TRUE;
 		} else if (!strcmp (tm, "SkipInit")) {
-			*op = MINT_NOP;
+			InterpInst *ldloca = td->last_ins;
+			if (ldloca != NULL && ldloca->opcode == MINT_LDLOCA_S) {
+				// ldloca + SkipInit = MINT_DEF
+				// MINT_DEF will overwrite any previous initializations of the var, but it will
+				// not actually lead to any generated code.
+				interp_add_ins (td, MINT_DEF);
+				td->last_ins->dreg = ldloca->sregs [0];
+				td->sp--;
+				td->ip += 5;
+				interp_clear_ins (ldloca);
+				return TRUE;
+			} else {
+				*op = MINT_NOP;
+			}
 		} else if (!strcmp (tm, "SubtractByteOffset")) {
 #if SIZEOF_VOID_P == 4
 			*op = MINT_SUB_I4;
