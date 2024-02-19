@@ -66,6 +66,7 @@ static guint16 sri_vector128_methods [] = {
 	SN_GreaterThan,
 	SN_LessThan,
 	SN_LessThanOrEqual,
+	SN_LoadUnsafe,
 	SN_Narrow,
 	SN_ShiftLeft,
 	SN_ShiftRightArithmetic,
@@ -447,6 +448,18 @@ emit_sri_vector128 (TransformData *td, MonoMethod *cmethod, MonoMethodSignature 
 		case SN_LessThanOrEqual:
 			simd_opcode = MINT_SIMD_INTRINS_P_PP;
 			if (atype == MONO_TYPE_U2) simd_intrins = INTERP_SIMD_INTRINSIC_V128_U2_LESS_THAN_EQUAL;
+			break;
+		case SN_LoadUnsafe:
+			if (csignature->param_count == 1) {
+				interp_add_ins (td, MINT_LDOBJ_VT);
+				td->last_ins->data [0] = SIZEOF_V128;
+				goto opcode_added;
+			} else if (csignature->param_count == 2) {
+				interp_add_ins (td, MINT_LDOBJ_OFF_VT);
+				td->last_ins->data [0] = SIZEOF_V128;
+				td->last_ins->data [1] = arg_size;
+				goto opcode_added;
+			}
 			break;
 		case SN_Narrow:
 			simd_opcode = MINT_SIMD_INTRINS_P_PP;

@@ -5691,6 +5691,15 @@ MINT_IN_CASE(MINT_BRTRUE_I8_SP) ZEROP_SP(gint64, !=); MINT_IN_BREAK;
 			ip += 4;
 			MINT_IN_BREAK;
 		}
+		MINT_IN_CASE(MINT_LDOBJ_OFF_VT) {
+			guint16 size = ip [4];
+			gpointer srcBase = LOCAL_VAR (ip [2], gpointer);
+			NULL_CHECK (srcBase);
+			gpointer srcAddr = (gpointer) ((gint8*)srcBase + LOCAL_VAR (ip [3], gsize) * ip [5]);
+			memcpy (locals + ip [1], srcAddr, size);
+			ip += 6;
+			MINT_IN_BREAK;
+		}
 		MINT_IN_CASE(MINT_LDSTR)
 			LOCAL_VAR (ip [1], gpointer) = frame->imethod->data_items [ip [2]];
 			ip += 3;
