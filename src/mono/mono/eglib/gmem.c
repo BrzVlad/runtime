@@ -30,7 +30,10 @@
 #include <string.h>
 #include <glib.h>
 #include <eglib-remap.h> // Remove the cast macros and restore the rename macros.
-#include <malloc.h>
+#include <malloc/malloc.h>
+
+#define malloc_usable_size malloc_size
+
 #undef malloc
 #undef realloc
 #undef free
