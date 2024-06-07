@@ -4251,8 +4251,11 @@ mini_parse_debug_option (const char *option)
 	else if (!strncmp (option, "thread-dump-dir=", 16))
 		mono_set_thread_dump_dir(g_strdup(option + 16));
 	else if (!strncmp (option, "aot-skip=", 9)) {
-		mini_debug_options.aot_skip_set = TRUE;
-		mini_debug_options.aot_skip = atoi (option + 9);
+		const char *aot_skip_i = option + 9;
+		const char *aot_skip_n = strchr (aot_skip_i, ':') + 1;
+
+		mini_debug_options.aot_skip_i = atoi (aot_skip_i);
+		mini_debug_options.aot_skip_n = atoi (aot_skip_n);
 	} else
 		return FALSE;
 

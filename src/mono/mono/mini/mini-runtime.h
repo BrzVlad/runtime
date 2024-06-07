@@ -339,11 +339,11 @@ typedef struct MonoDebugOptions {
 	gboolean weak_memory_model;
 
 	/*
-	 * Internal testing feature
-	 * Testing feature, skip loading the Nth aot loadable method.
+	 * Internal testing feature. We skip loading method from aot image if
+	 * method hash mod aot_skip_n == aot_skip_i. Depending on the params, it should
+	 * result in chaotic transitions between interp and aot.
 	 */
-	gboolean aot_skip_set;
-	int aot_skip;
+	guint32 aot_skip_n, aot_skip_i;
 
 	/*
 	 * Treat exceptions which reach the topmost runtime invoke as unhandled when

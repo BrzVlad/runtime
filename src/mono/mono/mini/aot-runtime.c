@@ -4367,24 +4367,17 @@ load_method (MonoAotModule *amodule, MonoImage *image, MonoMethod *method, guint
 	if ((amodule->methods_loaded [method_index / 32] >> (method_index % 32)) & 0x1)
 		return code;
 
-	if (mini_debug_options.aot_skip_set && !(method && method->wrapper_type)) {
-		gint32 methods_aot = mono_atomic_load_i32 (&mono_jit_stats.methods_aot);
-		methods_aot += mono_atomic_load_i32 (&mono_jit_stats.methods_aot_llvm);
-		if (methods_aot == mini_debug_options.aot_skip) {
-			if (!method) {
-				method = mono_get_method_checked (image, token, NULL, NULL, error);
-				if (!method)
-					return NULL;
-			}
-			if (method) {
-				char *name = mono_method_full_name (method, TRUE);
-				g_print ("NON AOT METHOD: %s.\n", name);
-				g_free (name);
-			} else {
-				g_print ("NON AOT METHOD: %p %d\n", code, method_index);
-			}
-			mini_debug_options.aot_skip_set = FALSE;
-			return NULL;
+
+	if (mini_debug_options.aot_skip_n) {
+		if (!method) {
+			method = mono_get_method_checked (image, token, NULL, NULL, error);
+			if (!method)
+				return NULL;
+		}
+		if (!method->wrapper_type) {
+			guint32 hash = mono_aot_method_hash (method);
+			if ((hash % mini_debug_options.aot_skip_n) == mini_debug_options.aot_skip_i)
+				return NULL;
 		}
 	}
 
