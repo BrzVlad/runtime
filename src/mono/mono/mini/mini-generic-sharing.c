@@ -928,6 +928,8 @@ get_method_nofail (MonoClass *klass, const char *method_name, int num_params, in
 	return method;
 }
 
+void mono_break (void);
+
 static gpointer
 class_type_info (MonoMemoryManager *mem_manager, MonoClass *klass, MonoRgctxInfoType info_type, MonoError *error)
 {
@@ -1083,8 +1085,8 @@ class_type_info (MonoMemoryManager *mem_manager, MonoClass *klass, MonoRgctxInfo
 		}
 
 		ji = mini_jit_info_table_find (mono_get_addr_from_ftnptr (addr));
-		g_assert (ji);
-		if (mini_jit_info_is_gsharedvt (ji))
+		// ji can be null if this is an entry to interpreter
+		if (ji && mini_jit_info_is_gsharedvt (ji))
 			return mono_create_static_rgctx_trampoline (method, addr);
 		else {
 			/* Need to add an out wrapper */
