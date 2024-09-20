@@ -2967,7 +2967,7 @@ interp_method_check_inlining (TransformData *td, MonoMethod *method, MonoMethodS
 static gboolean
 interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHeader *header, MonoError *error)
 {
-	const unsigned char *prev_ip, *prev_il_code, *prev_in_start;
+	const unsigned char *prev_ip, *prev_il_code;
 	int *prev_in_offsets;
 	gboolean ret;
 	unsigned int prev_max_stack_height, prev_locals_size;
@@ -3000,7 +3000,6 @@ interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHe
 
 	prev_ip = td->ip;
 	prev_il_code = td->il_code;
-	prev_in_start = td->in_start;
 	prev_sp_offset = GPTRDIFF_TO_INT (td->sp - td->stack);
 	prev_inlined_method = td->inlined_method;
 	prev_last_ins = td->last_ins;
@@ -3085,7 +3084,6 @@ interp_inline_method (TransformData *td, MonoMethod *target_method, MonoMethodHe
 	}
 
 	td->ip = prev_ip;
-	td->in_start = prev_in_start;
 	td->il_code = prev_il_code;
 	td->inlined_method = prev_inlined_method;
 	td->offset_to_bb = prev_offset_to_bb;
@@ -5194,8 +5192,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 	gboolean generate_enc_seq_points_without_debug_info = FALSE;
 	InterpBasicBlock *exit_bb = NULL;
 
-	td->il_code = header->code;
-	td->in_start = td->ip = header->code;
+	td->il_code = td->ip = header->code;
 	end = td->ip + header->code_size;
 
 	td->cbb = td->entry_bb = interp_alloc_bb (td);
@@ -5438,7 +5435,6 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
                         }
 		}
 		td->offset_to_bb [in_offset] = td->cbb;
-		td->in_start = td->ip;
 
 		/* Checks that a jump target isn't in the middle of opcode offset */
 		int op_size = mono_opcode_size (td->ip, end);
