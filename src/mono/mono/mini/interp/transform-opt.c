@@ -1655,7 +1655,7 @@ remove_bblock_ref (InterpBasicBlock **array, InterpBasicBlock *ref, int len)
 	}
 }
 
-static void
+void
 interp_unlink_bblocks (InterpBasicBlock *from, InterpBasicBlock *to)
 {
 	remove_bblock_ref (from->out_bb, to, from->out_count);

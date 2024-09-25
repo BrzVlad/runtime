@@ -521,6 +521,9 @@ interp_alloc_bb (TransformData *td);
 void
 interp_link_bblocks (TransformData *td, InterpBasicBlock *from, InterpBasicBlock *to);
 
+void
+interp_unlink_bblocks (InterpBasicBlock *from, InterpBasicBlock *to);
+
 int
 interp_compute_native_offset_estimates (TransformData *td, gboolean final_code);
 

@@ -763,8 +763,6 @@ handle_branch (TransformData *td, int long_op, int offset)
 	if (long_op != MINT_CALL_HANDLER) {
 		if (td->cbb->no_inlining)
 			target_bb->jump_targets--;
-		// We don't link finally blocks into the cfg (or other handler blocks for that matter)
-		interp_link_bblocks (td, td->cbb, target_bb);
 	}
 
 	interp_add_ins (td, long_op);
@@ -801,11 +799,14 @@ one_arg_branch(TransformData *td, int mint_op, int offset, int inst_size)
 		if (cond_result != -1) {
 			if (cond_result) {
 				handle_branch (td, MINT_BR, offset + inst_size);
+				interp_unlink_bblocks (td->cbb, td->cbb->next_bb);
 				return FALSE;
 			} else {
 				// branch condition always false, it is a NOP
 				int target = GPTRDIFF_TO_INT (td->ip + offset + inst_size - td->il_code);
-				td->offset_to_bb [target]->jump_targets--;
+				InterpBasicBlock *target_bb = td->offset_to_bb [target];
+				interp_unlink_bblocks (td->cbb, target_bb);
+				target_bb->jump_targets--;
 				return TRUE;
 			}
 		} else {
@@ -899,11 +900,13 @@ two_arg_branch(TransformData *td, int mint_op, int offset, int inst_size)
 		if (cond_result != -1) {
 			if (cond_result) {
 				handle_branch (td, MINT_BR, offset + inst_size);
+				interp_unlink_bblocks (td->cbb, td->cbb->next_bb);
 				return FALSE;
 			} else {
 				// branch condition always false, it is a NOP
 				int target = GPTRDIFF_TO_INT (td->ip + offset + inst_size - td->il_code);
-				td->offset_to_bb [target]->jump_targets--;
+				InterpBasicBlock *target_bb = td->offset_to_bb [target];
+				interp_unlink_bblocks (td->cbb, target_bb);
 				return TRUE;
 			}
 		} else {
@@ -4093,6 +4096,102 @@ interp_alloc_bb (TransformData *td)
 	return bb;
 }
 
+static void
+link_basic_blocks (TransformData *td, MonoMethodHeader *header)
+{
+	guint8 *start = (guint8*)td->il_code;
+	guint8 *end = (guint8*)td->il_code + td->code_size;
+	guint8 *ip = start;
+	gboolean link_bblocks = TRUE;
+	InterpBasicBlock *cbb = td->entry_bb;
+	int in_offset, target_offset;
+	const MonoOpcode *opinfo;
+
+	while (ip < end) {
+		in_offset = GPTRDIFF_TO_INT (ip - start);
+		int opcode = mono_opcode_value ((const guint8 **)&ip, end);
+		opinfo = &mono_opcodes [opcode];
+
+		InterpBasicBlock *new_bb = td->offset_to_bb [in_offset];
+		if (new_bb != NULL) {
+			if (new_bb != cbb) {
+				if (link_bblocks)
+					interp_link_bblocks (td, cbb, new_bb);
+				else
+					link_bblocks = TRUE;
+				cbb->next_bb = new_bb;
+				cbb = new_bb;
+			}
+		}
+
+		switch (opinfo->argument) {
+		case MonoInlineNone:
+			ip++;
+			if (ip < end && (opcode == MONO_CEE_RET || opcode == MONO_CEE_THROW || opcode == MONO_CEE_RETHROW ||
+					opcode == MONO_CEE_ENDFINALLY || opcode == MONO_CEE_ENDFILTER || opcode == MONO_CEE_MONO_RETHROW)) {
+				link_bblocks = FALSE;
+			}
+			break;
+		case MonoInlineString:
+		case MonoInlineType:
+		case MonoInlineField:
+		case MonoInlineMethod:
+		case MonoInlineTok:
+		case MonoInlineSig:
+		case MonoShortInlineR:
+		case MonoInlineI:
+			ip += 5;
+			break;
+		case MonoInlineVar:
+			ip += 3;
+			break;
+		case MonoShortInlineVar:
+		case MonoShortInlineI:
+			ip += 2;
+			break;
+		case MonoShortInlineBrTarget: {
+			int br_offset = (gint8)ip [1];
+			target_offset = in_offset + 2 + br_offset;
+			interp_link_bblocks (td, cbb, td->offset_to_bb [target_offset]);
+			ip += 2;
+			// link_bblocks remains true in flow is MONO_FLOW_COND_BRANCH
+			if (opinfo->flow_type == MONO_FLOW_BRANCH || !br_offset)
+				link_bblocks = FALSE;
+			break;
+		}
+		case MonoInlineBrTarget: {
+			int br_offset = (gint32)read32 (ip + 1);
+			target_offset = in_offset + 5 + br_offset;
+			interp_link_bblocks (td, cbb, td->offset_to_bb [target_offset]);
+			ip += 5;
+			// link_bblocks remains true in flow is MONO_FLOW_COND_BRANCH
+			if (opinfo->flow_type == MONO_FLOW_BRANCH || !br_offset)
+				link_bblocks = FALSE;
+			break;
+		}
+		case MonoInlineSwitch: {
+			guint32 n = read32 (ip + 1);
+			guint32 j;
+			ip += 5;
+			in_offset += 5 + 4 * n;
+			target_offset = in_offset;
+			for (j = 0; j < n; ++j) {
+				target_offset = in_offset + (gint32)read32 (ip);
+				interp_link_bblocks (td, cbb, td->offset_to_bb [target_offset]);
+				ip += 4;
+			}
+			break;
+		}
+		case MonoInlineR:
+		case MonoInlineI8:
+			ip += 9;
+			break;
+		default:
+			g_assert_not_reached ();
+		}
+	}
+}
+
 static InterpBasicBlock*
 get_bb (TransformData *td, unsigned char *ip, gboolean make_list)
 {
@@ -4125,7 +4224,7 @@ get_basic_blocks (TransformData *td, MonoMethodHeader *header, gboolean make_lis
 	guint8 *ip = start;
 	unsigned char *target;
 	ptrdiff_t cli_addr;
-	const MonoOpcode *opcode;
+	const MonoOpcode *opinfo;
 	InterpBasicBlock *bb;
 
 	td->offset_to_bb = (InterpBasicBlock**)mono_mempool_alloc0 (td->mempool, (unsigned int)(sizeof (InterpBasicBlock*) * (end - start + 1)));
@@ -4153,13 +4252,18 @@ get_basic_blocks (TransformData *td, MonoMethodHeader *header, gboolean make_lis
 			mono_bitset_set (il_targets, c->data.filter_offset);
 		}
 	}
+
 	while (ip < end) {
 		cli_addr = ip - start;
-		int i = mono_opcode_value ((const guint8 **)&ip, end);
-		opcode = &mono_opcodes [i];
-		switch (opcode->argument) {
+		int opcode = mono_opcode_value ((const guint8 **)&ip, end);
+		opinfo = &mono_opcodes [opcode];
+		switch (opinfo->argument) {
 		case MonoInlineNone:
 			ip++;
+			if (ip < end && (opcode == MONO_CEE_RET || opcode == MONO_CEE_THROW || opcode == MONO_CEE_RETHROW ||
+					opcode == MONO_CEE_ENDFINALLY || opcode == MONO_CEE_ENDFILTER || opcode == MONO_CEE_MONO_RETHROW)) {
+				bb = get_bb (td, ip, make_list);
+			}
 			break;
 		case MonoInlineString:
 		case MonoInlineType:
@@ -4228,9 +4332,6 @@ get_basic_blocks (TransformData *td, MonoMethodHeader *header, gboolean make_lis
 		default:
 			g_assert_not_reached ();
 		}
-
-		if (i == CEE_THROW || i == CEE_ENDFINALLY || i == CEE_RETHROW)
-			get_bb (td, ip, make_list);
 	}
 
 	/* get_bb added blocks in reverse order, unreverse now */
@@ -5214,6 +5315,8 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 		goto exit;
 	}
 
+	link_basic_blocks (td, header);
+
 	if (!inlining)
 		initialize_clause_bblocks (td);
 
@@ -5379,6 +5482,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 
 		InterpBasicBlock *new_bb = td->offset_to_bb [in_offset];
 		if (new_bb != NULL && td->cbb != new_bb) {
+			if (td->verbose_level) g_print ("BB%d\n", new_bb->index);
 			/* We are starting a new basic block. Change cbb and link them together */
 			if (link_bblocks) {
 				if (!new_bb->jump_targets && td->cbb->no_inlining) {
@@ -5388,11 +5492,6 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					if (td->verbose_level)
 						g_print ("Disable inlining in BB%d\n", new_bb->index);
 				}
-				/*
-				 * By default we link cbb with the new starting bblock, unless the previous
-				 * instruction is an unconditional branch (BR, LEAVE, ENDFINALLY)
-				 */
-				interp_link_bblocks (td, td->cbb, new_bb);
 				fixup_newbb_stack_locals (td, new_bb);
 			} else if (!new_bb->jump_targets) {
 				// This is a bblock that is not branched to and it is not linked to the
@@ -5444,7 +5543,7 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 				goto exit;
 			}
 		}
-		if (td->cbb->dead) {
+		if (td->cbb->dead && 0) {
 			g_assert (op_size > 0); /* The BB formation pass must catch all bad ops */
 
 			if (td->verbose_level > 1)
@@ -6027,7 +6126,6 @@ generate_code (TransformData *td, MonoMethod *method, MonoMethodHeader *header, 
 					init_bb_stack_state (td, target_bb);
 				}
 				target_bb_table [i] = target_bb;
-				interp_link_bblocks (td, td->cbb, target_bb);
 				td->ip += 4;
 			}
 			td->last_ins->info.target_bb_table = target_bb_table;
