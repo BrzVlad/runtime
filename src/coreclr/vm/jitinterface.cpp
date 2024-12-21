@@ -10953,6 +10953,9 @@ void CEEJitInfo::WriteCode(EEJitManager * jitMgr)
     if (m_pCodeHeap == nullptr) return;
 #endif
 
+    // FIXME currently needed for new interpreter
+    if (m_pCodeHeap == nullptr) return;
+
     WriteCodeBytes();
 
     // Now that the code header was written to the final location, publish the code via the nibble map

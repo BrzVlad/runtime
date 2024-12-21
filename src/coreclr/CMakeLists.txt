@@ -254,6 +254,7 @@ if(NOT CLR_CMAKE_HOST_MACCATALYST AND NOT CLR_CMAKE_HOST_IOS AND NOT CLR_CMAKE_H
   add_subdirectory(ildasm)
   add_subdirectory(gcinfo)
   add_subdirectory(jit)
+  add_subdirectory(interp)
   add_subdirectory(vm)
   add_subdirectory(md)
   add_subdirectory(debug)
