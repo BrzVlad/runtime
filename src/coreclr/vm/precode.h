@@ -329,6 +329,21 @@ struct FixupPrecode
         _ASSERTE(IS_ALIGNED(&GetData()->Target, sizeof(SIZE_T)));
         return InterlockedCompareExchangeT<PCODE>(&GetData()->Target, (PCODE)target, (PCODE)oldTarget) == (PCODE)oldTarget;
     }
+
+    BOOL SetPrecodeFixupThunkInterlocked(TADDR target)
+    {
+        CONTRACTL
+        {
+            NOTHROW;
+            GC_NOTRIGGER;
+        }
+        CONTRACTL_END;
+
+        _ASSERTE(IS_ALIGNED(&GetData()->PrecodeFixupThunk, sizeof(SIZE_T)));
+        _ASSERTE((PCODE)GetData()->Target == ((PCODE)this + FixupCodeOffset));
+        PCODE oldTarget = (PCODE)GetData()->PrecodeFixupThunk;
+        return InterlockedCompareExchangeT<PCODE>(&GetData()->PrecodeFixupThunk, (PCODE)target, (PCODE)oldTarget) == (PCODE)oldTarget;
+    }
 #endif
 
 #ifdef DACCESS_COMPILE
@@ -538,7 +553,7 @@ public:
 
 #ifndef DACCESS_COMPILE
     void ResetTargetInterlocked();
-    BOOL SetTargetInterlocked(PCODE target, BOOL fOnlyRedirectFromPrestub = TRUE);
+    BOOL SetTargetInterlocked(PCODE target, BOOL fOnlyRedirectFromPrestub = TRUE, BOOL fInterpreter = FALSE);
 
     // Reset precode to point to prestub
     void Reset();

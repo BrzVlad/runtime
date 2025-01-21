@@ -53,6 +53,7 @@ typedef struct _FakeHpRealCodeHdr
     LPVOID              pCalledMethods;
 #endif
     LPVOID              hdrMDesc;       // changed from MethodDesc*
+    BOOL                isInterpreterCode;
     DWORD               nUnwindInfos;
     T_RUNTIME_FUNCTION  unwindInfos[0];
 } FakeRealCodeHeader;

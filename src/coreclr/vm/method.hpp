@@ -1679,6 +1679,7 @@ protected:
         enum_flag4_ComputedRequiresStableEntryPoint         = 0x01,
         enum_flag4_RequiresStableEntryPoint                 = 0x02,
         enum_flag4_TemporaryEntryPointAssigned              = 0x04,
+        enum_flag4_IsInterpreted                            = 0x08,
     };
 
     void InterlockedSetFlags4(BYTE mask, BYTE newValue);

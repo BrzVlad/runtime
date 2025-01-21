@@ -52,6 +52,7 @@ enum CorJitAllocMemFlag
     CORJIT_ALLOCMEM_FLG_32BYTE_ALIGN   = 0x00000004, // The code will be 32-byte aligned
     CORJIT_ALLOCMEM_FLG_RODATA_32BYTE_ALIGN = 0x00000008, // The read-only data will be 32-byte aligned
     CORJIT_ALLOCMEM_FLG_RODATA_64BYTE_ALIGN = 0x00000010, // The read-only data will be 64-byte aligned
+    CORJIT_ALLOCMEM_FLG_INTERPRETER_CODE = 0x00000020, // The code is an IR code of the interpreter
 };
 
 inline CorJitAllocMemFlag operator |(CorJitAllocMemFlag a, CorJitAllocMemFlag b)
@@ -103,6 +104,13 @@ class ICorJitCompiler;
 class ICorJitInfo;
 
 extern "C" ICorJitCompiler* getJit();
+
+class ICorInterpreter
+{
+    public:
+        virtual void* GetInterpMethod(CORINFO_METHOD_HANDLE methodHnd) = 0;
+
+};
 
 // #EEToJitInterface
 // ICorJitCompiler is the interface that the EE uses to get IL bytecode converted to native code. Note that

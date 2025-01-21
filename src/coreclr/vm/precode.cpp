@@ -278,7 +278,7 @@ void Precode::ResetTargetInterlocked()
     // interlocked operation above (see ClrFlushInstructionCache())
 }
 
-BOOL Precode::SetTargetInterlocked(PCODE target, BOOL fOnlyRedirectFromPrestub)
+BOOL Precode::SetTargetInterlocked(PCODE target, BOOL fOnlyRedirectFromPrestub, BOOL fInterpreter)
 {
     WRAPPER_NO_CONTRACT;
     _ASSERTE(!IsPointingToPrestub(target));
@@ -298,12 +298,20 @@ BOOL Precode::SetTargetInterlocked(PCODE target, BOOL fOnlyRedirectFromPrestub)
 
 #ifdef HAS_FIXUP_PRECODE
     case PRECODE_FIXUP:
-        ret = AsFixupPrecode()->SetTargetInterlocked(target, expected);
+        if (fInterpreter)
+        {
+            ret = AsFixupPrecode()->SetPrecodeFixupThunkInterlocked(target);    
+        }
+        else
+        {
+            ret = AsFixupPrecode()->SetTargetInterlocked(target, expected);
+        }
         break;
 #endif // HAS_FIXUP_PRECODE
 
 #ifdef HAS_THISPTR_RETBUF_PRECODE
     case PRECODE_THISPTR_RETBUF:
+        _ASSERTE(!fInterpreter);
         ret = AsThisPtrRetBufPrecode()->SetTargetInterlocked(target, expected);
         ClrFlushInstructionCache(this, sizeof(ThisPtrRetBufPrecode), /* hasCodeExecutedBefore */ true);
         break;

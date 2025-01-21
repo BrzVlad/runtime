@@ -3028,6 +3028,8 @@ FORCEINLINE bool MethodDesc::TryBackpatchEntryPointSlots(
     return true;
 }
 
+extern "C" void InterpreterStub();
+
 void MethodDesc::TrySetInitialCodeEntryPointForVersionableMethod(
     PCODE entryPoint,
     bool mayHaveEntryPointSlotsToBackpatch)
@@ -3044,7 +3046,11 @@ void MethodDesc::TrySetInitialCodeEntryPointForVersionableMethod(
     else
     {
         _ASSERTE(IsVersionableWithPrecode());
-        GetOrCreatePrecode()->SetTargetInterlocked(entryPoint, TRUE /* fOnlyRedirectFromPrestub */);
+        if (VolatileLoad(&m_bFlags4) & enum_flag4_IsInterpreted)
+        {
+            entryPoint = (PCODE)InterpreterStub;
+        }
+        GetOrCreatePrecode()->SetTargetInterlocked(entryPoint, TRUE /* fOnlyRedirectFromPrestub */, TRUE /* fInterpreter */);
     }
 }
 

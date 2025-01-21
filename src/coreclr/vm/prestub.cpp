@@ -23,6 +23,8 @@
 #include "virtualcallstub.h"
 #include "../debug/ee/debugger.h"
 
+#include "interpexec.h"
+
 #ifdef FEATURE_COMINTEROP
 #include "clrtocomcall.h"
 #endif
@@ -426,6 +428,12 @@ PCODE MethodDesc::PrepareILBasedCode(PrepareCodeConfig* pConfig)
         LOG((LF_CLASSLOADER, LL_INFO1000000,
             "    In PrepareILBasedCode, calling JitCompileCode\n"));
         pCode = JitCompileCode(pConfig);
+        CodeHeader *pCodeHeader = EEJitManager::GetCodeHeaderFromStartAddress(pCode);
+        _ASSERTE(pCodeHeader->GetMethodDesc() == this);
+        if (pCodeHeader->IsInterpreterCode())
+        {
+            InterlockedUpdateFlags4(enum_flag4_IsInterpreted, TRUE);
+        }
     }
     else
     {
@@ -2688,6 +2696,28 @@ extern "C" PCODE STDCALL PreStubWorker(TransitionBlock* pTransitionBlock, Method
     END_PRESERVE_LAST_ERROR;
 
     return pbRetVal;
+}
+
+// TODO: instead of the methodHandle, pass in the IR code address. We can put equivalent of the old InterpMethod* at the beginning of the code.
+// Or, how about storing the actual InterpMethod instance at the beginning of the code? Would there be any downside to that?
+extern "C" void STDCALL ExecuteInterpretedMethod(TransitionBlock* pTransitionBlock, MethodDesc* pMD)
+{
+    // Argument registers are in the TransitionBlock
+    // The stack arguments are right after the pTransitionBlock
+    // TODO: decide on how to pass the return value in case there are multiple return registers used
+    EEJitManager *pManager = ExecutionManager::GetEEJitManager();
+    InterpMethod *pMethod = (InterpMethod*)pManager->m_interpreter->GetInterpMethod((CORINFO_METHOD_HANDLE)pMD);
+    assert(pMethod && pMethod->compiled);
+
+    InterpThreadContext *threadContext = InterpGetThreadContext();
+    int8_t *sp = threadContext->pStackPointer;
+
+    InterpFrame interpFrame = {0};
+    interpFrame.pMethod = pMethod;
+    interpFrame.pStack = sp;
+    interpFrame.pRetVal = sp;
+
+    InterpExecMethod(&interpFrame, threadContext);
 }
 
 #ifdef _DEBUG
