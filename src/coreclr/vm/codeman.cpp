@@ -1835,6 +1835,17 @@ static void LoadAndInitializeJIT(LPCWSTR pwzJitName DEBUGARG(LPCWSTR pwzJitPath)
     }
 }
 
+void InitializeInterpreter(IN HINSTANCE phJit, OUT ICorInterpreter **pNewInterpreter)
+{
+    typedef ICorInterpreter* (__stdcall* pGetInterpreterFn)();
+    pGetInterpreterFn getInterpreterFn = (pGetInterpreterFn) GetProcAddress(phJit, "getInterpreter");
+
+    if (getInterpreterFn != NULL)
+    {
+        *pNewInterpreter = (*getInterpreterFn)();
+    }
+}
+
 #ifdef FEATURE_MERGE_JIT_AND_ENGINE
 EXTERN_C void jitStartup(ICorJitHost* host);
 EXTERN_C ICorJitCompiler* getJit();
@@ -1896,6 +1907,7 @@ BOOL EEJitManager::LoadJIT()
     // This allows us to display load error messages for loading altjit.
 
     ICorJitCompiler* newAltJitCompiler = NULL;
+    ICorInterpreter* newInterpreter = NULL;
 
     LPWSTR altJitConfig;
     IfFailThrow(CLRConfig::GetConfigValue(CLRConfig::EXTERNAL_AltJit, &altJitConfig));
@@ -1967,6 +1979,7 @@ BOOL EEJitManager::LoadJIT()
         }
         g_JitLoadData.jld_id = JIT_LOAD_ALTJIT;
         LoadAndInitializeJIT(altJitName DEBUGARG(altJitPath), &m_AltJITCompiler, &newAltJitCompiler, &g_JitLoadData, targetOs);
+        InitializeInterpreter(m_AltJITCompiler, &newInterpreter);
     }
 
 #endif // ALLOW_SXS_JIT
@@ -1976,6 +1989,7 @@ BOOL EEJitManager::LoadJIT()
 #ifdef ALLOW_SXS_JIT
     m_AltJITRequired = (altJitConfig != NULL);
     m_alternateJit = newAltJitCompiler;
+    m_interpreter = newInterpreter;
 #endif // ALLOW_SXS_JIT
 
     m_jit = newJitCompiler;
@@ -2819,6 +2833,10 @@ void EEJitManager::allocCode(MethodDesc* pMD, size_t blockSize, size_t reserveFo
     }
 #endif
     requestInfo.setReserveForJumpStubs(reserveForJumpStubs);
+    if (flag & CORJIT_ALLOCMEM_FLG_INTERPRETER_CODE)
+    {
+        requestInfo.SetInterpreterCode();
+    }
 
 #ifdef FEATURE_EH_FUNCLETS
     SIZE_T realHeaderSize = offsetof(RealCodeHeader, unwindInfos[0]) + (sizeof(T_RUNTIME_FUNCTION) * nUnwindInfos);
@@ -2884,6 +2902,7 @@ void EEJitManager::allocCode(MethodDesc* pMD, size_t blockSize, size_t reserveFo
 #ifdef FEATURE_EH_FUNCLETS
         pCodeHdrRW->SetNumberOfUnwindInfos(nUnwindInfos);
 #endif
+        pCodeHdrRW->SetInterpreterCode(requestInfo.IsInterpreterCode());
 
         if (requestInfo.IsDynamicDomain())
         {

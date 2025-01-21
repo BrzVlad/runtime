@@ -426,6 +426,12 @@ PCODE MethodDesc::PrepareILBasedCode(PrepareCodeConfig* pConfig)
         LOG((LF_CLASSLOADER, LL_INFO1000000,
             "    In PrepareILBasedCode, calling JitCompileCode\n"));
         pCode = JitCompileCode(pConfig);
+        CodeHeader *pCodeHeader = EEJitManager::GetCodeHeaderFromStartAddress(pCode);
+        _ASSERTE(pCodeHeader->GetMethodDesc() == this);
+        if (pCodeHeader->IsInterpreterCode())
+        {
+            InterlockedUpdateFlags4(enum_flag4_IsInterpreted, TRUE);
+        }
     }
     else
     {
@@ -2688,6 +2694,15 @@ extern "C" PCODE STDCALL PreStubWorker(TransitionBlock* pTransitionBlock, Method
     END_PRESERVE_LAST_ERROR;
 
     return pbRetVal;
+}
+
+extern "C" void STDCALL ExecuteInterpretedMethod(TransitionBlock* pTransitionBlock, MethodDesc* pMD)
+{
+    // Argument registers are in the TransitionBlock
+    // The stack arguments are right after the pTransitionBlock
+    // TODO: decide on how to pass the return value in case there are multiple return registers used
+    EEJitManager *pManager = ExecutionManager::GetEEJitManager();
+    pManager->m_interpreter->InterpretMethod((CORINFO_METHOD_HANDLE)pMD, pTransitionBlock);
 }
 
 #ifdef _DEBUG
