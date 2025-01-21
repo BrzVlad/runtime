@@ -135,6 +135,8 @@ public:
 
     PTR_MethodDesc      phdrMDesc;
 
+    BOOL                isInterpreterCode;
+
 #ifdef FEATURE_EH_FUNCLETS
     DWORD               nUnwindInfos;
     T_RUNTIME_FUNCTION  unwindInfos[0];
@@ -191,6 +193,18 @@ public:
         SUPPORTS_DAC;
         // Note that it is important for this comparison to be unsigned
         return dac_cast<TADDR>(pRealCodeHeader) <= (TADDR)STUB_CODE_BLOCK_LAST;
+    }
+
+    BOOL IsInterpreterCode()
+    {
+        SUPPORTS_DAC;
+        return pRealCodeHeader->isInterpreterCode;
+    }
+
+    void SetInterpreterCode(BOOL isInterpreterCode)
+    {
+        SUPPORTS_DAC;
+        pRealCodeHeader->isInterpreterCode = isInterpreterCode;
     }
 
     void SetRealCodeHeader(BYTE* pRCH)
@@ -270,11 +284,15 @@ struct CodeHeapRequestInfo
     bool         m_isDynamicDomain;
     bool         m_isCollectible;
     bool         m_throwOnOutOfMemoryWithinRange;
+    bool         m_isInterpreterCode;
 
     bool   IsDynamicDomain()                    { return m_isDynamicDomain;    }
     void   SetDynamicDomain()                   { m_isDynamicDomain = true;    }
 
     bool   IsCollectible()                      { return m_isCollectible;      }
+
+    bool   IsInterpreterCode()                  { return m_isInterpreterCode;  }
+    void   SetInterpreterCode()                 { m_isInterpreterCode = true; }
 
     size_t getRequestSize()                     { return m_requestSize;        }
     void   setRequestSize(size_t requestSize)   { m_requestSize = requestSize; }
@@ -293,14 +311,14 @@ struct CodeHeapRequestInfo
     CodeHeapRequestInfo(MethodDesc *pMD)
         : m_pMD(pMD), m_pAllocator(0),
           m_loAddr(0), m_hiAddr(0),
-          m_requestSize(0), m_reserveSize(0), m_reserveForJumpStubs(0)
+          m_requestSize(0), m_reserveSize(0), m_reserveForJumpStubs(0), m_isInterpreterCode(false)
     { WRAPPER_NO_CONTRACT;   Init(); }
 
     CodeHeapRequestInfo(MethodDesc *pMD, LoaderAllocator* pAllocator,
                         BYTE * loAddr, BYTE * hiAddr)
         : m_pMD(pMD), m_pAllocator(pAllocator),
           m_loAddr(loAddr), m_hiAddr(hiAddr),
-          m_requestSize(0), m_reserveSize(0), m_reserveForJumpStubs(0)
+          m_requestSize(0), m_reserveSize(0), m_reserveForJumpStubs(0), m_isInterpreterCode(false)
     { WRAPPER_NO_CONTRACT;   Init(); }
 };
 
@@ -1988,6 +2006,7 @@ public:
 #ifdef ALLOW_SXS_JIT
     //put these at the end so that we don't mess up the offsets in the DAC.
     ICorJitCompiler *   m_alternateJit;
+    ICorInterpreter *   m_interpreter;
     HINSTANCE           m_AltJITCompiler;
     bool                m_AltJITRequired;
 #endif //ALLOW_SXS_JIT

@@ -1,0 +1,4 @@
+getJit
+getInterpreter
+jitStartup
+    
