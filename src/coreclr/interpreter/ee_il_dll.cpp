@@ -10,13 +10,11 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifndef DLLEXPORT
 #ifdef _MSC_VER
-#define DLLEXPORT __declspec(dllexport)
+#define DLLEXPORT
 #else
 #define DLLEXPORT __attribute__ ((visibility ("default")))
 #endif // _MSC_VER
-#endif // !DLLEXPORT
 
 /*****************************************************************************/
 ICorJitHost* g_interpHost        = nullptr;
