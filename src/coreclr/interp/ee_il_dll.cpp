@@ -24,7 +24,7 @@ extern "C" DLLEXPORT void jitStartup(ICorJitHost* jitHost)
 
     g_interpHost = jitHost;
 
-    // TODO Interp intialization 
+    // TODO Interp intialization
 
     g_interpInitialized = true;
 }
@@ -43,13 +43,15 @@ extern "C" DLLEXPORT ICorJitCompiler* getJit()
     return &g_CILInterp;
 }
 
-static CORINFO_METHOD_INFO* interpEntryArg;
+static InterpMethod* interpEntryArg;
 
 static int
 interpEntry ()
 {
     return 0;
 }
+
+static void mono_break () { }
 
 //****************************************************************************
 
@@ -66,9 +68,14 @@ CorJitResult CILInterp::compileMethod(ICorJitInfo*         compHnd,
 
     if (!strcmp(buffer, "Main"))
     {
-        interpEntryArg = methodInfo;
+        InterpMethod *interpMethod;
+        InterpCompiler compiler (compHnd, methodInfo);
+        compiler.CompileMethod (&interpMethod);
+
+        interpEntryArg = interpMethod;
         *entryAddress = (uint8_t*)interpEntry;
         *nativeSizeOfCode = 1; // ??
+        mono_break ();
         return CorJitResult(CORJIT_OK);
     }
 

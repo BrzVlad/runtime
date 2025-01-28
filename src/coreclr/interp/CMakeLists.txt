@@ -2,6 +2,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(INTERP_SOURCES
   compiler.cpp
+  intops.cpp
   ee_il_dll.cpp)
 
 set(INTERP_LINK_LIBRARIES

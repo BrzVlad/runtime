@@ -20,3 +20,5 @@
 
 #include "corhdr.h"
 #include "corjit.h"
+
+#include "compiler.h"
