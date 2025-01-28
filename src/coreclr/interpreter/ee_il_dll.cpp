@@ -1,5 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+#include <stddef.h>
 #include "corjit.h"
 
 #include "interpreter.h"
@@ -9,11 +10,19 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifndef DLLEXPORT
+#ifdef _MSC_VER
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT __attribute__ ((visibility ("default")))
+#endif // _MSC_VER
+#endif // !DLLEXPORT
+
 /*****************************************************************************/
 ICorJitHost* g_interpHost        = nullptr;
 bool         g_interpInitialized = false;
 /*****************************************************************************/
-extern "C" void jitStartup(ICorJitHost* jitHost)
+extern "C" DLLEXPORT void jitStartup(ICorJitHost* jitHost)
 {
     if (g_interpInitialized)
     {
@@ -25,7 +34,7 @@ extern "C" void jitStartup(ICorJitHost* jitHost)
 }
 /*****************************************************************************/
 static CILInterp g_CILInterp;
-extern "C" ICorJitCompiler* getJit()
+extern "C" DLLEXPORT ICorJitCompiler* getJit()
 {
     if (!g_interpInitialized)
     {
@@ -35,7 +44,7 @@ extern "C" ICorJitCompiler* getJit()
 }
 
 static Executor g_Executor;
-extern "C" ICorInterpreter* getInterpreter()
+extern "C" DLLEXPORT ICorInterpreter* getInterpreter()
 {
     if (!g_interpInitialized)
     {
