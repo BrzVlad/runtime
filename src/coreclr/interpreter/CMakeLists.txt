@@ -10,17 +10,6 @@ if(CLR_CMAKE_HOST_WIN32)
     list(APPEND INTERPRETER_LINK_LIBRARIES
         ${STATIC_MT_CRT_LIB}
         ${STATIC_MT_VCRT_LIB}
-        kernel32.lib
-        advapi32.lib
-        ole32.lib
-        oleaut32.lib
-        uuid.lib
-        user32.lib
-        version.lib
-        shlwapi.lib
-        bcrypt.lib
-        RuntimeObject.lib
-        delayimp.lib
     )
 endif(CLR_CMAKE_HOST_WIN32)
 
