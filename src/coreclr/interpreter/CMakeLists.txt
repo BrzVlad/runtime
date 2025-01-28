@@ -1,6 +1,9 @@
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(INTERPRETER_SOURCES
   compiler.cpp
+  compileropt.cpp
+  executor.cpp
+  intops.cpp
   ee_il_dll.cpp)
 
   set(INTERPRETER_LINK_LIBRARIES
