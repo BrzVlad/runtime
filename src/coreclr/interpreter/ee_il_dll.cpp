@@ -5,7 +5,6 @@
 
 #include "interpreter.h"
 #include "ee_il_dll.hpp"
-#include "executor.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -63,14 +62,14 @@ extern "C" DLLEXPORT ICorJitCompiler* getJit()
     return &g_CILInterp;
 }
 
-static Executor g_Executor;
+static InterpManager g_Manager;
 extern "C" DLLEXPORT ICorInterpreter* getInterpreter()
 {
     if (!g_interpInitialized)
     {
         return nullptr;
     }
-    return &g_Executor;
+    return &g_Manager;
 }
 
 //****************************************************************************
@@ -138,42 +137,7 @@ void CILInterp::setTargetOS(CORINFO_OS os)
 {
 }
 
-thread_local InterpThreadContext *g_pThreadContext = NULL;
-
-static InterpThreadContext *InterpGetThreadContext()
+void* InterpManager::GetInterpMethod(CORINFO_METHOD_HANDLE methodHnd)
 {
-    InterpThreadContext *threadContext = g_pThreadContext;
-
-    if (!threadContext)
-    {
-        threadContext = new InterpThreadContext;
-        // FIXME valloc with INTERP_STACK_ALIGNMENT alignment
-        threadContext->pStackStart = threadContext->pStackPointer = (int8_t*)malloc(sizeof(INTERP_STACK_SIZE));
-        threadContext->pStackEnd = threadContext->pStackStart + INTERP_STACK_SIZE;
-
-        g_pThreadContext = threadContext;
-        return threadContext;
-    }
-    else
-    {
-        return threadContext;
-    }
-}
-
-// TODO: instead of the methodHandle, pass in the IR code address. We can put equivalent of the old InterpMethod* at the beginning of the code.
-// Or, how about storing the actual InterpMethod instance at the beginning of the code? Would there be any downside to that?
-void Executor::InterpretMethod(CORINFO_METHOD_HANDLE methodHandle, void *pArguments)
-{
-    InterpMethod *pMethod = InterpGetInterpMethod(methodHandle);
-    assert(pMethod && pMethod->compiled);
-
-    InterpThreadContext *threadContext = InterpGetThreadContext();
-    int8_t *sp = threadContext->pStackPointer;
-
-    InterpFrame interpFrame = {0};
-    interpFrame.pMethod = pMethod;
-    interpFrame.pStack = sp;
-    interpFrame.pRetVal = sp;
-
-    InterpExecMethod(&interpFrame, threadContext);
+    return InterpGetInterpMethod(methodHnd);
 }

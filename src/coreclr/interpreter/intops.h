@@ -12,14 +12,6 @@ typedef enum
     InterpOpInt,
 } InterpOpArgType;
 
-#define OPDEF(a,b,c,d,e,f) a,
-typedef enum
-{
-#include "intops.def"
-    INTOP_LAST
-} InterpOpcode;
-#undef OPDEF
-
 extern uint8_t const g_interpOpLen[];
 extern int const g_interpOpDVars[];
 extern int const g_interpOpSVars[];

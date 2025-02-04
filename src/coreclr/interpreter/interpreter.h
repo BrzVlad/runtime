@@ -20,9 +20,7 @@
 #include "corhdr.h"
 #include "corjit.h"
 
+#include "interpretershared.h"
 #include "compiler.h"
 
 #define ALIGN_UP_TO(val,align) ((((size_t)val) + (size_t)((align) - 1)) & (~((size_t)(align - 1))))
-#define INTERP_STACK_SLOT_SIZE 8    // Alignment of each var offset on the interpreter stack
-#define INTERP_STACK_ALIGNMENT 16   // Alignment of interpreter stack at the start of a frame
-#define INTERP_STACK_SIZE 1024*1024

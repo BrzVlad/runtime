@@ -23,6 +23,8 @@
 #include "virtualcallstub.h"
 #include "../debug/ee/debugger.h"
 
+#include "interpexec.h"
+
 #ifdef FEATURE_COMINTEROP
 #include "clrtocomcall.h"
 #endif
@@ -2696,13 +2698,26 @@ extern "C" PCODE STDCALL PreStubWorker(TransitionBlock* pTransitionBlock, Method
     return pbRetVal;
 }
 
+// TODO: instead of the methodHandle, pass in the IR code address. We can put equivalent of the old InterpMethod* at the beginning of the code.
+// Or, how about storing the actual InterpMethod instance at the beginning of the code? Would there be any downside to that?
 extern "C" void STDCALL ExecuteInterpretedMethod(TransitionBlock* pTransitionBlock, MethodDesc* pMD)
 {
     // Argument registers are in the TransitionBlock
     // The stack arguments are right after the pTransitionBlock
     // TODO: decide on how to pass the return value in case there are multiple return registers used
     EEJitManager *pManager = ExecutionManager::GetEEJitManager();
-    pManager->m_interpreter->InterpretMethod((CORINFO_METHOD_HANDLE)pMD, pTransitionBlock);
+    InterpMethod *pMethod = (InterpMethod*)pManager->m_interpreter->GetInterpMethod((CORINFO_METHOD_HANDLE)pMD);
+    assert(pMethod && pMethod->compiled);
+
+    InterpThreadContext *threadContext = InterpGetThreadContext();
+    int8_t *sp = threadContext->pStackPointer;
+
+    InterpFrame interpFrame = {0};
+    interpFrame.pMethod = pMethod;
+    interpFrame.pStack = sp;
+    interpFrame.pRetVal = sp;
+
+    InterpExecMethod(&interpFrame, threadContext);
 }
 
 #ifdef _DEBUG

@@ -108,7 +108,8 @@ extern "C" ICorJitCompiler* getJit();
 class ICorInterpreter
 {
     public:
-        virtual void InterpretMethod(CORINFO_METHOD_HANDLE methodHandle, void *pArguments) = 0;
+        virtual void* GetInterpMethod(CORINFO_METHOD_HANDLE methodHnd) = 0;
+
 };
 
 // #EEToJitInterface

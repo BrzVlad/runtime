@@ -1,8 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#ifndef _EXECUTOR_H_
-#define _EXECUTOR_H_
+#ifndef _INTERPEXEC_H_
+#define _INTERPEXEC_H_
+
+#include "../interpreter/interpretershared.h"
+
+#define INTERP_STACK_SIZE 1024*1024
 
 struct StackVal
 {
@@ -38,6 +42,7 @@ struct InterpThreadContext
     int8_t *pStackPointer;
 };
 
+InterpThreadContext* InterpGetThreadContext();
 void InterpExecMethod(InterpFrame *pFrame, InterpThreadContext *pThreadContext);
 
 #endif
