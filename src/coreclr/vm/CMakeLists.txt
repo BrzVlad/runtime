@@ -267,6 +267,15 @@ if(FEATURE_JIT_PITCHING)
     )
 endif(FEATURE_JIT_PITCHING)
 
+if(FEATURE_INTERPRETER)
+    list(APPEND VM_SOURCES_DAC_AND_WKS_COMMON
+        interpexec.cpp
+    )
+    list(APPEND VM_HEADERS_DAC_AND_WKS_COMMON
+        interpexec.h
+    )
+endif(FEATURE_INTERPRETER)
+
 set(VM_SOURCES_DAC
     ${VM_SOURCES_DAC_AND_WKS_COMMON}
     threaddebugblockinginfo.cpp

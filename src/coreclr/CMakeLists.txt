@@ -194,6 +194,10 @@ include_directories("${GENERATED_INCLUDE_DIR}")
 include_directories("hosts/inc")
 include_directories("minipal")
 
+if(FEATURE_INTERPRETER)
+add_subdirectory(interpreter)
+endif(FEATURE_INTERPRETER)
+
 if(CLR_CMAKE_TARGET_WIN32 AND FEATURE_EVENT_TRACE)
     include_directories("${GENERATED_INCLUDE_DIR}/etw")
 endif(CLR_CMAKE_TARGET_WIN32 AND FEATURE_EVENT_TRACE)
