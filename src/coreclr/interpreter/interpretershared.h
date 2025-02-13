@@ -20,16 +20,7 @@ typedef enum
 struct InterpMethod
 {
     CORINFO_METHOD_HANDLE methodHnd;
-    int32_t *pCode;
     int32_t allocaSize;
-
-    volatile bool compiled;
-
-    InterpMethod()
-    {
-        pCode = NULL;
-        compiled = false;
-    }
 };
 
 #endif

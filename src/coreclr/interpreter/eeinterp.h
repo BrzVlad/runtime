@@ -16,8 +16,3 @@ class CILInterp : public ICorJitCompiler
     );
     void setTargetOS(CORINFO_OS os);
 };
-
-class InterpManager : public ICorInterpreter
-{
-    void* GetInterpMethod(CORINFO_METHOD_HANDLE methodHnd);
-};

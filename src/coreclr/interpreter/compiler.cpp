@@ -467,13 +467,24 @@ void InterpCompiler::EmitCode()
             ip = EmitCodeIns(ip, ins);
         }
     }
+
+    m_MethodCodeSize = (int32_t)(ip - m_pMethodCode);
 }
 
-void InterpCompiler::PublishInterpMethod(InterpMethod* pMethod)
+InterpMethod* InterpCompiler::CreateInterpMethod()
 {
-    pMethod->pCode = m_pMethodCode;
+    InterpMethod *pMethod = new InterpMethod;
+
     pMethod->allocaSize = m_totalVarsStackSize;
-    pMethod->compiled = true;
+    pMethod->methodHnd = m_methodHnd;
+
+    return pMethod;
+}
+
+int32_t* InterpCompiler::GetCode(int32_t *pCodeSize)
+{
+    *pCodeSize = m_MethodCodeSize;
+    return m_pMethodCode;
 }
 
 InterpCompiler::InterpCompiler(COMP_HANDLE compHnd,
@@ -484,7 +495,7 @@ InterpCompiler::InterpCompiler(COMP_HANDLE compHnd,
     m_methodInfo = methodInfo;
 }
 
-int InterpCompiler::CompileMethod(InterpMethod *pMethod)
+InterpMethod* InterpCompiler::CompileMethod()
 {
     GenerateCode(m_methodInfo);
 
@@ -494,9 +505,7 @@ int InterpCompiler::CompileMethod(InterpMethod *pMethod)
 
     EmitCode();
 
-    PublishInterpMethod(pMethod);
-
-    return CORJIT_OK;
+    return CreateInterpMethod();
 }
 
 int InterpCompiler::GenerateCode(CORINFO_METHOD_INFO* methodInfo)
