@@ -5,6 +5,7 @@
 #define _COMPILER_H_
 
 #include "intops.h"
+#include "datastructs.h"
 
 // Types that can exist on the IL execution stack. They are used only during
 // IL import compilation stage.
@@ -16,7 +17,12 @@ enum StackType {
     StackTypeO,
     StackTypeVT,
     StackTypeMP,
-    StackTypeF
+    StackTypeF,
+#ifdef TARGET_64BIT
+    StackTypeI = StackTypeI8
+#else
+    StackTypeI = StackTypeI4
+#endif
 };
 
 // Types relevant for interpreter vars and opcodes. They are used in the final
@@ -95,12 +101,21 @@ struct InterpInst
 
 #define CALL_ARGS_SVAR  -2
 
+struct StackInfo;
+
+enum InterpBBState
+{
+    BBStateNotEmitted,
+    BBStateEmitting,
+    BBStateEmitted
+};
 
 struct InterpBasicBlock
 {
     int32_t index;
     int32_t ilOffset, nativeOffset;
     int32_t stackHeight;
+    StackInfo *pStackState;
 
     InterpInst *pFirstIns, *pLastIns;
     InterpBasicBlock *pNextBB;
@@ -108,6 +123,8 @@ struct InterpBasicBlock
     int inCount, outCount;
     InterpBasicBlock **ppInBBs;
     InterpBasicBlock **ppOutBBs;
+
+    InterpBBState emitState;
 };
 
 struct InterpVar
@@ -133,6 +150,30 @@ struct StackInfo
     // The var associated with the value of this stack entry. Every time we push on
     // the stack a new var is created.
     int var;
+
+    void Init(StackType type)
+    {
+        this->type = type;
+        clsHnd = NULL;
+        size = 0;
+        var = -1;
+    }
+};
+
+enum RelocType
+{
+    RelocLongBranch,
+    RelocSwitch
+};
+
+struct Reloc
+{
+    RelocType type;
+    // For branch relocation, how many sVar slots to skip
+    int skip;
+    // Base offset that the relative offset to be embedded in IR applies to
+    int32_t offset;
+    InterpBasicBlock *pTargetBB;
 };
 
 typedef class ICorJitInfo* COMP_HANDLE;
@@ -143,6 +184,10 @@ private:
     CORINFO_METHOD_HANDLE m_methodHnd;
     COMP_HANDLE m_compHnd;
     CORINFO_METHOD_INFO* m_methodInfo;
+
+    uint8_t* m_ip;
+    uint8_t* m_pILCode;
+    uint32_t m_ILCodeSize;
 
     int GenerateCode(CORINFO_METHOD_INFO* methodInfo);
 
@@ -181,6 +226,14 @@ private:
     void                LinkBBs(InterpBasicBlock *from, InterpBasicBlock *to);
     void                UnlinkBBs(InterpBasicBlock *from, InterpBasicBlock *to);
 
+    void    EmitBranch(InterpOpcode opcode, int ilOffset);
+    void    EmitOneArgBranch(InterpOpcode opcode, int ilOffset, int insSize);
+    void    EmitTwoArgBranch(InterpOpcode opcode, int ilOffset, int insSize);
+    void    AddConv(StackInfo *sp, InterpInst *prevIns, StackType type, InterpOpcode convOp);
+
+    void    EmitBBEndVarMoves(InterpBasicBlock *pTargetBB);
+    void    InitBBStackState(InterpBasicBlock *pBB);
+
     // Vars
     InterpVar *m_pVars = NULL;
     int32_t m_varsSize = 0;
@@ -213,7 +266,8 @@ private:
     void AllocOffsets();
     int32_t ComputeCodeSize();
     void EmitCode();
-    int32_t* EmitCodeIns(int32_t *ip, InterpInst *pIns);
+    int32_t* EmitCodeIns(int32_t *ip, InterpInst *pIns, PtrArray<Reloc*> *relocs);
+    void PatchRelocations(PtrArray<Reloc*> *relocs);
     InterpMethod* CreateInterpMethod();
     bool CreateBasicBlocks(CORINFO_METHOD_INFO* methodInfo);
 public:
