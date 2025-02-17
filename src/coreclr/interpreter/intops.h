@@ -30,6 +30,12 @@ extern OPCODE_FORMAT const g_CEEOpArgs[];
 const char* CEEOpName(OPCODE op);
 OPCODE CEEDecodeOpcode(const uint8_t **ip);
 
+#ifdef TARGET_64BIT
+#define INTOP_MOV_P INTOP_MOV_8
+#else
+#define INTOP_MOV_P INTOP_MOV_4
+#endif
+
 // Helpers identical to ones used by JIT
 // FIXME how to consume GET_UNALIGNED_VAL defines from pal as jit ???
 //

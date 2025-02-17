@@ -337,6 +337,33 @@ void InterpCompiler::UnlinkBBs(InterpBasicBlock *from, InterpBasicBlock *to)
     to->inCount--;
 }
 
+static InterpOpcode InterpGetMovForType(InterpType mt, bool signExtend)
+{
+    switch (mt)
+    {
+        case InterpTypeI1:
+        case InterpTypeU1:
+        case InterpTypeI2:
+        case InterpTypeU2:
+            if (signExtend)
+                return (InterpOpcode)(INTOP_MOV_I4_I1 + mt);
+            else
+                return INTOP_MOV_4;
+        case InterpTypeI4:
+        case InterpTypeR4:
+            return INTOP_MOV_4;
+        case InterpTypeI8:
+        case InterpTypeR8:
+            return INTOP_MOV_8;
+        case InterpTypeO:
+            return INTOP_MOV_P;
+        case InterpTypeVT:
+            return INTOP_MOV_VT;
+        default:
+            assert(0);
+    }
+}
+
 int32_t InterpCompiler::CreateVarExplicit(InterpType mt, CORINFO_CLASS_HANDLE clsHnd, int size)
 {
     if (m_varsSize == m_varsCapacity) {
