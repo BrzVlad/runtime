@@ -38,7 +38,8 @@ enum InterpType {
     InterpTypeR8,
     InterpTypeO,
     InterpTypeVT,
-    InterpTypeVOID,
+    InterpTypeByRef,
+    InterpTypeVoid,
 #ifdef TARGET_64BIT
     InterpTypeI = InterpTypeI8
 #else
@@ -130,13 +131,16 @@ struct InterpBasicBlock
 struct InterpVar
 {
     CORINFO_CLASS_HANDLE clsHnd;
-    InterpType mt;
+    InterpType interpType;
     int indirects;
     int offset;
     int size;
     // live_start and live_end are used by the offset allocator
     int liveStart;
     int liveEnd;
+
+    unsigned int global : 1; // Dedicated stack offset throughout method execution
+    unsigned int il_global : 1; // Args and IL locals
 };
 
 struct StackInfo
@@ -229,7 +233,7 @@ private:
     void    EmitBranch(InterpOpcode opcode, int ilOffset);
     void    EmitOneArgBranch(InterpOpcode opcode, int ilOffset, int insSize);
     void    EmitTwoArgBranch(InterpOpcode opcode, int ilOffset, int insSize);
-    void    AddConv(StackInfo *sp, InterpInst *prevIns, StackType type, InterpOpcode convOp);
+    void    EmitConv(StackInfo *sp, InterpInst *prevIns, StackType type, InterpOpcode convOp);
 
     void    EmitBBEndVarMoves(InterpBasicBlock *pTargetBB);
     void    InitBBStackState(InterpBasicBlock *pBB);
@@ -241,11 +245,14 @@ private:
 
     int32_t CreateVarExplicit(InterpType mt, CORINFO_CLASS_HANDLE clsHnd, int size);
 
-    int32_t m_totalVarsStackSize = 0;
+    int32_t m_totalVarsStackSize;
     int32_t m_paramAreaOffset = 0;
+    int32_t m_ILLocalsOffset, m_ILLocalsSize;
     void    AllocVarOffsetCB(int *pVar, void *pData);
     int32_t AllocVarOffset(int var, int32_t *pPos);
 
+    int32_t GetInterpTypeSize(CORINFO_CLASS_HANDLE clsHnd, InterpType interpType, int32_t *pAlign);
+    void    CreateILVars();
 
     // Stack
     StackInfo *m_pStackPointer, *m_pStackBase;
@@ -255,8 +262,13 @@ private:
     bool CheckStackHelper(int n);
     void EnsureStack(int additional);
     void PushTypeExplicit(StackType stackType, CORINFO_CLASS_HANDLE clsHnd, int size);
-    void PushType(StackType stackType, CORINFO_CLASS_HANDLE clsHnd);
+    void PushStackType(StackType stackType, CORINFO_CLASS_HANDLE clsHnd);
+    void PushInterpType(InterpType interpType, CORINFO_CLASS_HANDLE clsHnd);
     void PushTypeVT(CORINFO_CLASS_HANDLE clsHnd, int size);
+
+    // Code emit
+    void EmitLoadVar(int var);
+    void EmitStoreVar(int var);
 
     // Passes
     int32_t* m_pMethodCode;
