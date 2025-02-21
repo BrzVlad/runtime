@@ -16,7 +16,12 @@ enum StackType {
     StackTypeO,
     StackTypeVT,
     StackTypeMP,
-    StackTypeF
+    StackTypeF,
+#ifdef TARGET_64BIT
+    StackTypeI = StackTypeI8
+#else
+    StackTypeI = StackTypeI4
+#endif
 };
 
 // Types relevant for interpreter vars and opcodes. They are used in the final
@@ -133,6 +138,14 @@ struct StackInfo
     // The var associated with the value of this stack entry. Every time we push on
     // the stack a new var is created.
     int var;
+
+    void Init(StackType type)
+    {
+        this->type = type;
+        clsHnd = NULL;
+        size = 0;
+        var = -1;
+    }
 };
 
 typedef class ICorJitInfo* COMP_HANDLE;
@@ -143,6 +156,8 @@ private:
     CORINFO_METHOD_HANDLE m_methodHnd;
     COMP_HANDLE m_compHnd;
     CORINFO_METHOD_INFO* m_methodInfo;
+
+    uint8_t* m_ip;
 
     int GenerateCode(CORINFO_METHOD_INFO* methodInfo);
 
@@ -203,6 +218,9 @@ private:
     void PushTypeExplicit(StackType stackType, CORINFO_CLASS_HANDLE clsHnd, int size);
     void PushType(StackType stackType, CORINFO_CLASS_HANDLE clsHnd);
     void PushTypeVT(CORINFO_CLASS_HANDLE clsHnd, int size);
+
+    // Code emit
+    void    EmitConv(StackInfo *sp, InterpInst *prevIns, StackType type, InterpOpcode convOp);
 
     // Passes
     int32_t* m_pMethodCode;
