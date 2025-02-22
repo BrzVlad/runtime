@@ -269,6 +269,9 @@ private:
     void    EmitConv(StackInfo *sp, InterpInst *prevIns, StackType type, InterpOpcode convOp);
     void    EmitLoadVar(int var);
     void    EmitStoreVar(int var);
+    void    EmitBinaryArithmeticOp(InterpOpcode op);
+    void    EmitUnaryArithmeticOp(InterpOpcode op);
+    void    EmitShiftOp(InterpOpcode op);
 
     // Passes
     int32_t* m_pMethodCode;
