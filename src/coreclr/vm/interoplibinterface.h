@@ -173,7 +173,7 @@ extern "C" BOOL QCALLTYPE ObjCMarshal_TrySetGlobalMessageSendCallback(
 class JavaNative
 {
 public: // GC interaction
-    static bool TriggerGCBridge(
+    static bool TriggerClientBridgeProcessing(
         _In_ size_t sccsLen,
         _In_ StronglyConnectedComponent* sccs,
         _In_ size_t ccrsLen,
@@ -231,7 +231,7 @@ public:
 
     static void WaitForGCBridgeFinish();
 
-    static void TriggerGCBridge(
+    static void TriggerClientBridgeProcessing(
         _In_ size_t sccsLen,
         _In_ StronglyConnectedComponent* sccs,
         _In_ size_t ccrsLen,

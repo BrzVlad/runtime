@@ -49776,6 +49776,11 @@ HRESULT GCHeap::Initialize()
 
 ////
 // GC callback functions
+bool GCHeap::IsPromoted(Object* object)
+{
+    return IsPromoted(object, true);
+}
+
 bool GCHeap::IsPromoted(Object* object, bool bVerifyNextHeader)
 {
     uint8_t* o = (uint8_t*)object;
