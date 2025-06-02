@@ -5443,6 +5443,8 @@
                             <opcode name="DestroyGCHandle" message="$(string.PrivatePublisher.DestroyGCHandleOpcodeMessage)" symbol="CLR_PRIVATEGC_DESTROYGCHANDLE_OPCODE" value="43"> </opcode>
                             <opcode name="PinPlugAtGCTime" message="$(string.PrivatePublisher.PinPlugAtGCTimeOpcodeMessage)" symbol="CLR_PRIVATEGC_PINGCPLUG_OPCODE" value="44"> </opcode>
                             <opcode name="BGC1stSweepEnd" message="$(string.PrivatePublisher.BGC1stSweepEndOpcodeMessage)" symbol="CLR_PRIVATEGC_BGC1STSWEEPEND_OPCODE" value="45"> </opcode>
+                            <opcode name="BPBuildGraphBegin" message="$(string.PrivatePublisher.BPBuildGraphBeginOpcodeMessage)" symbol="CLR_PRIVATEGC_BPBUILDGRAPHBEGIN_OPCODE" value="46"> </opcode>
+                            <opcode name="BPBuildGraphEnd" message="$(string.PrivatePublisher.BPBuildGraphEndOpcodeMessage)" symbol="CLR_PRIVATEGC_BPBUILDGRAPHEND_OPCODE" value="47"> </opcode>
                         </opcodes>
                     </task>
 
@@ -6730,6 +6732,16 @@
                            keywords ="GCPrivateKeyword"  opcode="BGC1stSweepEnd"
                            task="GarbageCollectionPrivate"
                            symbol="BGC1stSweepEnd" message="$(string.PrivatePublisher.BGC1stSweepEndEventMessage)"/>
+
+                    <event value="27" version="0" level="win:Informational"  template="BPBuildGraphBegin"
+                           keywords ="GCPrivateKeyword"  opcode="BPBuildGraphBegin"
+                           task="GarbageCollectionPrivate"
+                           symbol="BPBuildGraphBegin" message="$(string.PrivatePublisher.BPBuildGraphBeginEventMessage)"/>
+
+                    <event value="28" version="0" level="win:Informational"  template="BPBuildGraphEnd"
+                           keywords ="GCPrivateKeyword"  opcode="BPBuildGraphEnd"
+                           task="GarbageCollectionPrivate"
+                           symbol="BPBuildGraphEnd" message="$(string.PrivatePublisher.BPBuildGraphEndEventMessage)"/>
 
                     <!--Private events from other components in CLR, starting value 80-->
                     <event value="80" version="0" level="win:Informational"  template="Startup"
@@ -8740,6 +8752,8 @@
                 <string id="PrivatePublisher.BGC2ndConEndEventMessage" value="ClrInstanceID=%1"/>
                 <string id="PrivatePublisher.BGCPlanEndEventMessage" value="ClrInstanceID=%1"/>
                 <string id="PrivatePublisher.BGCSweepEndEventMessage" value="ClrInstanceID=%1"/>
+                <string id="PrivatePublisher.BPBuildGraphBeginEventMessage" value="ClrInstanceID=%1"/>
+                <string id="PrivatePublisher.BPBuildGraphEndEventMessage" value="ClrInstanceID=%1"/>
                 <string id="PrivatePublisher.BGCDrainMarkEventMessage" value="Objects=%1;%nClrInstanceID=%2"/>
                 <string id="PrivatePublisher.BGCRevisitEventMessage" value="Pages=%1;%nObjects=%2;%nIsLarge=%3;%nClrInstanceID=%4"/>
                 <string id="PrivatePublisher.BGCOverflowEventMessage" value="Min=%1;%nMax=%2;%Objects=%3;%nIsLarge=%4;%nClrInstanceID=%5"/>
@@ -9382,6 +9396,8 @@
                 <string id="PrivatePublisher.BGCOverflowOpcodeMessage" value="BGCOverflow" />
                 <string id="PrivatePublisher.BGCAllocWaitBeginOpcodeMessage" value="BGCAllocWaitStart" />
                 <string id="PrivatePublisher.BGCAllocWaitEndOpcodeMessage" value="BGCAllocWaitStop" />
+                <string id="PrivatePublisher.BPBuildGraphBeginOpcodeMessage" value="BPBuildGraphStart" />
+                <string id="PrivatePublisher.BPBuildGraphEndOpcodeMessage" value="BPBuildGraphStop" />
                 <string id="PrivatePublisher.FinalizeObjectOpcodeMessage" value="FinalizeObject" />
                 <string id="PrivatePublisher.SetGCHandleOpcodeMessage" value="SetGCHandle" />
                 <string id="PrivatePublisher.DestroyGCHandleOpcodeMessage" value="DestroyGCHandle" />
