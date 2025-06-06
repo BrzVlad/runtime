@@ -8056,16 +8056,13 @@ retry_emit:
 
 			td->sp = td->stack;
 
-			MonoExceptionClause *last_exited_clause = NULL;
-
 			g_assert (header->num_clauses < G_MAXUINT16);
 			for (guint16 i = 0; i < header->num_clauses; ++i) {
 				MonoExceptionClause *clause = &header->clauses [i];
+				if (clause->flags != MONO_EXCEPTION_CLAUSE_FINALLY)
+					continue;
 				if (MONO_OFFSET_IN_CLAUSE (clause, GPTRDIFF_TO_UINT32(td->ip - header->code)) &&
 						(!MONO_OFFSET_IN_CLAUSE (clause, GINT_TO_UINT32(target_offset + in_offset)))) {
-					last_exited_clause = clause;
-					if (clause->flags != MONO_EXCEPTION_CLAUSE_FINALLY)
-						continue;
 					handle_branch (td, MINT_CALL_HANDLER, clause->handler_offset - in_offset);
 					td->last_ins->data [2] = i;
 
@@ -8085,23 +8082,16 @@ retry_emit:
 			if (td->clause_indexes [in_offset] != -1) {
 				/* LEAVE instructions in catch clauses need to check for abort exceptions */
 				handle_branch (td, MINT_LEAVE_CHECK, target_offset);
-				// leave in a catch clause exits to unprotected IP. in last_clause_index we have the
-				// last try that we exited. We expect that target_bb is reachable from at least one ip
-				// in the try range
-				if (!last_exited_clause)
-					last_exited_clause = header->clauses + td->clause_indexes [in_offset];
-				gboolean found_link = FALSE;
+				// Link the try_bb of this catch to the leave target. This is needed so that SSA
+				// algorithms know about this possible control flow when doing optimizations
 				InterpBasicBlock *target_bb = td->last_ins->info.target_bb;
-				for (int i = 0; i < target_bb->in_count; i++) {
-					InterpBasicBlock *in_bb = target_bb->in_bb [i];
-					if (MONO_OFFSET_IN_CLAUSE (last_exited_clause, in_bb->il_offset))
-						found_link = TRUE;
-				}
-				if (!found_link) {
-					td->disable_ssa = TRUE;
-					if (td->verbose_level)
-						g_print ("Disable SSA method %s, code size %d\n", mono_method_full_name (td->method, 1), td->header->code_size);
-				}
+				int clause_index = td->clause_indexes [in_offset];
+				InterpBasicBlock *try_bb = td->offset_to_bb [td->header->clauses [clause_index].try_offset];
+				g_assert (try_bb);
+
+				interp_link_bblocks (td, try_bb, target_bb);
+				if (td->verbose_level)
+					g_print ("Link tryBB%d to catch leave BB%d\n", try_bb->index, target_bb->index);
 			} else {
 				handle_branch (td, MINT_BR, target_offset);
 			}
