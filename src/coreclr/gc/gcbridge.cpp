@@ -9,6 +9,13 @@
 #include "gc.h"
 #include "gcbridge.h"
 
+#include "minipal/log.h"
+
+static int mem_general = 0;
+static int mem_obj_bucket = 0;
+static int mem_color_bucket = 0;
+static int mem_api = 0;
+
 struct DynPtrArray
 {
     int size;
@@ -44,6 +51,7 @@ static void DynPtrArrayUninit(DynPtrArray* da)
     if (da->capacity == 0)
         return;
 
+    mem_general -= da->capacity * sizeof(void*);
     free(da->data);
     da->data = NULL;
 }
@@ -55,6 +63,7 @@ static char* DynPtrArrayEnsureCapacityInternal(DynPtrArray* da, int capacity)
     while (capacity > da->capacity)
         da->capacity *= 2;
 
+    mem_general += da->capacity * sizeof(void*);
     return (char*)new (nothrow) void*[da->capacity];
 }
 
@@ -71,8 +80,10 @@ static void DynPtrArrayEnsureCapacity(DynPtrArray* da, int capacity)
     newData = DynPtrArrayEnsureCapacityInternal(da, capacity);
     assert(newData);
     memcpy(newData, da->data, sizeof(void*) * da->size);
-    if (oldCapacity > 0)
+    if (oldCapacity > 0) {
         free(da->data);
+        mem_general -= oldCapacity * sizeof(void*);
+    }
     da->data = newData;
 }
 
@@ -283,6 +294,7 @@ static int g_objectDataCount;
 static ObjectBucket* NewObjectBucket()
 {
     ObjectBucket* res = new (nothrow) ObjectBucket;
+    mem_obj_bucket += sizeof(ObjectBucket);
     assert(res);
     res->next = NULL;
     res->nextData = &res->data[0];
@@ -355,6 +367,7 @@ static int g_colorDataCount;
 static ColorBucket* NewColorBucket()
 {
     ColorBucket* res = new (nothrow) ColorBucket;
+    mem_color_bucket += sizeof(ColorBucket);
     assert(res);
     res->next = NULL;
     res->nextData = &res->data[0];
@@ -1056,6 +1069,18 @@ static uint64_t GetHighPrecisionTimeStamp()
 static uint64_t g_startTime;
 static uint64_t g_afterTarjanTime;
 
+static void dumpMemStats(const char *when)
+{
+    int mem_global_arr = (g_scanStack.capacity + g_loopStack.capacity + g_registeredBridges.capacity + g_registeredBridgesContexts.capacity + g_colorMergeArray.capacity) * sizeof (void*);
+
+    minipal_log_print_info ("\n[brz]  DUMP bridge mem stats %s\n", when);
+    minipal_log_print_info ("[brz] mem_general = %d kb\n", mem_general/1024);
+    minipal_log_print_info ("[brz] mem_obj_bucket = %d kb\n", mem_obj_bucket/1024);
+    minipal_log_print_info ("[brz] mem_color_bucket = %d kb\n", mem_color_bucket/1024);
+    minipal_log_print_info ("[brz] mem_api = %d kb\n", mem_api/1024);
+    minipal_log_print_info ("[brz] mem_global_arr = %d kb\n\n", mem_global_arr/1024); 
+}
+
 static void BridgeFinish()
 {
 #if DUMP_GRAPH
@@ -1184,6 +1209,7 @@ static MarkCrossReferencesArgs* BuildSccCallbackData()
 
     // This is a straightforward translation from colors to the bridge callback format.
     StronglyConnectedComponent* apiSccs = new (nothrow) StronglyConnectedComponent[g_numSccs];
+    mem_api += g_numSccs * sizeof(StronglyConnectedComponent);
     assert(apiSccs);
     int apiIndex = 0;
     g_xrefCount = 0;
@@ -1200,6 +1226,7 @@ static MarkCrossReferencesArgs* BuildSccCallbackData()
 
             apiSccs[apiIndex].Count = bridges;
             uintptr_t *contexts = new (nothrow) uintptr_t[bridges];
+            mem_api += bridges * sizeof(uintptr_t);
             assert(contexts);
 
             for (j = 0; j < bridges; ++j)
@@ -1238,6 +1265,7 @@ static MarkCrossReferencesArgs* BuildSccCallbackData()
 
     // Write out xrefs array
     ComponentCrossReference* apiXRefs = new (nothrow) ComponentCrossReference[g_xrefCount];
+    mem_api += g_xrefCount * sizeof(ComponentCrossReference);
     assert(apiXRefs);
     int xrefIndex = 0;
     for (cur = g_rootColorBucket; cur; cur = cur->next)
@@ -1270,15 +1298,20 @@ static MarkCrossReferencesArgs* BuildSccCallbackData()
         printf("\t%ld -> %ld\n", apiXRefs[i].SourceGroupIndex, apiXRefs[i].DestinationGroupIndex);
 #endif
 
+    mem_api += sizeof(MarkCrossReferencesArgs);
     return new (nothrow) MarkCrossReferencesArgs(g_numSccs, apiSccs, g_xrefCount, apiXRefs);
 }
 
 MarkCrossReferencesArgs* ProcessBridgeObjects()
 {
+    dumpMemStats("begin");
+
     if (!TarjanSccAlgorithm())
         return NULL;
 
     MarkCrossReferencesArgs* args = BuildSccCallbackData();
+    minipal_log_print_info("[brz]  SCCS %ld, xrefs %ld\n", args->ComponentCount, args->CrossReferenceCount);
+    dumpMemStats("after compute");
 
     ResetObjectsHeader();
 
