@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic.Utils;
 using System.Globalization;
 using System.Reflection;
@@ -192,11 +193,11 @@ namespace System.Linq.Expressions.Interpreter
         }
 
 #if NO_FEATURE_STATIC_DELEGATE
-        private static Func<LightLambda, Delegate> GetRunDelegateCtor(Type delegateType)
+        private static Func<LightLambda, Delegate>? GetRunDelegateCtor(Type delegateType)
         {
             lock (_runCache)
             {
-                Func<LightLambda, Delegate> fastCtor;
+                Func<LightLambda, Delegate>? fastCtor;
                 if (_runCache.TryGetValue(delegateType, out fastCtor))
                 {
                     return fastCtor;
@@ -205,7 +206,9 @@ namespace System.Linq.Expressions.Interpreter
             }
         }
 
-        private static Func<LightLambda, Delegate> MakeRunDelegateCtor(Type delegateType)
+        [UnconditionalSuppressMessage("Aot", "IL3050")]
+        [UnconditionalSuppressMessage("Aot", "IL2060")]
+        private static Func<LightLambda, Delegate>? MakeRunDelegateCtor(Type delegateType)
         {
             MethodInfo method = delegateType.GetInvokeMethod();
             ParameterInfo[] paramInfos = method.GetParametersCached();
@@ -228,14 +231,20 @@ namespace System.Linq.Expressions.Interpreter
                 paramTypes[paramTypes.Length - 1] = method.ReturnType;
             }
 
-            MethodInfo runMethod;
+            MethodInfo? runMethod;
 
             if (method.ReturnType == typeof(void) && paramTypes.Length == 2 &&
                 paramInfos[0].ParameterType.IsByRef && paramInfos[1].ParameterType.IsByRef)
             {
                 runMethod = typeof(LightLambda).GetMethod("RunVoidRef2", BindingFlags.NonPublic | BindingFlags.Instance);
-                paramTypes[0] = paramInfos[0].ParameterType.GetElementType();
-                paramTypes[1] = paramInfos[1].ParameterType.GetElementType();
+                Type? t = paramInfos[0].ParameterType.GetElementType();
+                if (t is null)
+                    return null;
+                paramTypes[0] = t;
+                t = paramInfos[1].ParameterType.GetElementType();
+                if (t is null)
+                    return null;
+                paramTypes[1] = t;
             }
             else if (method.ReturnType == typeof(void) && paramTypes.Length == 0)
             {
@@ -246,18 +255,21 @@ namespace System.Linq.Expressions.Interpreter
                 for (int i = 0; i < paramInfos.Length; i++)
                 {
                     paramTypes[i] = paramInfos[i].ParameterType;
-                    if (paramTypes[i].IsByRef)
+                    if (paramTypes[i] is null || paramTypes[i].IsByRef)
                     {
                         return null;
                     }
                 }
 
 #if FEATURE_MAKE_RUN_METHODS
-                if (DelegateHelpers.MakeDelegate(paramTypes) == delegateType)
+                if (System.Linq.Expressions.Interpreter.DelegateHelpers.MakeDelegate(paramTypes) == delegateType)
                 {
                     name = "Make" + name + paramInfos.Length;
 
-                    MethodInfo ctorMethod = typeof(LightLambda).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(paramTypes);
+                    MethodInfo? ctorMethod = typeof(LightLambda).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static);
+                    if (ctorMethod is null)
+                        return null;
+                    ctorMethod = ctorMethod.MakeGenericMethod(paramTypes);
                     return _runCache[delegateType] = (Func<LightLambda, Delegate>)ctorMethod.CreateDelegate(typeof(Func<LightLambda, Delegate>));
                 }
 #endif
@@ -277,12 +289,15 @@ namespace System.Linq.Expressions.Interpreter
             } catch (SecurityException) {
             }*/
 
+            if (runMethod is null)
+                return null;
             // we don't have permission for restricted skip visibility dynamic methods, use the slower Delegate.CreateDelegate.
             var targetMethod = runMethod.IsGenericMethodDefinition ? runMethod.MakeGenericMethod(paramTypes) : runMethod;
             return _runCache[delegateType] = lambda => targetMethod.CreateDelegate(delegateType, lambda);
         }
 
         //TODO enable sharing of these custom delegates
+        [UnconditionalSuppressMessage("Aot", "IL3050:RequiresDynamicCode")]
         private Delegate CreateCustomDelegate(Type delegateType)
         {
             //PerfTrack.NoteEvent(PerfTrack.Categories.Compiler, "Synchronously compiling a custom delegate");
@@ -301,7 +316,7 @@ namespace System.Linq.Expressions.Interpreter
             }
 
             NewArrayExpression data = Expression.NewArrayInit(typeof(object), parametersAsObject);
-            var dlg = new Func<object[], object>(Run);
+            var dlg = new Func<object?[], object?>(Run);
 
             ConstantExpression dlgExpr = Expression.Constant(dlg);
 
@@ -324,12 +339,13 @@ namespace System.Linq.Expressions.Interpreter
                 {
                     if (paramInfos[i].ParameterType.IsByRef)
                     {
+                        Type elType = paramInfos[i].ParameterType.GetElementType()!;
                         updates.Add(
                             Expression.Assign(
                                 parameters[i],
                                 Expression.Convert(
                                     Expression.ArrayAccess(argsParam, Expression.Constant(i)),
-                                    paramInfos[i].ParameterType.GetElementType()
+                                    elType
                                 )
                             )
                         );
@@ -365,7 +381,7 @@ namespace System.Linq.Expressions.Interpreter
                 return System.Dynamic.Utils.DelegateHelpers.CreateObjectArrayDelegate(delegateType, Run);
             }
 #else
-            Func<LightLambda, Delegate> fastCtor = GetRunDelegateCtor(delegateType);
+            Func<LightLambda, Delegate>? fastCtor = GetRunDelegateCtor(delegateType);
             if (fastCtor != null)
             {
                 return fastCtor(this);
@@ -396,9 +412,9 @@ namespace System.Linq.Expressions.Interpreter
             }
             finally
             {
-                frame.Leave(currentFrame);
-                arg0 = (T0)frame.Data[0];
-                arg1 = (T1)frame.Data[1];
+                InterpretedFrame.Leave(currentFrame);
+                arg0 = (T0)frame.Data[0]!;
+                arg1 = (T1)frame.Data[1]!;
             }
         }
 #endif
