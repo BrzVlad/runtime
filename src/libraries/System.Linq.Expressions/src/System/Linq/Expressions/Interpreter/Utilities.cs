@@ -15,6 +15,7 @@ namespace System.Linq.Expressions.Interpreter
     {
         private const int MaximumArity = 17;
 
+        [UnconditionalSuppressMessage("Aot", "IL3050:RequiresDynamicCode")]
         internal static Type MakeDelegate(Type[] types)
         {
             Debug.Assert(types != null && types.Length > 0);

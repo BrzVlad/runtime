@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>$(NetCoreAppCurrent)</TargetFramework>
+    <TargetFrameworks>$(NetCoreAppCurrent)-maccatalyst;$(NetCoreAppCurrent)-ios;$(NetCoreAppCurrent)-tvos;$(NetCoreAppCurrent)</TargetFrameworks>
     <DefineConstants> $(DefineConstants);FEATURE_FAST_CREATE</DefineConstants>
     <NoWarn>$(NoWarn);CA1859</NoWarn>
     <!--
@@ -10,6 +10,12 @@
     -->
     <ILLinkDisableIPConstProp>true</ILLinkDisableIPConstProp>
     <UseCompilerGeneratedDocXmlFile>false</UseCompilerGeneratedDocXmlFile>
+  </PropertyGroup>
+
+  <!-- DesignTimeBuild requires all the TargetFramework Derived Properties to not be present in the first property group. -->
+  <PropertyGroup>
+    <TargetPlatformIdentifier>$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)'))</TargetPlatformIdentifier>
+    <DefineConstants Condition="'$(TargetPlatformIdentifier)' == 'ios' or '$(TargetPlatformIdentifier)' == 'tvos' or '$(TargetPlatformIdentifier)' == 'maccatalyst'">$(DefineConstants);NO_FEATURE_STATIC_DELEGATE;FEATURE_MAKE_RUN_METHODS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
