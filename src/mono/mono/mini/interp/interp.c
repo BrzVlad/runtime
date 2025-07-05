@@ -2660,6 +2660,8 @@ init_jit_call_info (InterpMethod *rmethod, MonoError *error)
 	if (need_wrapper) {
 		MonoMethod *wrapper = mini_get_gsharedvt_out_sig_wrapper (sig);
 		jit_wrapper = mono_jit_compile_method_jit_only (wrapper, error);
+		if (!is_ok (error))
+			mono_break ();
 		mono_error_assert_ok (error);
 	}
 

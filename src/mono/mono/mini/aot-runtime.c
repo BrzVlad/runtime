@@ -4376,8 +4376,10 @@ load_method (MonoAotModule *amodule, MonoImage *image, MonoMethod *method, guint
 		}
 		if (!method->wrapper_type) {
 			guint32 hash = mono_aot_method_hash (method);
-			if ((hash % mini_debug_options.aot_skip_n) == mini_debug_options.aot_skip_i)
+			if ((hash % mini_debug_options.aot_skip_n) == mini_debug_options.aot_skip_i) {
+				g_print ("Skip aot method %s.%s\n", m_class_get_name (method->klass), method->name);
 				return NULL;
+			}
 		}
 	}
 

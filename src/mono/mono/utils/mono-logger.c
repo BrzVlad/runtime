@@ -391,6 +391,9 @@ eglib_log_adapter (const gchar *log_domain, GLogLevelFlags log_level, const gcha
 {
 	UserSuppliedLoggerUserData *ll = (UserSuppliedLoggerUserData*)logCallback.user_data;
 
+	if (log_level & G_LOG_LEVEL_ERROR)
+		__builtin_trap ();
+//		*((volatile gpointer*)NULL) = NULL;
 	ll->legacy_callback (log_domain, log_level_get_name (log_level), message, log_level & G_LOG_LEVEL_ERROR, ll->user_data);
 }
 

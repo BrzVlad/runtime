@@ -145,8 +145,7 @@
           Condition="'$(RunAOTCompilation)' == 'true'">
 
     <PropertyGroup>
-      <_AOTMode Condition="'$(UseMonoJustInterp)' != 'true'">Full</_AOTMode>
-      <_AOTMode Condition="'$(UseMonoJustInterp)' == 'true'">JustInterp</_AOTMode>
+      <_AOTMode>FullInterp</_AOTMode>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(_IsLibraryMode)' == 'true'">
@@ -191,8 +190,7 @@
         <_IsNative>false</_IsNative>
       </_AssembliesToBundleInternal>
 
-      <_AotInputAssemblies Include="@(_AssembliesToBundleInternal)" 
-                           Condition="'%(_AssembliesToBundleInternal._InternalForceInterpret)' != 'true'">
+      <_AotInputAssemblies Include="@(_AssembliesToBundleInternal)">
         <AotArguments>$(AotArguments)</AotArguments>
         <ProcessArguments>$(ProcessArguments)</ProcessArguments>
       </_AotInputAssemblies>
