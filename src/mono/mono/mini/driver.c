@@ -2209,16 +2209,8 @@ mono_main (int argc, char* argv[])
 			char **split, **ptr;
 
 			split = g_strsplit (argv [i] + 11, G_SEARCHPATH_SEPARATOR_S, 1000);
-<<<<<<< HEAD
 			for (ptr = split; ptr && *ptr; ptr++) {
 				mono_aot_paths = g_list_append (mono_aot_paths, g_strdup (*ptr));
-=======
-			while (*split) {
-				char *tmp = *split;
-				mono_aot_paths = g_list_append (mono_aot_paths, g_strdup (tmp));
-				g_free_vb (tmp);
-				split++;
->>>>>>> 001f99bb4df ([mono] Replace alloc/free methods)
 			}
 			g_strfreev (split);
 		} else if (strncmp (argv [i], "--path=", 7) == 0) {

@@ -414,7 +414,7 @@ get_context (void)
 		if (mono_interp_opt & INTERP_OPT_PRECISE_GC)
 			context->no_ref_slots = (guchar*)mono_valloc (NULL, INTERP_STACK_SIZE / (8 * sizeof (gpointer)), MONO_MMAP_READ | MONO_MMAP_WRITE, MONO_MEM_ACCOUNT_INTERP_STACK);
 		context->stack_end = context->stack_start + INTERP_STACK_SIZE - INTERP_REDZONE_SIZE;
-		context->stack_real_end = context->stack_start + INTERP_STACK_SIZE;
+		context->stack_real_end = context->stack_start + INTERP_STACK_SIZE - 16384;
 		/* We reserve a stack slot at the top of the interp stack to make temp objects visible to GC */
 		context->stack_pointer = context->stack_start + MINT_STACK_ALIGNMENT;
 
