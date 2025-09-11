@@ -3542,6 +3542,9 @@ interp_create_method_pointer (MonoMethod *method, gboolean compile, MonoError *e
 	MonoFtnDesc *ftndesc = g_new0 (MonoFtnDesc, 1);
 	ftndesc->addr = entry_func;
 	ftndesc->arg = imethod;
+
+	mono_interp_stats.num_ftndesc_creation++;
+
 	mono_error_assert_ok (error);
 
 	/*

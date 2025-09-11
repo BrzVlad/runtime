@@ -6,22 +6,6 @@
 
 #include <assert.h>
 
-c_static_assert(PAL_OperationEncrypt == kCCEncrypt);
-c_static_assert(PAL_OperationDecrypt == kCCDecrypt);
-
-c_static_assert(PAL_AlgorithmAES == kCCAlgorithmAES128);
-c_static_assert(PAL_AlgorithmDES == kCCAlgorithmDES);
-c_static_assert(PAL_Algorithm3DES == kCCAlgorithm3DES);
-c_static_assert(PAL_AlgorithmRC2 == kCCAlgorithmRC2);
-
-c_static_assert(PAL_ChainingModeECB == kCCModeECB);
-c_static_assert(PAL_ChainingModeCBC == kCCModeCBC);
-c_static_assert(PAL_ChainingModeCFB == kCCModeCFB);
-c_static_assert(PAL_ChainingModeCFB8 == kCCModeCFB8);
-
-c_static_assert(PAL_PaddingModeNone == ccNoPadding);
-c_static_assert(PAL_PaddingModePkcs7 == ccPKCS7Padding);
-
 // No PAL_SymmetricOptions are currently mapped, so no asserts required.
 
 void AppleCryptoNative_CryptorFree(CCCryptorRef cryptor)

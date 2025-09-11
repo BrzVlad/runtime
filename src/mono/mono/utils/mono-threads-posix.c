@@ -350,6 +350,9 @@ mono_memory_barrier_process_wide (void)
 	status = mono_mprotect (memory_barrier_process_wide_helper_page, mono_pagesize (), MONO_MMAP_NONE);
 	g_assert (status == 0);
 
+	status = mono_mprotect (memory_barrier_process_wide_helper_page, mono_pagesize (), MONO_MMAP_READ | MONO_MMAP_WRITE);
+	g_assert (status == 0);
+
 	status = pthread_mutex_unlock (&memory_barrier_process_wide_mutex);
 	g_assert (status == 0);
 }

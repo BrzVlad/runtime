@@ -292,6 +292,7 @@ typedef struct {
 	gint32 emitted_instructions;
 	gint32 inlined_methods;
 	gint32 inline_failures;
+	gint32 num_ftndesc_creation;
 } MonoInterpStats;
 
 extern MonoInterpStats mono_interp_stats;

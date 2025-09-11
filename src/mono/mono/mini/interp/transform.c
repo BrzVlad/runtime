@@ -4250,6 +4250,7 @@ interp_save_debug_info (InterpMethod *rtm, MonoMethodHeader *header, TransformDa
 {
 	MonoDebugMethodJitInfo *dinfo;
 
+	return;
 	if (!mono_debug_enabled ())
 		return;
 
@@ -9865,6 +9866,8 @@ mono_interp_transform_method (InterpMethod *imethod, ThreadContext *context, Mon
 		imethod->transformed = TRUE;
 		mono_interp_stats.methods_transformed++;
 		mono_atomic_fetch_add_i32 (&mono_jit_stats.methods_with_interp, 1);
+
+		g_warning ("Interp compile method %s\n", mono_method_full_name (imethod->method, 1));
 
 		// FIXME Publishing of seq points seems to be racy with tiereing. We can have both tiered and untiered method
 		// running at the same time. We could therefore get the optimized imethod seq points for the unoptimized method.

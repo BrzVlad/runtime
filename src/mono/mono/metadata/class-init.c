@@ -37,6 +37,8 @@
 
 #define FEATURE_COVARIANT_RETURNS
 
+static gboolean log_class_init = FALSE;
+
 gboolean mono_print_vtable = FALSE;
 gboolean mono_align_small_structs = FALSE;
 
@@ -441,6 +443,8 @@ mono_class_set_failure_and_error (MonoClass *klass, MonoError *error, const char
 	mono_error_set_type_load_class (error, klass, "%s", msg);
 }
 
+void mono_break(void);
+
 /**
  * mono_class_create_from_typedef:
  * \param image: image where the token is valid
@@ -750,6 +754,14 @@ mono_class_create_from_typedef (MonoImage *image, guint32 type_token, MonoError 
 
 	MONO_PROFILER_RAISE (class_loaded, (klass));
 
+	if (log_class_init) {
+		char *myname = mono_class_full_name (klass);
+		if (!strncmp (myname, "System.Reactive.Linq.ObservableImpl.Return`1", 44))
+			mono_break();
+		g_warning ("Loaded class %s\n", myname);
+		g_free(myname);
+	}
+
 	return klass;
 
 parent_failure:
@@ -1007,6 +1019,13 @@ mono_class_create_generic_inst (MonoGenericClass *gclass)
 	gclass->cached_class = klass;
 
 	MONO_PROFILER_RAISE (class_loaded, (klass));
+	if (log_class_init) {
+		char *myname = mono_class_full_name (klass);
+		if (!strncmp (myname, "System.Reactive.Linq.ObservableImpl.Return`1", 44))
+			mono_break();
+		g_warning ("Loaded class %s\n", myname);
+		g_free(myname);
+	}
 
 	++class_ginst_count;
 	inflated_classes_size += sizeof (MonoClassGenericInst);
@@ -1306,6 +1325,13 @@ mono_class_create_bounded_array (MonoClass *eclass, guint32 rank, gboolean bound
 	mono_loader_unlock ();
 
 	MONO_PROFILER_RAISE (class_loaded, (klass));
+	if (log_class_init) {
+		char *myname = mono_class_full_name (klass);
+		if (!strncmp (myname, "System.Reactive.Linq.ObservableImpl.Return`1", 44))
+			mono_break();
+		g_warning ("Loaded class %s\n", myname);
+		g_free(myname);
+	}
 
 	return klass;
 }
@@ -1466,10 +1492,21 @@ mono_class_create_generic_parameter (MonoGenericParam *param)
 	mono_image_unlock (image);
 
 	/* FIXME: Should this go inside 'make_generic_param_klass'? */
-	if (klass2)
+	if (klass2) {
 		MONO_PROFILER_RAISE (class_failed, (klass2));
-	else
+		char *myname = mono_class_full_name (klass2);
+		g_warning ("Loaded class failed %s\n", myname);
+		g_free(myname);
+	} else {
 		MONO_PROFILER_RAISE (class_loaded, (klass));
+		if (log_class_init) {
+			char *myname = mono_class_full_name (klass);
+			if (!strncmp (myname, "System.Reactive.Linq.ObservableImpl.Return`1", 44))
+				mono_break();
+			g_warning ("Loaded class %s\n", myname);
+			g_free(myname);
+		}
+	}
 
 	return klass;
 }
@@ -1572,6 +1609,13 @@ mono_class_create_ptr (MonoType *type)
 	}
 
 	MONO_PROFILER_RAISE (class_loaded, (result));
+	if (log_class_init) {
+		char *myname = mono_class_full_name (result);
+		if (!strncmp (myname, "System.Reactive.Linq.ObservableImpl.Return`1", 44))
+			mono_break();
+		g_warning ("Loaded class failed %s\n", myname);
+		g_free(myname);
+	}
 
 	return result;
 }
@@ -1631,6 +1675,13 @@ mono_class_create_fnptr (MonoMethodSignature *sig)
 	mono_loader_unlock ();
 
 	MONO_PROFILER_RAISE (class_loaded, (result));
+	if (log_class_init) {
+		char *myname = mono_class_full_name (result);
+		if (!strncmp (myname, "System.Reactive.Linq.ObservableImpl.Return`1", 44))
+			mono_break();
+		g_warning ("Loaded class failed %s\n", myname);
+		g_free(myname);
+	}
 
 	return result;
 }

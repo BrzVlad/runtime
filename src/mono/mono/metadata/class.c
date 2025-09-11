@@ -1367,6 +1367,17 @@ mono_class_inflate_generic_method_full_checked (MonoMethod *method, MonoClass *k
 	}
 	mono_mem_manager_unlock (mm);
 
+	if (FALSE) {
+		MonoClass *klass = ((MonoMethod*)cached)->klass; 
+
+		char *name = mono_method_full_name ((MonoMethod*)cached, 1);
+		if (mono_class_is_interface (klass))
+			g_warning("Inflated method interface %s\n", name);
+		else
+			g_warning("Inflated method %s\n", name);
+		g_free(name);
+	}
+
 	return (MonoMethod*)cached;
 
 fail:
