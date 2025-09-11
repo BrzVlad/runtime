@@ -112,7 +112,7 @@ namespace System.Linq.Expressions.Compiler
 
         private static System.Reflection.TypeInfo MakeNewCustomDelegate(Type[] types)
         {
-            if (RuntimeFeature.IsDynamicCodeSupported)
+            if (false && RuntimeFeature.IsDynamicCodeSupported)
             {
                 Type returnType = types[types.Length - 1];
                 Type[] parameters = types.RemoveLast();
@@ -129,7 +129,8 @@ namespace System.Linq.Expressions.Compiler
             }
             else
             {
-                throw new PlatformNotSupportedException();
+                string msg = types!.ToString()!;
+                throw new PlatformNotSupportedException(msg);
             }
         }
     }

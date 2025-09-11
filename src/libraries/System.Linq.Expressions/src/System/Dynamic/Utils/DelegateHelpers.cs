@@ -215,7 +215,7 @@ namespace System.Dynamic.Utils
                 {
                     static IDisposable? CreateForceAllowDynamicCodeScope()
                     {
-                        if (!RuntimeFeature.IsDynamicCodeSupported)
+                        if (true)
                         {
                             // Force 'new DynamicMethod' to not throw even though RuntimeFeature.IsDynamicCodeSupported is false.
                             // If we are running on a runtime that supports dynamic code, even though the feature switch is off,
@@ -225,7 +225,7 @@ namespace System.Dynamic.Utils
                             return ForceAllowDynamicCodeLightup.ForceAllowDynamicCodeDelegate?.Invoke();
                         }
 
-                        return null;
+                        // return null;
                     }
 
                     using IDisposable? forceAllowDynamicCodeScope = CreateForceAllowDynamicCodeScope();

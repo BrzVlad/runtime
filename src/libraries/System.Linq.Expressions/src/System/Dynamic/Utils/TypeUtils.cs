@@ -39,7 +39,7 @@ namespace System.Dynamic.Utils
         /// </summary>
         public static Type LiftPrimitiveOrThrow(this Type type)
         {
-            if (RuntimeFeature.IsDynamicCodeSupported)
+            if (false && RuntimeFeature.IsDynamicCodeSupported)
             {
                 return GetNullableType(type);
             }

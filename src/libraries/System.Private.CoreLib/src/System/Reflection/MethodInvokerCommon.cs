@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using static System.Reflection.InvokerEmitUtil;
 using static System.Reflection.MethodBase;
 
+#pragma warning disable IDE0060
+
 namespace System.Reflection
 {
     internal static class MethodInvokerCommon
@@ -16,21 +18,9 @@ namespace System.Reflection
             out InvokerArgFlags[] invokerFlags,
             out bool needsByRefStrategy)
         {
-            if (LocalAppContextSwitches.ForceInterpretedInvoke && !LocalAppContextSwitches.ForceEmitInvoke)
-            {
                 // Always use the native interpreted invoke.
                 // Useful for testing, to avoid startup overhead of emit, or for calling a ctor on already initialized object.
                 strategy = GetStrategyForUsingInterpreted();
-            }
-            else if (LocalAppContextSwitches.ForceEmitInvoke && !LocalAppContextSwitches.ForceInterpretedInvoke)
-            {
-                // Always use emit invoke (if IsDynamicCodeSupported == true); useful for testing.
-                strategy = GetStrategyForUsingEmit();
-            }
-            else
-            {
-                strategy = default;
-            }
 
             int argCount = argumentTypes.Length;
             invokerFlags = new InvokerArgFlags[argCount];
@@ -121,11 +111,6 @@ namespace System.Reflection
             }
             else
             {
-                if (RuntimeFeature.IsDynamicCodeSupported)
-                {
-                    invokeFunc_ObjSpanArgs = CreateInvokeDelegate_ObjSpanArgs(method, backwardsCompat);
-                }
-
                 strategy |= InvokerStrategy.StrategyDetermined_ObjSpanArgs;
             }
         }
@@ -150,11 +135,6 @@ namespace System.Reflection
             }
             else
             {
-                if (RuntimeFeature.IsDynamicCodeSupported)
-                {
-                    invokeFunc_Obj4Args = CreateInvokeDelegate_Obj4Args(method, backwardsCompat);
-                }
-
                 strategy |= InvokerStrategy.StrategyDetermined_Obj4Args;
             }
         }
@@ -173,11 +153,6 @@ namespace System.Reflection
             }
             else
             {
-                if (RuntimeFeature.IsDynamicCodeSupported)
-                {
-                    invokeFunc_RefArgs = CreateInvokeDelegate_RefArgs(method, backwardsCompat);
-                }
-
                 strategy |= InvokerStrategy.StrategyDetermined_RefArgs;
             }
         }
