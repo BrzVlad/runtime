@@ -585,13 +585,7 @@ mono_threads_assert_gc_unsafe_region (void)
 static int
 threads_suspend_policy_default (void)
 {
-#if defined (ENABLE_COOP_SUSPEND)
 	return MONO_THREADS_SUSPEND_FULL_COOP;
-#elif defined (ENABLE_HYBRID_SUSPEND)
-	return MONO_THREADS_SUSPEND_HYBRID;
-#else
-	return 0; /* unset */
-#endif
 }
 
 /* Look up whether an env var is set, warn that it's obsolete and offer a new
@@ -624,7 +618,7 @@ threads_suspend_policy_getenv_compat (void)
 		policy = MONO_THREADS_SUSPEND_FULL_COOP;
 	} else if (hasenv_obsolete ("MONO_ENABLE_HYBRID_SUSPEND", "hybrid"))
 		policy = MONO_THREADS_SUSPEND_HYBRID;
-	return policy;
+	return MONO_THREADS_SUSPEND_FULL_COOP;
 }
 
 static int
@@ -643,7 +637,7 @@ threads_suspend_policy_getenv (void)
 			g_error ("MONO_THREADS_SUSPEND environment variable set to '%s', must be one of coop, hybrid, preemptive.", str);
 		g_free (str);
 	}
-	return policy;
+	return MONO_THREADS_SUSPEND_FULL_COOP;
 }
 
 char mono_threads_suspend_policy_hidden_dont_modify;
