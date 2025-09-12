@@ -48,11 +48,18 @@ namespace System
             get => GetCachedSwitchValue("Switch.System.Reflection.ForceEmitInvoke", ref s_forceEmitInvoke);
         }
 
+#if !TARGET_IOS
         private static int s_forceInterpretedInvoke;
+#endif
         public static bool ForceInterpretedInvoke
         {
+#if TARGET_IOS
+            // FIXME I think this should be added in macios build tasks in RuntimeHostConfigurationOption
+            get => false;
+#else
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => GetCachedSwitchValue("Switch.System.Reflection.ForceInterpretedInvoke", ref s_forceInterpretedInvoke);
+#endif
         }
 
         private static int s_serializationGuard;

@@ -121,7 +121,7 @@ namespace System.Reflection
             }
             else
             {
-                if (RuntimeFeature.IsDynamicCodeSupported)
+                if (RuntimeFeature.IsDynamicCodeCompiled)
                 {
                     invokeFunc_ObjSpanArgs = CreateInvokeDelegate_ObjSpanArgs(method, backwardsCompat);
                 }
@@ -150,7 +150,7 @@ namespace System.Reflection
             }
             else
             {
-                if (RuntimeFeature.IsDynamicCodeSupported)
+                if (RuntimeFeature.IsDynamicCodeCompiled)
                 {
                     invokeFunc_Obj4Args = CreateInvokeDelegate_Obj4Args(method, backwardsCompat);
                 }
@@ -173,7 +173,7 @@ namespace System.Reflection
             }
             else
             {
-                if (RuntimeFeature.IsDynamicCodeSupported)
+                if (RuntimeFeature.IsDynamicCodeCompiled)
                 {
                     invokeFunc_RefArgs = CreateInvokeDelegate_RefArgs(method, backwardsCompat);
                 }
