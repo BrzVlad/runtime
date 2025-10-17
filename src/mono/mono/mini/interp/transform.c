@@ -8056,13 +8056,16 @@ retry_emit:
 
 			td->sp = td->stack;
 
+			MonoExceptionClause *last_exited_clause = NULL;
+
 			g_assert (header->num_clauses < G_MAXUINT16);
 			for (guint16 i = 0; i < header->num_clauses; ++i) {
 				MonoExceptionClause *clause = &header->clauses [i];
-				if (clause->flags != MONO_EXCEPTION_CLAUSE_FINALLY)
-					continue;
 				if (MONO_OFFSET_IN_CLAUSE (clause, GPTRDIFF_TO_UINT32(td->ip - header->code)) &&
 						(!MONO_OFFSET_IN_CLAUSE (clause, GINT_TO_UINT32(target_offset + in_offset)))) {
+					last_exited_clause = clause;
+					if (clause->flags != MONO_EXCEPTION_CLAUSE_FINALLY)
+						continue;
 					handle_branch (td, MINT_CALL_HANDLER, clause->handler_offset - in_offset);
 					td->last_ins->data [2] = i;
 
@@ -8082,11 +8085,18 @@ retry_emit:
 			if (td->clause_indexes [in_offset] != -1) {
 				/* LEAVE instructions in catch clauses need to check for abort exceptions */
 				handle_branch (td, MINT_LEAVE_CHECK, target_offset);
+
+				// Here, we need to find the outermost catch handler that contains the current in_offset
+				// but doesn't contain the leave offset. We then link the try_bb of this clause to the
+				// target_bb.
+
+				if (!last_exited_clause)
+					last_exited_clause = header->clauses + td->clause_indexes [in_offset];
+
 				// Link the try_bb of this catch to the leave target. This is needed so that SSA
 				// algorithms know about this possible control flow when doing optimizations
 				InterpBasicBlock *target_bb = td->last_ins->info.target_bb;
-				int clause_index = td->clause_indexes [in_offset];
-				InterpBasicBlock *try_bb = td->offset_to_bb [td->header->clauses [clause_index].try_offset];
+				InterpBasicBlock *try_bb = td->offset_to_bb [last_exited_clause->try_offset];
 				g_assert (try_bb);
 
 				interp_link_bblocks (td, try_bb, target_bb);
