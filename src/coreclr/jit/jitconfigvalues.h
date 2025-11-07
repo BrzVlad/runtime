@@ -705,7 +705,7 @@ RELEASE_CONFIG_INTEGER(TC_OnStackReplacement, "TC_OnStackReplacement", 0)
 #endif // FEATURE_ON_STACK_REPLACEMENT
 
 // Initial patchpoint counter value used by jitted code
-RELEASE_CONFIG_INTEGER(TC_OnStackReplacement_InitialCounter, "TC_OnStackReplacement_InitialCounter", 1000)
+RELEASE_CONFIG_INTEGER(TC_OnStackReplacement_InitialCounter, "TC_OnStackReplacement_InitialCounter", 1000000000)
 
 // Enable partial compilation for Tier0 methods
 RELEASE_CONFIG_INTEGER(TC_PartialCompilation, "TC_PartialCompilation", 0)

@@ -359,6 +359,12 @@ HRESULT CorHost2::ExecuteAssembly(DWORD dwAppDomainId,
     UNINSTALL_UNWIND_AND_CONTINUE_HANDLER;
     UNINSTALL_UNHANDLED_MANAGED_EXCEPTION_TRAP;
 
+    {
+        int64_t total100ns = g_c100nsTicksInJit.Load();
+        int64_t ms = total100ns / 10000;
+        printf ("[CoreCLR] Total JIT time:  %ld ms\n", ms);
+    }
+
 #ifdef LOG_EXECUTABLE_ALLOCATOR_STATISTICS
     ExecutableAllocator::DumpHolderUsage();
     ExecutionManager::DumpExecutionManagerUsage();

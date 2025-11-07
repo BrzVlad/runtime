@@ -304,6 +304,7 @@ CorJitResult CILJit::compileMethod(ICorJitInfo*         compHnd,
 
     if (result == CORJIT_OK)
     {
+        // printf ("Compile JIT method\n");
         *entryAddress = (BYTE*)methodCodePtr;
     }
 

@@ -470,14 +470,14 @@ RETAIL_CONFIG_DWORD_INFO_EX(EXTERNAL_ProcessorCount, W("PROCESSOR_COUNT"), 0, "S
 #ifdef FEATURE_TIERED_COMPILATION
 #ifdef _DEBUG
 // Use lower values to exercise more paths sooner
-#define TC_BackgroundWorkerTimeoutMs (100)
-#define TC_CallCountThreshold (2)
-#define TC_CallCountingDelayMs (1)
+#define TC_BackgroundWorkerTimeoutMs (100000000)
+#define TC_CallCountThreshold (200000000)
+#define TC_CallCountingDelayMs (10000000)
 #define TC_DelaySingleProcMultiplier (2)
 #else // !_DEBUG
 #define TC_BackgroundWorkerTimeoutMs (4000)
-#define TC_CallCountThreshold (30)
-#define TC_CallCountingDelayMs (100)
+#define TC_CallCountThreshold (300000000)
+#define TC_CallCountingDelayMs (100000000)
 #define TC_DelaySingleProcMultiplier (10)
 #endif // _DEBUG
 RETAIL_CONFIG_DWORD_INFO(EXTERNAL_TieredCompilation, W("TieredCompilation"), 1, "Enables tiered compilation")
