@@ -860,6 +860,8 @@ void InterpExecMethod(InterpreterFrame *pInterpreterFrame, InterpMethodContextFr
     InterpMethod *pMethod = pFrame->startIp->Method;
     _ASSERTE(pMethod->CheckIntegrity());
 
+	pMethod->calls++;
+
     pThreadContext->pStackPointer = pFrame->pStack + pMethod->allocaSize;
     stack = pFrame->pStack;
 
@@ -906,6 +908,8 @@ MAIN_LOOP:
             // It will be useful for testing e.g. the debug info at various locations in the current method, so let's
             // keep it for such purposes until we don't need it anymore.
             pFrame->ip = (int32_t*)ip;
+
+			pMethod->opcounts++;
 
             switch (*ip)
             {
@@ -2905,6 +2909,7 @@ CALL_INTERP_METHOD:
 
                     // Set execution state for the new frame
                     pMethod = pFrame->startIp->Method;
+					pMethod->calls++;
                     _ASSERTE(pMethod->CheckIntegrity());
                     stack = pFrame->pStack;
                     ip = pFrame->startIp->GetByteCodes();

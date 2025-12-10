@@ -9,6 +9,14 @@
 #include <string.h>
 #include <stdio.h>
 
+typedef struct {
+	const char *name;
+	InterpMethod *pMethod;
+} InterpMethodInfo;
+
+InterpMethodInfo *interpMethods;
+int interpMethodsCount = 0;
+
 /*****************************************************************************/
 ICorJitHost* g_interpHost        = nullptr;
 bool         g_interpInitialized = false;
@@ -23,6 +31,8 @@ extern "C" INTERP_API void jitStartup(ICorJitHost* jitHost)
 
     assert(!InterpConfig.IsInitialized());
     InterpConfig.Initialize(jitHost);
+
+	interpMethods = (InterpMethodInfo*)malloc (10000 * sizeof (InterpMethodInfo));
 
     g_interpInitialized = true;
 }
@@ -111,6 +121,11 @@ CorJitResult CILInterp::compileMethod(ICorJitInfo*         compHnd,
         int32_t IRCodeSize = 0;
         int32_t *pIRCode = compiler.GetCode(&IRCodeSize);
 
+        const char *methodName = compHnd->getMethodNameFromMetadata(methodInfo->ftn, nullptr, nullptr, nullptr, 0);
+		interpMethods[interpMethodsCount].pMethod = pMethod;
+		interpMethods[interpMethodsCount].name = methodName;
+		interpMethodsCount++;
+
         uint32_t sizeOfCode = sizeof(InterpMethod*) + IRCodeSize * sizeof(int32_t);
         uint8_t unwindInfo[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -142,8 +157,37 @@ CorJitResult CILInterp::compileMethod(ICorJitInfo*         compHnd,
     return CORJIT_OK;
 }
 
+static int
+imethod_opcount_comparer (const void *m1, const void *m2)
+{   
+    long diff = ((InterpMethodInfo*)m2)->pMethod->opcounts - ((InterpMethodInfo*)m1)->pMethod->opcounts;
+    if (diff > 0)
+        return 1;
+    else if (diff < 0)
+        return -1;
+    else
+        return 0;
+}
+
 void CILInterp::ProcessShutdownWork(ICorStaticInfo* statInfo)
 {
+	const long opcount_threshold = 100000;
+	long total_executed_opcodes = 0;
+	for (int i = 0; i < interpMethodsCount; i++)
+		total_executed_opcodes += interpMethods[i].pMethod->opcounts;
+
+    qsort (interpMethods, interpMethodsCount, sizeof (InterpMethodInfo), imethod_opcount_comparer);
+
+    printf ("Total executed opcodes %ld\n", total_executed_opcodes);
+    long cumulative_executed_opcodes = 0;
+    for (int i = 0; i < interpMethodsCount; i++) {
+		InterpMethod *pMethod = interpMethods[i].pMethod;
+		if (pMethod->opcounts < opcount_threshold)
+			break;
+        cumulative_executed_opcodes += pMethod->opcounts;
+        printf ("%d%% Opcounts %ld, calls %ld, Method %s, imethod ptr %p\n", (int)(cumulative_executed_opcodes * 100 / total_executed_opcodes), pMethod->opcounts, pMethod->calls, interpMethods[i].name, pMethod);
+    }
+
     g_interpInitialized = false;
 }
 

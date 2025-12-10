@@ -305,6 +305,8 @@ CorJitResult CILJit::compileMethod(ICorJitInfo*         compHnd,
     if (result == CORJIT_OK)
     {
         *entryAddress = (BYTE*)methodCodePtr;
+        const char *methodName = compHnd->getMethodNameFromMetadata(methodInfo->ftn, nullptr, nullptr, nullptr, 0); 
+        printf ("Compile JIT method %s\n", methodName);
     }
 
     return CorJitResult(result);

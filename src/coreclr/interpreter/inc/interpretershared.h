@@ -46,6 +46,8 @@ struct InterpMethod
     bool initLocals;
     bool unmanagedCallersOnly;
 
+	long calls, opcounts;
+
 #ifdef INTERPRETER_COMPILER_INTERNAL
     InterpMethod(
         CORINFO_METHOD_HANDLE methodHnd, int32_t argsSize, int32_t allocaSize,
