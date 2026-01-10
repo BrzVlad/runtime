@@ -498,11 +498,7 @@ void* ExecutableAllocator::Commit(void* pStart, size_t size, bool isExecutable)
     }
     else
     {
-#if defined(TARGET_IOS) || defined(TARGET_TVOS) || defined(TARGET_MACCATALYST)
         return ClrVirtualAlloc(pStart, size, MEM_COMMIT, PAGE_READWRITE);
-#else
-        return ClrVirtualAlloc(pStart, size, MEM_COMMIT, isExecutable ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE);
-#endif
     }
 }
 
@@ -714,12 +710,6 @@ void* ExecutableAllocator::ReserveWithinRange(size_t size, const void* loAddress
     else
     {
         DWORD allocationType = MEM_RESERVE;
-#if defined(HOST_UNIX) && !defined(TARGET_IOS) && !defined(TARGET_TVOS) && !defined(TARGET_MACCATALYST)
-        // Tell PAL to use the executable memory allocator to satisfy this request for virtual memory.
-        // This will allow us to place JIT'ed code close to the coreclr library
-        // and thus improve performance by avoiding jump stubs in managed code.
-        allocationType |= MEM_RESERVE_EXECUTABLE;
-#endif
         return ClrVirtualAllocWithinRange((const BYTE*)loAddress, (const BYTE*)hiAddress, size, allocationType, PAGE_NOACCESS);
     }
 }
@@ -804,12 +794,6 @@ void* ExecutableAllocator::Reserve(size_t size)
         else
         {
             DWORD allocationType = MEM_RESERVE;
-#if defined(HOST_UNIX) && !defined(TARGET_IOS) && !defined(TARGET_TVOS) && !defined(TARGET_MACCATALYST)
-            // Tell PAL to use the executable memory allocator to satisfy this request for virtual memory.
-            // This will allow us to place JIT'ed code close to the coreclr library
-            // and thus improve performance by avoiding jump stubs in managed code.
-            allocationType |= MEM_RESERVE_EXECUTABLE;
-#endif
             result = (BYTE*)ClrVirtualAlloc(NULL, size, allocationType, PAGE_NOACCESS);
         }
     }
