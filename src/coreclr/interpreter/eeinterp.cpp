@@ -66,7 +66,7 @@ CorJitResult CILInterp::compileMethod(ICorJitInfo*         compHnd,
                 doInterpret = true;
                 const char *assemblyName = compHnd->getClassAssemblyName(compHnd->getMethodClass(methodInfo->ftn));
                 if (assemblyName && !strcmp(assemblyName, "System.Private.CoreLib"))
-                    doInterpret = false;
+                    doInterpret = true;
                 break;
             }
 

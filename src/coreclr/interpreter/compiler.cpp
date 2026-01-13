@@ -1896,6 +1896,8 @@ InterpMethod* InterpCompiler::CompileMethod()
 
     EmitCode();
 
+	printf("\nInterp compile method: ");
+	PrintMethodName(m_methodHnd);
 #ifdef DEBUG
     if (IsInterpDumpActive())
     {
