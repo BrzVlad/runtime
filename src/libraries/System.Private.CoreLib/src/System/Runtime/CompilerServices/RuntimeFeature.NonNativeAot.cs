@@ -25,7 +25,7 @@ namespace System.Runtime.CompilerServices
 #if CORECLR && (TARGET_WASM || TARGET_IOS || TARGET_TVOS || TARGET_MACCATALYST)
             get => false;
 #else
-            get => IsDynamicCodeSupported;
+            get => false; //IsDynamicCodeSupported;
 #endif
         }
     }
