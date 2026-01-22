@@ -523,9 +523,15 @@ namespace Internal.JitInterface
 
         public static bool ShouldSkipCompilation(InstructionSetSupport instructionSetSupport, MethodDesc methodNeedingCode)
         {
+            return ShouldSkipCompilation(instructionSetSupport, methodNeedingCode, out _);
+        }
+
+		public static bool ShouldSkipCompilation(InstructionSetSupport instructionSetSupport, MethodDesc methodNeedingCode, out string reason)
+        {
             bool targetAllowsRuntimeCodeGeneration = ((ReadyToRunCompilerContext)methodNeedingCode.Context).TargetAllowsRuntimeCodeGeneration;
             if (methodNeedingCode.IsAggressiveOptimization && targetAllowsRuntimeCodeGeneration)
             {
+                reason = "method is marked AggressiveOptimization";
                 return true;
             }
 
@@ -535,15 +541,18 @@ namespace Internal.JitInterface
             // This allows us to avoid the high cost of manually implementing intrinsics in the interpreter.
             if (HardwareIntrinsicHelpers.IsHardwareIntrinsic(methodNeedingCode) && targetAllowsRuntimeCodeGeneration)
             {
+                reason = "method is a hardware intrinsic and target allows runtime code generation";
                 return true;
             }
 
             if (methodNeedingCode.IsAbstract)
             {
+                reason = "method is abstract";
                 return true;
             }
             if (methodNeedingCode.IsInternalCall)
             {
+                reason = "method is internal call";
                 return true;
             }
             if (methodNeedingCode.OwningType.IsDelegate && (
@@ -552,14 +561,17 @@ namespace Internal.JitInterface
                 methodNeedingCode.Name.SequenceEqual("Invoke"u8) ||
                 methodNeedingCode.Name.SequenceEqual("EndInvoke"u8)))
             {
+                reason = "method is a special delegate method";
                 // Special methods on delegate types
                 return true;
             }
             if (ShouldCodeNotBeCompiledIntoFinalImage(instructionSetSupport, methodNeedingCode))
             {
+                reason = "method should not be compiled into the final image";
                 return true;
             }
 
+            reason = "";
             return false;
         }
 
@@ -757,10 +769,10 @@ namespace Internal.JitInterface
 
             try
             {
-                if (ShouldSkipCompilation(_compilation.InstructionSetSupport, MethodBeingCompiled))
+                if (ShouldSkipCompilation(_compilation.InstructionSetSupport, MethodBeingCompiled, out string skipReason))
                 {
                     if (logger.IsVerbose)
-                        logger.Writer.WriteLine($"Info: Method `{MethodBeingCompiled}` was not compiled because it is skipped.");
+                        logger.Writer.WriteLine($"Info: Method `{MethodBeingCompiled}` was not compiled because {skipReason}.");
                     return;
                 }
 
