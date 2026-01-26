@@ -555,11 +555,7 @@ RETAIL_CONFIG_DWORD_INFO(EXTERNAL_VirtualCallStubLogging, W("VirtualCallStubLogg
 CONFIG_DWORD_INFO(INTERNAL_VirtualCallStubMissCount, W("VirtualCallStubMissCount"), 100, "Used only when STUB_LOGGING is defined, which by default is not.")
 CONFIG_DWORD_INFO(INTERNAL_VirtualCallStubResetCacheCounter, W("VirtualCallStubResetCacheCounter"), 0, "Used only when STUB_LOGGING is defined, which by default is not.")
 CONFIG_DWORD_INFO(INTERNAL_VirtualCallStubResetCacheIncr, W("VirtualCallStubResetCacheIncr"), 0, "Used only when STUB_LOGGING is defined, which by default is not.")
-#if defined(TARGET_IOS) || defined(TARGET_TVOS) || defined(TARGET_MACCATALYST)
 CONFIG_DWORD_INFO(INTERNAL_UseCachedInterfaceDispatch, W("UseCachedInterfaceDispatch"), 1, "If cached interface dispatch is compiled in, use that instead of virtual stub dispatch")
-#else
-CONFIG_DWORD_INFO(INTERNAL_UseCachedInterfaceDispatch, W("UseCachedInterfaceDispatch"), 0, "If cached interface dispatch is compiled in, use that instead of virtual stub dispatch")
-#endif // defined(TARGET_IOS) || defined(TARGET_TVOS) || defined(TARGET_MACCATALYST)
 ///
 /// Watson
 ///
