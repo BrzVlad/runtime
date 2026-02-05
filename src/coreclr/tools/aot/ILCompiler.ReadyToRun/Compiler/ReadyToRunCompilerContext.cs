@@ -103,6 +103,9 @@ namespace ILCompiler
         {
             get
             {
+#if FEATURE_NO_DYNAMIC_CODEGEN
+                return false;
+#else
                 if (Target.OperatingSystem is TargetOS.iOS or TargetOS.iOSSimulator or TargetOS.MacCatalyst or TargetOS.tvOS or TargetOS.tvOSSimulator)
                 {
                     return false;
@@ -114,6 +117,7 @@ namespace ILCompiler
                 }
 
                 return true;
+#endif
             }
         }
 
