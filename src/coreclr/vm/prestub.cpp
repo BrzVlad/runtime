@@ -876,8 +876,20 @@ PCODE MethodDesc::JitCompileCodeLockedEventWrapper(PrepareCodeConfig* pConfig, J
 #endif // PROFILING_SUPPORTED
 
 #ifdef FEATURE_PERFMAP
-    // Save the JIT'd method information so that perf can resolve JIT'd call frames.
-    PerfMap::LogJITCompiledMethod(this, pCode, sizeOfCode, pConfig);
+#if defined(FEATURE_INTERPRETER)
+    if (isInterpreterCode)
+    {
+        InterpreterPrecode* pPrecode = InterpreterPrecode::FromEntryPoint(pCode);
+        InterpByteCodeStart* interpreterCode = dac_cast<InterpByteCodeStart*>(pPrecode->GetData()->ByteCodeAddr);
+        PCODE irAddress = PINSTRToPCODE(dac_cast<TADDR>(interpreterCode));
+        PerfMap::LogInterpreterMethod(this, irAddress, sizeOfCode);
+    }
+#endif // FEATURE_INTERPRETER
+    else
+    {
+        // Save the JIT'd method information so that perf can resolve JIT'd call frames.
+        PerfMap::LogJITCompiledMethod(this, pCode, sizeOfCode, pConfig);
+    }
 #endif
 
     // The notification will only occur if someone has registered for this method.
