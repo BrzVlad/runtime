@@ -630,15 +630,9 @@ namespace Internal.JitInterface
                     else
                     {
                         // If we reach here this is an instruction set generally supported on this platform, but we don't know what the behavior will be at runtime
-                        Console.WriteLine($"SKIPPED: {method}");
                         return true;
                     }
                 }
-
-                if (doBypass)
-                    Console.WriteLine($"SKIPPED: {method}");
-                else
-                    Console.WriteLine($"COMPILED: {method}");
 
                 return doBypass;
             }
