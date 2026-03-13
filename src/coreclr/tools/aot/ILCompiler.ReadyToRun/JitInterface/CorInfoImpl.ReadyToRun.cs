@@ -631,6 +631,7 @@ namespace Internal.JitInterface
                         else if (!instructionSetSupport.IsInstructionSetExplicitlyUnsupported(instructionSet))
                         {
                             // If we reach here this is an instruction set generally supported on this platform, but we don't know what the behavior will be at runtime
+                            Console.WriteLine($"SKIPPED: {method}");
                             return true;
                         }
                     }
@@ -640,8 +641,11 @@ namespace Internal.JitInterface
                 {
                     // If none of the instruction sets are supported (all are either illegal or explicitly unsupported),
                     // skip compilation unless the method has a functional fallback path
+                    Console.WriteLine($"SKIPPED: {method}");
                     return true;
                 }
+
+                Console.WriteLine($"COMPILED: {method}");
             }
 
             // No reason to bypass compilation and code generation.
