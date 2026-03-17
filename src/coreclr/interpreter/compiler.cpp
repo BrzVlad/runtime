@@ -2186,6 +2186,10 @@ bool InterpCompiler::CompileMethod()
 
     EmitCode();
 
+    printf("\nInterp compiled method: ");
+    PrintMethodName(m_methodHnd);
+
+
 #ifdef DEBUG
     if (IsInterpDumpActive())
     {
