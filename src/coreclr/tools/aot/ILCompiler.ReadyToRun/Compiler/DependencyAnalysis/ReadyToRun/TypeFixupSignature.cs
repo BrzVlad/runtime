@@ -211,6 +211,15 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 factory.CompilationModuleGroup.VersionsWithType(_typeDesc))
             {
                 dependencies.Add(factory.AllMethodsOnType(_typeDesc), "Methods on generic type instantiation");
+
+                // Also compile methods on generic base types
+                for (var baseType = _typeDesc.BaseType;
+                     baseType != null && baseType.HasInstantiation && !baseType.IsGenericDefinition;
+                     baseType = baseType.BaseType)
+                {
+                    if (factory.CompilationModuleGroup.VersionsWithType(baseType))
+                        dependencies.Add(factory.AllMethodsOnType(baseType), "Methods on generic base type instantiation");
+                }
             }
 
             if (_fixupKind == ReadyToRunFixupKind.TypeHandle)
