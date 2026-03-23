@@ -205,20 +205,19 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         {
             DependencyList dependencies = new DependencyList();
 
-            if (_typeDesc.HasInstantiation &&
-                !_typeDesc.IsGenericDefinition &&
-                (factory.CompilationCurrentPhase == 0) &&
-                factory.CompilationModuleGroup.VersionsWithType(_typeDesc))
+            if (factory.CompilationCurrentPhase == 0)
             {
-                dependencies.Add(factory.AllMethodsOnType(_typeDesc), "Methods on generic type instantiation");
-
-                // Also compile methods on generic base types
-                for (var baseType = _typeDesc.BaseType;
-                     baseType != null && baseType.HasInstantiation && !baseType.IsGenericDefinition;
-                     baseType = baseType.BaseType)
+                TypeDesc type = _typeDesc;
+                while (type != null)
                 {
-                    if (factory.CompilationModuleGroup.VersionsWithType(baseType))
-                        dependencies.Add(factory.AllMethodsOnType(baseType), "Methods on generic base type instantiation");
+                    if (type.HasInstantiation &&
+                        !type.IsGenericDefinition &&
+                        factory.CompilationModuleGroup.VersionsWithType(type))
+                    {
+                        dependencies.Add(factory.AllMethodsOnType(type), "Methods on generic type instantiation");
+                    }
+
+                    type = type.BaseType;
                 }
             }
 
