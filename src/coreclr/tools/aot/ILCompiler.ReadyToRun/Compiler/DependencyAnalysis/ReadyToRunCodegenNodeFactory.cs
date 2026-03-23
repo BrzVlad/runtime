@@ -132,6 +132,13 @@ namespace ILCompiler.DependencyAnalysis
             return _allMethodsOnType.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
         }
 
+        private NodeCache<TypeDesc, InterfaceMethodsOnTypeNode> _interfaceMethodsOnType;
+
+        public InterfaceMethodsOnTypeNode InterfaceMethodsOnType(TypeDesc type)
+        {
+            return _interfaceMethodsOnType.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
+        }
+
         private NodeCache<ReadyToRunGenericHelperKey, ISymbolNode> _genericReadyToRunHelpersFromDict;
 
         public ISymbolNode ReadyToRunHelperFromDictionaryLookup(ReadyToRunHelperId id, Object target, TypeSystemEntity dictionaryOwner)
@@ -250,6 +257,11 @@ namespace ILCompiler.DependencyAnalysis
             _allMethodsOnType = new NodeCache<TypeDesc, AllMethodsOnTypeNode>(type =>
             {
                 return new AllMethodsOnTypeNode(type);
+            });
+
+            _interfaceMethodsOnType = new NodeCache<TypeDesc, InterfaceMethodsOnTypeNode>(type =>
+            {
+                return new InterfaceMethodsOnTypeNode(type);
             });
 
             _genericReadyToRunHelpersFromDict = new NodeCache<ReadyToRunGenericHelperKey, ISymbolNode>(helperKey =>
