@@ -132,11 +132,11 @@ namespace ILCompiler.DependencyAnalysis
             return _allMethodsOnType.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
         }
 
-        private NodeCache<TypeDesc, InterfaceMethodsOnTypeNode> _interfaceMethodsOnType;
+        private NodeCache<TypeDesc, InheritedVirtualMethodsNode> _inheritedVirtualMethods;
 
-        public InterfaceMethodsOnTypeNode InterfaceMethodsOnType(TypeDesc type)
+        public InheritedVirtualMethodsNode InheritedVirtualMethods(TypeDesc type)
         {
-            return _interfaceMethodsOnType.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
+            return _inheritedVirtualMethods.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
         }
 
         private NodeCache<ReadyToRunGenericHelperKey, ISymbolNode> _genericReadyToRunHelpersFromDict;
@@ -259,9 +259,9 @@ namespace ILCompiler.DependencyAnalysis
                 return new AllMethodsOnTypeNode(type);
             });
 
-            _interfaceMethodsOnType = new NodeCache<TypeDesc, InterfaceMethodsOnTypeNode>(type =>
+            _inheritedVirtualMethods = new NodeCache<TypeDesc, InheritedVirtualMethodsNode>(type =>
             {
-                return new InterfaceMethodsOnTypeNode(type);
+                return new InheritedVirtualMethodsNode(type);
             });
 
             _genericReadyToRunHelpersFromDict = new NodeCache<ReadyToRunGenericHelperKey, ISymbolNode>(helperKey =>
