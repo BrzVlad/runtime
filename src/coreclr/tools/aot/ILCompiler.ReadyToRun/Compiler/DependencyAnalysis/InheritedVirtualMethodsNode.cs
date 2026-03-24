@@ -42,6 +42,8 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         public override IEnumerable<DependencyListEntry> GetStaticDependencies(NodeFactory context)
         {
             DependencyList dependencies = new DependencyList();
+            if (_type is not DefType)
+                return dependencies;
             DefType defType = _type.GetClosestDefType();
 
             // 1. Interface method implementations inherited from base types
@@ -91,6 +93,9 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             TypeDesc implType = defType;
             while (!implType.HasSameTypeDefinition(implMethod.OwningType))
                 implType = implType.BaseType;
+
+            if (!implType.HasInstantiation)
+                return;
 
             if (!implType.IsTypeDefinition)
                 targetMethod = implType.Context.GetMethodForInstantiatedType(
