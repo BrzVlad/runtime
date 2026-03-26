@@ -125,13 +125,6 @@ namespace ILCompiler.DependencyAnalysis
             return _localMethodCache.GetOrAdd(method);
         }
 
-        private NodeCache<TypeDesc, AllMethodsOnTypeNode> _allMethodsOnType;
-
-        public AllMethodsOnTypeNode AllMethodsOnType(TypeDesc type)
-        {
-            return _allMethodsOnType.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
-        }
-
         private NodeCache<TypeDesc, InheritedVirtualMethodsNode> _inheritedVirtualMethods;
 
         public InheritedVirtualMethodsNode InheritedVirtualMethods(TypeDesc type)
@@ -262,11 +255,6 @@ namespace ILCompiler.DependencyAnalysis
 
         private void CreateNodeCaches()
         {
-            _allMethodsOnType = new NodeCache<TypeDesc, AllMethodsOnTypeNode>(type =>
-            {
-                return new AllMethodsOnTypeNode(type);
-            });
-
             _inheritedVirtualMethods = new NodeCache<TypeDesc, InheritedVirtualMethodsNode>(type =>
             {
                 return new InheritedVirtualMethodsNode(type);
