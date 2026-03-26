@@ -76,14 +76,13 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             // For generic virtual method calls, create a GVM dependency node that will
             // dynamically discover implementations on types as they are added to the graph.
             if (_fixupKind == ReadyToRunFixupKind.VirtualEntry &&
-                Method.HasInstantiation &&
                 Method.IsVirtual &&
                 !Method.IsGenericMethodDefinition &&
                 !Method.OwningType.IsGenericDefinition &&
                 factory.CompilationCurrentPhase == 0)
             {
                 list = list ?? new DependencyAnalysisFramework.DependencyNodeCore<NodeFactory>.DependencyList();
-                list.Add(factory.GVMDependencies(Method), "GVM dependency for virtual entry fixup");
+                list.Add(factory.VirtualMethodUseDependencies(Method), "Virtual dispatch dependency");
             }
 
             return list;
