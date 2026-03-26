@@ -205,26 +205,15 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         {
             DependencyList dependencies = new DependencyList();
 
-            if (_typeDesc.HasInstantiation &&
-                !_typeDesc.IsGenericDefinition &&
-                (factory.CompilationCurrentPhase == 0) &&
-                factory.CompilationModuleGroup.VersionsWithType(_typeDesc))
-            {
-                dependencies.Add(factory.AllMethodsOnType(_typeDesc), "Methods on generic type instantiation");
-            }
-
-            // Ensure virtual and interface method implementations inherited from generic
-            // base types are compiled for this instantiation. AllMethodsOnType only discovers
-            // methods defined directly on the type, missing inherited implementations needed
-            // for virtual and interface dispatch on value-type instantiations.
-            // This applies to non-generic types too — e.g., a non-generic Derived extending
-            // Base<int> still needs Base<int>'s interface implementations compiled.
+            // Register a type discovery marker so that ReadyToRunVirtualMethodDependenciesNode
+            // can find this type when resolving virtual/interface dispatch implementations.
+            // Method compilation is demand-driven via VirtualEntry fixups, not eager.
             if (!_typeDesc.IsGenericDefinition &&
                 !_typeDesc.IsInterface &&
                 (factory.CompilationCurrentPhase == 0) &&
                 factory.CompilationModuleGroup.VersionsWithType(_typeDesc))
             {
-                dependencies.Add(factory.InheritedVirtualMethods(_typeDesc), "Inherited virtual/interface methods on type");
+                dependencies.Add(factory.InheritedVirtualMethods(_typeDesc), "Type discovery marker for virtual dispatch");
             }
 
             if (_fixupKind == ReadyToRunFixupKind.TypeHandle)
