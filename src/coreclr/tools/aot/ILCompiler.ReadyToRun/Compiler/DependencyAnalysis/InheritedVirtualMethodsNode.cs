@@ -16,8 +16,9 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
     /// ReadyToRunVirtualMethodDependenciesNode can scan for discovered types and
     /// resolve virtual/interface dispatch implementations on them.
     ///
-    /// This node itself produces no static dependencies — method compilation is
-    /// demand-driven via VirtualEntry fixups in MethodFixupSignature.
+    /// Also eagerly compiles the static constructor (.cctor) if present, since it is
+    /// invoked implicitly by the runtime on first type access and has no explicit call
+    /// site that would create a fixup dependency.
     /// </summary>
     public class InheritedVirtualMethodsNode : DependencyNodeCore<NodeFactory>
     {
@@ -37,7 +38,39 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
 
         public override IEnumerable<CombinedDependencyListEntry> GetConditionalStaticDependencies(NodeFactory context) => null;
         public override IEnumerable<CombinedDependencyListEntry> SearchDynamicDependencies(List<DependencyNodeCore<NodeFactory>> markedNodes, int firstNode, NodeFactory context) => null;
-        public override IEnumerable<DependencyListEntry> GetStaticDependencies(NodeFactory context) => null;
+
+        public override IEnumerable<DependencyListEntry> GetStaticDependencies(NodeFactory context)
+        {
+            if (_type is not DefType defType)
+                return null;
+
+            DependencyList dependencies = null;
+
+            // Static and instance constructors are invoked implicitly by the runtime
+            // (e.g., .cctor on first type access, .ctor via Activator.CreateInstance,
+            // default comparer creation, etc.) with no explicit call site that creates
+            // a fixup. Eagerly compile them so that methods they call are transitively compiled.
+            foreach (MethodDesc method in defType.GetMethods())
+            {
+                if (!method.IsConstructor && !method.IsStaticConstructor)
+                    continue;
+
+                MethodDesc canonMethod = method.GetCanonMethodTarget(CanonicalFormKind.Specific);
+                if (canonMethod.IsGenericMethodDefinition ||
+                    !context.CompilationModuleGroup.ContainsMethodBody(canonMethod, false))
+                    continue;
+
+                try
+                {
+                    context.DetectGenericCycles(_type, canonMethod);
+                    dependencies ??= new DependencyList();
+                    dependencies.Add(context.CompiledMethodNode(canonMethod), "Constructor on discovered type");
+                }
+                catch (TypeSystemException) { }
+            }
+
+            return dependencies;
+        }
 
         protected override string GetName(NodeFactory factory) => $"Inherited virtual methods on {_type}";
     }
