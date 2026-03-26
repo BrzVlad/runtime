@@ -139,6 +139,15 @@ namespace ILCompiler.DependencyAnalysis
             return _inheritedVirtualMethods.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
         }
 
+        private NodeCache<MethodDesc, ReadyToRunGVMDependenciesNode> _gvmDependencies;
+
+        public ReadyToRunGVMDependenciesNode GVMDependencies(MethodDesc method)
+        {
+            Debug.Assert(method.HasInstantiation);
+            Debug.Assert(method.IsVirtual);
+            return _gvmDependencies.GetOrAdd(method.GetCanonMethodTarget(CanonicalFormKind.Specific));
+        }
+
         private NodeCache<ReadyToRunGenericHelperKey, ISymbolNode> _genericReadyToRunHelpersFromDict;
 
         public ISymbolNode ReadyToRunHelperFromDictionaryLookup(ReadyToRunHelperId id, Object target, TypeSystemEntity dictionaryOwner)
@@ -262,6 +271,11 @@ namespace ILCompiler.DependencyAnalysis
             _inheritedVirtualMethods = new NodeCache<TypeDesc, InheritedVirtualMethodsNode>(type =>
             {
                 return new InheritedVirtualMethodsNode(type);
+            });
+
+            _gvmDependencies = new NodeCache<MethodDesc, ReadyToRunGVMDependenciesNode>(method =>
+            {
+                return new ReadyToRunGVMDependenciesNode(method);
             });
 
             _genericReadyToRunHelpersFromDict = new NodeCache<ReadyToRunGenericHelperKey, ISymbolNode>(helperKey =>

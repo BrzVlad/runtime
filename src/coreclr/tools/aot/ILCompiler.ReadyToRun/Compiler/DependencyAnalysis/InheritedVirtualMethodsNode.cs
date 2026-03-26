@@ -31,7 +31,9 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             _type = type;
         }
 
-        public override bool InterestingForDynamicDependencyAnalysis => false;
+        public TypeDesc Type => _type;
+
+        public override bool InterestingForDynamicDependencyAnalysis => true;
         public override bool HasDynamicDependencies => false;
         public override bool HasConditionalStaticDependencies => false;
         public override bool StaticDependenciesAreComputed => true;
