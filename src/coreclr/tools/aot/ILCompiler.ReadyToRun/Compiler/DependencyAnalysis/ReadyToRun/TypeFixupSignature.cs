@@ -205,12 +205,15 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         {
             DependencyList dependencies = new DependencyList();
 
-            if (_typeDesc.HasInstantiation &&
-                !_typeDesc.IsGenericDefinition &&
+            // Register a type discovery marker so that ReadyToRunVirtualMethodDependenciesNode
+            // can find this type when resolving virtual/interface dispatch implementations.
+            // Method compilation is demand-driven via VirtualEntry fixups, not eager.
+            if (!_typeDesc.IsGenericDefinition &&
+                !_typeDesc.IsInterface &&
                 (factory.CompilationCurrentPhase == 0) &&
                 factory.CompilationModuleGroup.VersionsWithType(_typeDesc))
             {
-                dependencies.Add(factory.AllMethodsOnType(_typeDesc), "Methods on generic type instantiation");
+                dependencies.Add(factory.InheritedVirtualMethods(_typeDesc), "Type discovery marker for virtual dispatch");
             }
 
             if (_fixupKind == ReadyToRunFixupKind.TypeHandle)

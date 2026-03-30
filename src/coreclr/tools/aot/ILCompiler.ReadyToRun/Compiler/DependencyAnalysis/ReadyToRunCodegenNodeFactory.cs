@@ -128,11 +128,19 @@ namespace ILCompiler.DependencyAnalysis
             return _localMethodCache.GetOrAdd(method);
         }
 
-        private NodeCache<TypeDesc, AllMethodsOnTypeNode> _allMethodsOnType;
+        private NodeCache<TypeDesc, InheritedVirtualMethodsNode> _inheritedVirtualMethods;
 
-        public AllMethodsOnTypeNode AllMethodsOnType(TypeDesc type)
+        public InheritedVirtualMethodsNode InheritedVirtualMethods(TypeDesc type)
         {
-            return _allMethodsOnType.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
+            return _inheritedVirtualMethods.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
+        }
+
+        private NodeCache<MethodDesc, ReadyToRunVirtualMethodDependenciesNode> _virtualMethodUseDependencies;
+
+        public ReadyToRunVirtualMethodDependenciesNode VirtualMethodUseDependencies(MethodDesc method)
+        {
+            Debug.Assert(method.IsVirtual);
+            return _virtualMethodUseDependencies.GetOrAdd(method.GetCanonMethodTarget(CanonicalFormKind.Specific));
         }
 
         private NodeCache<ReadyToRunGenericHelperKey, ISymbolNode> _genericReadyToRunHelpersFromDict;
@@ -250,9 +258,14 @@ namespace ILCompiler.DependencyAnalysis
 
         private void CreateNodeCaches()
         {
-            _allMethodsOnType = new NodeCache<TypeDesc, AllMethodsOnTypeNode>(type =>
+            _inheritedVirtualMethods = new NodeCache<TypeDesc, InheritedVirtualMethodsNode>(type =>
             {
-                return new AllMethodsOnTypeNode(type);
+                return new InheritedVirtualMethodsNode(type);
+            });
+
+            _virtualMethodUseDependencies = new NodeCache<MethodDesc, ReadyToRunVirtualMethodDependenciesNode>(method =>
+            {
+                return new ReadyToRunVirtualMethodDependenciesNode(method);
             });
 
             _genericReadyToRunHelpersFromDict = new NodeCache<ReadyToRunGenericHelperKey, ISymbolNode>(helperKey =>
