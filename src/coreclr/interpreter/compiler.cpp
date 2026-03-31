@@ -11204,6 +11204,7 @@ bool InterpreterRetryData::GetOverrideILMergePointStackType(int32_t ilOffset, ui
     }
 }
 
+#ifdef DEBUG
 static void DumpClassName(CORINFO_CLASS_HANDLE cls, COMP_HANDLE compHnd)
 {
     char className[100];
@@ -11362,7 +11363,6 @@ void PrintInterpGenericLookup(InterpGenericLookup* lookup)
     }
 }
 
-#ifdef DEBUG
 static void DumpNameInPointerMap(void* ptr, dn_simdhash_ptr_ptr_t* pPointerMap, COMP_HANDLE compHnd)
 {
     const char *name;
@@ -11428,18 +11428,15 @@ static void DumpNameInPointerMap(void* ptr, dn_simdhash_ptr_ptr_t* pPointerMap, 
         }
     }
 }
-#endif
 
 static void DumpPointer(void* pointer,
     dn_simdhash_ptr_ptr_t* pPointerMap = nullptr, COMP_HANDLE compHnd = nullptr)
 {
     printf("%p ", pointer);
-#ifdef DEBUG
     if (pPointerMap != nullptr)
     {
         DumpNameInPointerMap(pointer, pPointerMap, compHnd);
     }
-#endif
 }
 
 static void DumpHelperFtn(int32_t _data, void** pDataItems,
@@ -11639,10 +11636,8 @@ static void DumpInsData(InterpInst *ins, int32_t insOffset, const int32_t *pData
 
 void InterpCompiler::PrintInsData(InterpInst *ins, int32_t insOffset, const int32_t *pData, int32_t opcode)
 {
-#ifdef DEBUG
     DumpInsData(ins, insOffset, pData, opcode, m_dataItems.GetUnderlyingArray(),
                 m_pointerToNameMap.GetValue(), m_compHnd);
-#endif
 }
 
 static void DumpCompiledIns(const int32_t *ip, const int32_t *start, void** pDataItems,
@@ -11691,14 +11686,10 @@ static void DumpCompiledCode(const int32_t *code, int32_t codeSizeInSlots, void*
 
 void InterpCompiler::PrintCompiledCode()
 {
-#ifdef DEBUG
     DumpCompiledCode(m_pMethodCode, m_methodCodeSize, m_dataItems.GetUnderlyingArray(),
                      m_pointerToNameMap.GetValue(), m_compHnd);
-#endif
 }
 
-#ifdef DEBUG
-// For use in native debugger
 extern "C" void InterpDumpIR(const InterpByteCodeStart *startIp)
 {
     InterpMethod *pMethod = startIp->Method;
