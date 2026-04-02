@@ -54,6 +54,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         protected override DependencyList ComputeNonRelocationBasedDependencies(NodeFactory factory)
         {
             DependencyList list = base.ComputeNonRelocationBasedDependencies(factory);
+
             if (_fixupKind == ReadyToRunFixupKind.VirtualEntry &&
                 !Method.IsAbstract &&
                 !Method.HasInstantiation &&
