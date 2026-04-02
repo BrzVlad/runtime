@@ -174,6 +174,16 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             {
                 if (overrideTypeCur.ConvertToCanonForm(CanonicalFormKind.Specific) == _method.OwningType)
                     break;
+
+                // Value type instantiations (e.g. SortedSet<int>) keep their specific form
+                // under CanonicalFormKind.Specific, so they will never match a shared owning
+                // type like SortedSet<__Canon>. Fall back to comparing type definitions so
+                // that virtual dispatch is resolved for these instantiations as well.
+                if (overrideTypeCur.HasInstantiation &&
+                    _method.OwningType.HasInstantiation &&
+                    overrideTypeCur.GetTypeDefinition() == _method.OwningType.GetTypeDefinition())
+                    break;
+
                 overrideTypeCur = overrideTypeCur.BaseType;
             }
             while (overrideTypeCur != null);
