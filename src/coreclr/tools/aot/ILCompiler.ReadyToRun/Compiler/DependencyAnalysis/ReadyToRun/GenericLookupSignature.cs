@@ -133,10 +133,33 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         protected override DependencyList ComputeNonRelocationBasedDependencies(NodeFactory factory)
         {
             DependencyList dependencies = null;
+
             if (_fixupKind == ReadyToRunFixupKind.TypeHandle)
             {
                 TypeFixupSignature.AddDependenciesForAsyncStateMachineBox(ref dependencies, factory, _typeArgument);
+
+                // In shared generic code, newobj uses a generic dictionary for the type handle
+                // rather than a direct READYTORUN_FIXUP_TypeHandle (TypeFixupSignature). Mirror
+                // what TypeFixupSignature does: register the type for virtual dispatch discovery
+                // so that InheritedVirtualMethodsNode is created and virtual/interface dispatch
+                // can resolve overrides on this type.
+                // Note: _typeArgument may use signature variables (RuntimeDeterminedType), so
+                // canonicalize first to get the canonical form needed for dispatch matching.
+                if (_typeArgument != null)
+                {
+                    TypeDesc canonType = _typeArgument.ConvertToCanonForm(CanonicalFormKind.Specific);
+                    if (!canonType.IsGenericDefinition &&
+                        !canonType.IsInterface &&
+                        canonType.IsDefType &&
+                        (factory.CompilationCurrentPhase == 0) &&
+                        factory.CompilationModuleGroup.VersionsWithType(canonType))
+                    {
+                        dependencies ??= new DependencyList();
+                        dependencies.Add(factory.InheritedVirtualMethods(canonType), "Generic lookup type discovery for virtual dispatch");
+                    }
+                }
             }
+
             return dependencies;
         }
 
