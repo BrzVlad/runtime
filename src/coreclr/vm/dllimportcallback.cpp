@@ -249,7 +249,11 @@ PCODE TheUMEntryPrestubWorker(UMEntryThunkData* pUMEntryThunkData)
     entryPoint = pUMEntryThunkData->RunTimeInit(&targetIsPrecode);
 
 #ifdef FEATURE_INTERPRETER
-    _ASSERTE(targetIsPrecode || pUMEntryThunkData->GetInterpreterTarget() != (PCODE)0);
+    if (!targetIsPrecode)
+    {
+        _ASSERTE(pUMEntryThunkData->GetInterpreterTarget() != (PCODE)0);
+        t_MostRecentUMEntryThunkData = pUMEntryThunkData;
+    }
 #else
     _ASSERTE(targetIsPrecode);
 #endif
