@@ -309,6 +309,11 @@ extern "C" PCODE ComPreStubWorker(UMEntryThunkData* pEntryThunk)
     INSTALL_MANAGED_EXCEPTION_DISPATCHER;
     INSTALL_UNWIND_AND_CONTINUE_HANDLER;
 
+#ifdef FEATURE_INTERPRETER
+    // If we add support for COM interop on interpreter, this will need to update t_MostRecentUMEntryThunkData
+    _ASSERTE(pEntryThunk->GetInterpreterTarget() == (PCODE)0);
+#endif // FEATURE_INTERPRETER
+
     if (pThread->PreemptiveGCDisabled())
     {
         EEPOLICY_HANDLE_FATAL_ERROR_WITH_MESSAGE(
