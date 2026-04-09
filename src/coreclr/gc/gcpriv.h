@@ -166,7 +166,7 @@ inline void FATAL_GC_ERROR()
 // We can add more mechanisms here.
 //#define STRESS_REGIONS
 //#define COMMITTED_BYTES_SHADOW
-#define MARK_PHASE_PREFETCH
+//#define MARK_PHASE_PREFETCH
 #endif //USE_REGIONS
 
 // FEATURE_STRUCTALIGN was added by Midori. In CLR we are not interested

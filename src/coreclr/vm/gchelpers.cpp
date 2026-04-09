@@ -571,6 +571,9 @@ void PublishObjectAndNotify(TObj* &orObject, GC_ALLOC_FLAGS flags)
 {
     _ASSERTE(orObject->HasEmptySyncBlockInfo());
 
+    STRESS_LOG2(LF_GCALLOC, LL_INFO1000, "Allocated obj %p MT %p\n",
+        (void*)orObject, (void*)orObject->GetGCSafeMethodTable());
+
     if (flags & GC_ALLOC_USER_OLD_HEAP)
     {
         GCHeapUtilities::GetGCHeap()->PublishObject((BYTE*)orObject);

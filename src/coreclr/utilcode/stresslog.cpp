@@ -1006,5 +1006,190 @@ void __cdecl ThreadStressLog::operator delete(void* p)
 
 #endif //MEMORY_MAPPED_STRESSLOG
 
+// Dump the in-process stress log to a text file.
+// Callable from lldb via: expr StressLog::DumpToFile("/tmp/stresslog.txt")
+// or via the extern "C" wrapper: expr DumpStressLog("/tmp/stresslog.txt")
+void StressLog::DumpToFile(const char* path)
+{
+    FILE* f = fopen(path, "w");
+    if (f == nullptr)
+    {
+        fprintf(stderr, "DumpToFile: cannot open %s\n", path);
+        return;
+    }
+
+    fprintf(f, "StressLog dump: facilities=0x%x level=%u\n",
+        theLog.facilitiesToLog, theLog.levelToLog);
+    fprintf(f, "MaxSizePerThread=%u (0x%x) MaxSizeTotal=%u (0x%x) totalChunks=%d\n",
+        theLog.MaxSizePerThread, theLog.MaxSizePerThread,
+        theLog.MaxSizeTotal, theLog.MaxSizeTotal,
+        (int)theLog.totalChunk);
+    fprintf(f, "moduleOffset=0x%zx\n\n", theLog.moduleOffset);
+
+    int threadNum = 0;
+    ThreadStressLog* tsl = theLog.logs;
+    while (tsl != nullptr)
+    {
+        fprintf(f, "== Thread %d (tid=0x%llx, dead=%d, chunks=%ld, wrapped=%d) ==\n",
+            threadNum, (unsigned long long)tsl->threadId, (int)tsl->isDead,
+            tsl->chunkListLength, (int)tsl->writeHasWrapped);
+
+        StressLogChunk* chunk = tsl->curWriteChunk;
+        if (chunk == nullptr)
+        {
+            fprintf(f, "  (no chunks)\n");
+            tsl = tsl->next;
+            threadNum++;
+            continue;
+        }
+
+        // Walk messages from curPtr forward to end of chunk, then next chunk
+        StressMsg* msg = tsl->curPtr;
+        StressLogChunk* startChunk = chunk;
+        int msgCount = 0;
+
+        while (true)
+        {
+            if (msg >= (StressMsg*)chunk->EndPtr())
+            {
+                chunk = chunk->next;
+                if (chunk == startChunk)
+                    break;
+                msg = (StressMsg*)chunk->StartPtr();
+                if (chunk == startChunk)
+                    break;
+            }
+
+            if (msg->GetTimeStamp() == 0)
+            {
+                msg = (StressMsg*)((char*)msg + sizeof(StressMsg));
+                continue;
+            }
+
+            uint64_t offset = msg->GetFormatOffset();
+            uint32_t nArgs = msg->GetNumberOfArgs();
+            uint32_t fac = msg->GetFacility();
+
+            const char* formatStr = nullptr;
+            size_t cumSize = 0;
+            for (size_t m = 0; m < StressLog::MAX_MODULES; m++)
+            {
+                auto& mod = theLog.modules[m];
+                if (mod.baseAddress == nullptr)
+                    break;
+                if (offset - cumSize < mod.size)
+                {
+                    formatStr = (const char*)(mod.baseAddress + (offset - cumSize));
+                    break;
+                }
+                cumSize += mod.size;
+            }
+
+            fprintf(f, "  [%5d] t=%llu ",
+                msgCount, (unsigned long long)msg->GetTimeStamp());
+
+            if (formatStr != nullptr && nArgs <= 7)
+            {
+                // Format the message using the format string and args
+                const char* p = formatStr;
+                uint32_t argIdx = 0;
+                while (*p != '\0')
+                {
+                    if (*p == '%' && argIdx < nArgs)
+                    {
+                        p++;
+                        // Skip flags
+                        while (*p == '-' || *p == '+' || *p == ' ' || *p == '#' || *p == '0') p++;
+                        // Skip width
+                        while (*p >= '0' && *p <= '9') p++;
+                        // Skip precision
+                        if (*p == '.') { p++; while (*p >= '0' && *p <= '9') p++; }
+                        // Size modifiers
+                        bool isLong = false;
+                        bool isSizeT = false;
+                        if (*p == 'z') { isSizeT = true; p++; }
+                        else if (*p == 'l') { isLong = true; p++; if (*p == 'l') p++; }
+                        else if (*p == 'I') { p++; if (*p == '6') { p++; if (*p == '4') p++; } }
+
+                        size_t val = (size_t)msg->args[argIdx];
+                        switch (*p)
+                        {
+                        case 'p': case 'P':
+                            fprintf(f, "0x%llx", (unsigned long long)val);
+                            argIdx++;
+                            break;
+                        case 'x': case 'X':
+                            fprintf(f, "0x%llx", (unsigned long long)val);
+                            argIdx++;
+                            break;
+                        case 'd': case 'i':
+                            fprintf(f, "%lld", (long long)(ptrdiff_t)val);
+                            argIdx++;
+                            break;
+                        case 'u':
+                            fprintf(f, "%llu", (unsigned long long)val);
+                            argIdx++;
+                            break;
+                        case 's':
+                            fprintf(f, "<str@0x%llx>", (unsigned long long)val);
+                            argIdx++;
+                            break;
+                        case '%':
+                            fputc('%', f);
+                            break;
+                        default:
+                            fprintf(f, "0x%llx", (unsigned long long)val);
+                            argIdx++;
+                            break;
+                        }
+                    }
+                    else if (*p == '\n')
+                    {
+                        // skip embedded newlines
+                    }
+                    else
+                    {
+                        fputc(*p, f);
+                    }
+                    p++;
+                }
+            }
+            else if (formatStr != nullptr)
+            {
+                fprintf(f, "%.200s", formatStr);
+            }
+            else
+            {
+                fprintf(f, "off=0x%llx args=%u", (unsigned long long)offset, nArgs);
+                for (uint32_t i = 0; i < nArgs && i < 7; i++)
+                    fprintf(f, " 0x%llx", (unsigned long long)(size_t)msg->args[i]);
+            }
+
+            fprintf(f, "\n");
+
+            msg = (StressMsg*)((char*)msg + sizeof(StressMsg) + nArgs * sizeof(void*));
+            msgCount++;
+
+            if (msgCount > 1000000)
+            {
+                fprintf(f, "  (truncated at 1M messages)\n");
+                break;
+            }
+        }
+
+        fprintf(f, "  (%d messages)\n\n", msgCount);
+        tsl = tsl->next;
+        threadNum++;
+    }
+
+    fclose(f);
+    fprintf(stderr, "DumpToFile: wrote %d threads to %s\n", threadNum, path);
+}
+
+extern "C" NOINLINE void DumpStressLog(const char* path)
+{
+    StressLog::DumpToFile(path);
+}
+
 #endif // STRESS_LOG
 
