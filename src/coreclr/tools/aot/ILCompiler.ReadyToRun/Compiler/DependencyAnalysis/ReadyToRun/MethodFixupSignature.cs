@@ -82,8 +82,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 Method.IsVirtual &&
                 !Method.IsAsyncVariant() &&
                 !Method.IsGenericMethodDefinition &&
-                !Method.OwningType.IsGenericDefinition &&
-                factory.CompilationCurrentPhase == 0)
+                !Method.OwningType.IsGenericDefinition)
             {
                 list = list ?? new DependencyAnalysisFramework.DependencyNodeCore<NodeFactory>.DependencyList();
                 list.Add(factory.VirtualMethodUseDependencies(Method), "Virtual dispatch dependency");
