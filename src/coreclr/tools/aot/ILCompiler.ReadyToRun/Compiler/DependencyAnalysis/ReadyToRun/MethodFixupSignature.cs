@@ -84,8 +84,28 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 !Method.IsGenericMethodDefinition &&
                 !Method.OwningType.IsGenericDefinition)
             {
-                list = list ?? new DependencyAnalysisFramework.DependencyNodeCore<NodeFactory>.DependencyList();
-                list.Add(factory.VirtualMethodUseDependencies(Method), "Virtual dispatch dependency");
+                // Because methods with generic parameters are already compiled in their canonical form, we are only interested in finding
+                // instantiations of virtual methods that have at least one non-canonical argument (aka a valuetype).
+                bool hasNonCanonArgs = false;
+                MethodDesc canon = Method.GetCanonMethodTarget(CanonicalFormKind.Specific);
+
+                TypeSystemContext context = Method.Context;
+                foreach (TypeDesc arg in Method.Instantiation)
+                {
+                    if (arg != context.CanonType)
+                        hasNonCanonArgs = true;
+                }
+                foreach (TypeDesc arg in Method.OwningType.Instantiation)
+                {
+                    if (arg != context.CanonType)
+                        hasNonCanonArgs = true;
+                }
+
+                if (hasNonCanonArgs)
+                {
+                    list = list ?? new DependencyAnalysisFramework.DependencyNodeCore<NodeFactory>.DependencyList();
+                    list.Add(factory.VirtualMethodUseDependencies(Method), "Virtual dispatch dependency");
+                }
             }
 
             return list;
