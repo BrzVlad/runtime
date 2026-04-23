@@ -40,21 +40,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         public override bool HasConditionalStaticDependencies => false;
         public override bool StaticDependenciesAreComputed => true;
 
-        public override bool HasDynamicDependencies
-        {
-            get
-            {
-                TypeDesc methodOwningType = _method.OwningType;
-
-                // If the method is on a sealed non-interface type or is final,
-                // no overrides are possible — nothing to discover dynamically.
-                if (!methodOwningType.IsInterface &&
-                    (methodOwningType.IsSealed() || _method.IsFinal))
-                    return false;
-
-                return true;
-            }
-        }
+        public override bool HasDynamicDependencies => true;
 
         public override IEnumerable<DependencyListEntry> GetStaticDependencies(NodeFactory factory) => null;
 

@@ -80,9 +80,11 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             // dynamically discover implementations on types as they are added to the graph.
             if (_fixupKind == ReadyToRunFixupKind.VirtualEntry &&
                 Method.IsVirtual &&
+                !Method.IsFinal &&
                 !Method.IsAsyncVariant() &&
                 !Method.IsGenericMethodDefinition &&
-                !Method.OwningType.IsGenericDefinition)
+                !Method.OwningType.IsGenericDefinition &&
+                (Method.OwningType.IsInterface || !Method.OwningType.IsSealed()))
             {
                 // Because methods with generic parameters are already compiled in their canonical form, we are only interested in finding
                 // instantiations of virtual methods that have at least one non-canonical argument (aka a valuetype).
