@@ -73,10 +73,14 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 }
             }
 
+            // FIXME Including async methods can lead to crash when compiling Async variant: [S.P.CoreLib] System.IO.TextWriter + SyncTextWriter.DisposeAsync()
+            // Crash is assertion in constructStringLiteral that gets called when compiling an IL stub.
+            //
             // For generic virtual method calls, create a GVM dependency node that will
             // dynamically discover implementations on types as they are added to the graph.
             if (_fixupKind == ReadyToRunFixupKind.VirtualEntry &&
                 Method.IsVirtual &&
+                !Method.IsAsyncVariant() &&
                 !Method.IsGenericMethodDefinition &&
                 !Method.OwningType.IsGenericDefinition &&
                 factory.CompilationCurrentPhase == 0)
