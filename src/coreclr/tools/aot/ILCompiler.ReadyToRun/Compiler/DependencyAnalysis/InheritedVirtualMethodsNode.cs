@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-
+using System.Diagnostics;
 using ILCompiler.DependencyAnalysisFramework;
 using Internal.TypeSystem;
 
@@ -25,6 +25,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
 
         public InheritedVirtualMethodsNode(TypeDesc type)
         {
+            Debug.Assert(type is DefType && !type.IsInterface);
             _type = type;
         }
 

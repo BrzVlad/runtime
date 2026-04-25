@@ -51,138 +51,39 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         {
             List<CombinedDependencyListEntry> dynamicDependencies = new List<CombinedDependencyListEntry>();
 
-            TypeDesc methodOwningType = _method.OwningType;
             bool methodIsShared = _method.IsSharedByGenericInstantiations;
-            TypeSystemContext context = _method.Context;
 
             for (int i = firstNode; i < markedNodes.Count; i++)
             {
                 DependencyNodeCore<NodeFactory> entry = markedNodes[i];
 
-                // We scan for InheritedVirtualMethodsNode — these represent discovered types.
                 if (entry is not InheritedVirtualMethodsNode typeNode)
                     continue;
 
                 TypeDesc potentialOverrideType = typeNode.Type;
-                if (potentialOverrideType is not DefType || potentialOverrideType.IsInterface)
+
+                if (methodIsShared &&
+                    potentialOverrideType.ConvertToCanonForm(CanonicalFormKind.Specific) != potentialOverrideType)
                     continue;
 
-                if (methodOwningType.IsInterface)
+                if (_method.OwningType.IsInterface)
                 {
-                    ResolveInterfaceMethod(dynamicDependencies, factory, context, potentialOverrideType);
+                    foreach (MethodDesc impl in potentialOverrideType.ResolveCanonicalInterfaceMethodImplementations(_method))
+                    {
+                        AddMethodDependency(dynamicDependencies, factory, impl.GetCanonMethodTarget(CanonicalFormKind.Specific));
+                    }
                 }
                 else
                 {
-                    ResolveClassVirtualMethod(dynamicDependencies, factory, context, potentialOverrideType);
+                    MethodDesc canonTarget = potentialOverrideType.ResolveCanonicalClassVirtualMethodOverride(_method);
+                    if (canonTarget is not null)
+                    {
+                        AddMethodDependency(dynamicDependencies, factory, canonTarget);
+                    }
                 }
             }
 
             return dynamicDependencies;
-        }
-
-        private void ResolveInterfaceMethod(
-            List<CombinedDependencyListEntry> dynamicDependencies,
-            NodeFactory factory,
-            TypeSystemContext context,
-            TypeDesc potentialOverrideType)
-        {
-            // Resolve on the type definition using open instantiation, then substitute.
-            // This correctly handles cases like:
-            //   class Foo<T, U> : IFoo<T>, IFoo<U>, IFoo<string> { }
-            // where a single canonical interface method could map to multiple implementations.
-            TypeDesc potentialOverrideDefinition = potentialOverrideType.GetTypeDefinition();
-            DefType[] potentialInterfaces = potentialOverrideType.RuntimeInterfaces;
-            DefType[] potentialDefinitionInterfaces = potentialOverrideDefinition.RuntimeInterfaces;
-
-            for (int interfaceIndex = 0; interfaceIndex < potentialInterfaces.Length; interfaceIndex++)
-            {
-                if (potentialInterfaces[interfaceIndex].ConvertToCanonForm(CanonicalFormKind.Specific) != _method.OwningType)
-                    continue;
-
-                MethodDesc interfaceMethod = _method.GetMethodDefinition();
-                if (_method.OwningType.HasInstantiation)
-                    interfaceMethod = context.GetMethodForInstantiatedType(
-                        _method.GetTypicalMethodDefinition(), (InstantiatedType)potentialDefinitionInterfaces[interfaceIndex]);
-
-                MethodDesc slotDecl = interfaceMethod.Signature.IsStatic
-                    ? potentialOverrideDefinition.InstantiateAsOpen().ResolveInterfaceMethodToStaticVirtualMethodOnType(interfaceMethod)
-                    : potentialOverrideDefinition.InstantiateAsOpen().ResolveInterfaceMethodTarget(interfaceMethod);
-
-                if (slotDecl == null)
-                {
-                    var result = potentialOverrideDefinition.InstantiateAsOpen()
-                        .ResolveInterfaceMethodToDefaultImplementationOnType(interfaceMethod, out slotDecl);
-                    if (result != DefaultInterfaceMethodResolution.DefaultImplementation)
-                        slotDecl = null;
-                }
-
-                if (slotDecl != null)
-                {
-                    MethodDesc implementingMethod;
-                    if (_method.HasInstantiation)
-                    {
-                        // GVM: create open method instantiation and substitute with concrete arguments.
-                        TypeDesc[] openInstantiation = new TypeDesc[_method.Instantiation.Length];
-                        for (int instArg = 0; instArg < openInstantiation.Length; instArg++)
-                            openInstantiation[instArg] = context.GetSignatureVariable(instArg, method: true);
-
-                        implementingMethod = slotDecl.MakeInstantiatedMethod(openInstantiation)
-                            .InstantiateSignature(potentialOverrideType.Instantiation, _method.Instantiation);
-                    }
-                    else
-                    {
-                        // Non-GVM: just substitute type-level arguments.
-                        implementingMethod = slotDecl.InstantiateSignature(
-                            potentialOverrideType.Instantiation, new Instantiation());
-                    }
-
-                    MethodDesc canonImpl = implementingMethod.GetCanonMethodTarget(CanonicalFormKind.Specific);
-                    AddMethodDependency(dynamicDependencies, factory, canonImpl);
-                }
-            }
-        }
-
-        private void ResolveClassVirtualMethod(
-            List<CombinedDependencyListEntry> dynamicDependencies,
-            NodeFactory factory,
-            TypeSystemContext context,
-            TypeDesc potentialOverrideType)
-        {
-            // Walk up the type hierarchy to find where the canonical form matches.
-            TypeDesc overrideTypeCur = potentialOverrideType;
-            do
-            {
-                if (overrideTypeCur.ConvertToCanonForm(CanonicalFormKind.Specific) == _method.OwningType)
-                    break;
-                overrideTypeCur = overrideTypeCur.BaseType;
-            }
-            while (overrideTypeCur != null);
-
-            if (overrideTypeCur == null)
-                return;
-
-            MethodDesc methodToResolve;
-            if (_method.OwningType == overrideTypeCur)
-            {
-                methodToResolve = _method;
-            }
-            else
-            {
-                MethodDesc typicalOnConcreteType = context
-                    .GetMethodForInstantiatedType(_method.GetTypicalMethodDefinition(), (InstantiatedType)overrideTypeCur);
-
-                methodToResolve = _method.HasInstantiation
-                    ? typicalOnConcreteType.MakeInstantiatedMethod(_method.Instantiation)
-                    : typicalOnConcreteType;
-            }
-
-            MethodDesc targetMethod = potentialOverrideType.FindVirtualFunctionTargetMethodOnObjectType(methodToResolve);
-            MethodDesc canonTarget = targetMethod.GetCanonMethodTarget(CanonicalFormKind.Specific);
-
-            if (canonTarget != _method)
-            {
-                AddMethodDependency(dynamicDependencies, factory, canonTarget);
-            }
         }
 
         private void AddMethodDependency(

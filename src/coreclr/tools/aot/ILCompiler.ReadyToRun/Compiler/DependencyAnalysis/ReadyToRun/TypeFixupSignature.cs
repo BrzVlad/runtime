@@ -221,6 +221,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             // Base<int> still needs Base<int>'s interface implementations compiled.
             if (!_typeDesc.IsGenericDefinition &&
                 !_typeDesc.IsInterface &&
+                _typeDesc is DefType &&
                 (factory.CompilationCurrentPhase == 0) &&
                 factory.CompilationModuleGroup.VersionsWithType(_typeDesc))
             {
