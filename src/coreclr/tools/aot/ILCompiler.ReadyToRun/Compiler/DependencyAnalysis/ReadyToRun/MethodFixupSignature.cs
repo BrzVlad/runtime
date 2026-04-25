@@ -54,10 +54,10 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         protected override DependencyList ComputeNonRelocationBasedDependencies(NodeFactory factory)
         {
             DependencyList list = base.ComputeNonRelocationBasedDependencies(factory);
+            MethodDesc canonMethod = Method.GetCanonMethodTarget(CanonicalFormKind.Specific);
             if (_fixupKind == ReadyToRunFixupKind.VirtualEntry &&
                 !Method.IsAbstract &&
                 !Method.HasInstantiation &&
-                Method.GetCanonMethodTarget(CanonicalFormKind.Specific) is var canonMethod &&
                 !factory.CompilationModuleGroup.VersionsWithMethodBody(canonMethod) &&
                 factory.CompilationModuleGroup.CrossModuleCompileable(canonMethod) &&
                 factory.CompilationModuleGroup.ContainsMethodBody(canonMethod, false))
@@ -89,15 +89,13 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 // Because methods with generic parameters are already compiled in their canonical form, we are only interested in finding
                 // instantiations of virtual methods that have at least one non-canonical argument (aka a valuetype).
                 bool hasNonCanonArgs = false;
-                MethodDesc canon = Method.GetCanonMethodTarget(CanonicalFormKind.Specific);
-
-                TypeSystemContext context = Method.Context;
-                foreach (TypeDesc arg in Method.Instantiation)
+                TypeSystemContext context = canonMethod.Context;
+                foreach (TypeDesc arg in canonMethod.Instantiation)
                 {
                     if (arg != context.CanonType)
                         hasNonCanonArgs = true;
                 }
-                foreach (TypeDesc arg in Method.OwningType.Instantiation)
+                foreach (TypeDesc arg in canonMethod.OwningType.Instantiation)
                 {
                     if (arg != context.CanonType)
                         hasNonCanonArgs = true;

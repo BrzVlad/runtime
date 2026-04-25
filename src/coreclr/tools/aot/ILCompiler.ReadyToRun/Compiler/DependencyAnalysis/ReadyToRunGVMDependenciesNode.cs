@@ -67,12 +67,6 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 if (potentialOverrideType is not DefType || potentialOverrideType.IsInterface)
                     continue;
 
-                // If the method is canonical (shared), only process types that are already in
-                // canonical form. Non-canonical types will have their own canonical form processed.
-                if (methodIsShared &&
-                    potentialOverrideType.ConvertToCanonForm(CanonicalFormKind.Specific) != potentialOverrideType)
-                    continue;
-
                 if (methodOwningType.IsInterface)
                 {
                     ResolveInterfaceMethod(dynamicDependencies, factory, context, potentialOverrideType);
