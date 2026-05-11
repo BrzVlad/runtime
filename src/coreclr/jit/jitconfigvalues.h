@@ -220,6 +220,9 @@ CONFIG_INTEGER(TailcallStress, "TailcallStress", 0)
 CONFIG_METHODSET(JitBreak, "JitBreak") // Stops in the importer when compiling a specified method
 CONFIG_METHODSET(JitDebugBreak, "JitDebugBreak")
 
+// Generate interpreter IR instead of native code for specified method(s)
+RELEASE_CONFIG_METHODSET(JitInterpOpt, "InterpOptMethod")
+
 //
 // JitDump
 //

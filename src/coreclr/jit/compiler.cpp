@@ -5084,8 +5084,19 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
     activePhaseChecks = PhaseChecks::CHECK_NONE;
     activePhaseDumps  = PhaseDumps::DUMP_NONE;
 
-    // Generate code
-    codeGen->genGenerateCode(methodCodePtr, methodCodeSize);
+#ifdef FEATURE_INTERPRETER
+    // If InterpOptMethod matches, generate interpreter IR instead of native code
+    if (!JitConfig.JitInterpOpt().isEmpty() &&
+        JitConfig.JitInterpOpt().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
+    {
+        generateInterpIR(methodCodePtr, methodCodeSize);
+    }
+    else
+#endif // FEATURE_INTERPRETER
+    {
+        // Generate code
+        codeGen->genGenerateCode(methodCodePtr, methodCodeSize);
+    }
 
 #if TRACK_LSRA_STATS
     if (JitConfig.DisplayLsraStats() == 2)

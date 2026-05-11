@@ -35,6 +35,8 @@ RELEASE_CONFIG_INTEGER(InterpMode, "InterpMode", 0); // Interpreter mode, one of
 // 2: use interpreter for everything except intrinsics. All intrinsics fallback to JIT. Implies DOTNET_ReadyToRun=0.
 // 3: use interpreter for everything, the full interpreter-only mode, no fallbacks to R2R or JIT whatsoever. Implies DOTNET_ReadyToRun=0, DOTNET_EnableHWIntrinsic=0
 
+RELEASE_CONFIG_METHODSET(InterpOptMethod, "InterpOptMethod"); // Method(s) to compile via JIT optimization then generate interpreter IR
+
 RELEASE_CONFIG_INTEGER(DisplayMemStats, "JitMemStats", 0); // Display interpreter memory usage statistics (0=off, 1=summary, 2=detailed per-method)
 
 #undef CONFIG_STRING

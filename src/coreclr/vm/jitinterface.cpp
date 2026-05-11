@@ -13710,40 +13710,106 @@ PCODE UnsafeJitFunction(PrepareCodeConfig* config,
 #endif // ALLOW_SXS_JIT
         }
 
-        JumpStubOverflowCheck jsoCheck{};
-        while (true)
+        // Check if this method was requested for JIT-optimized interpreter IR generation.
+        bool isInterpOptMethod = false;
+#ifdef FEATURE_INTERPRETER
         {
-            CEEJitInfo jitInfo{ config, ftn, ILHeader, jitMgr };
+            const char* interpOptMethodName = getenv("DOTNET_InterpOptMethod");
+            if (interpOptMethodName != nullptr && interpOptMethodName[0] != 0)
+            {
+                LPCUTF8 methodName = ftn->GetName();
+                if (methodName != nullptr && strcmp(methodName, interpOptMethodName) == 0)
+                {
+                    isInterpOptMethod = true;
+                }
+            }
+        }
 
-            // Enable the jump stub overflow check
-            jsoCheck.Enable(jitInfo);
+        if (isInterpOptMethod)
+        {
+            // For InterpOptMethod, call the JIT compiler directly, bypassing both
+            // UnsafeJitFunctionWorker and invokeCompileMethod. This avoids:
+            // - WriteCode (which registers native code metadata)
+            // - CompressDebugInfo (which looks up a RealCodeHeader)
+            // - MethodCompileComplete
+            // None of these are needed for interpreter bytecodes.
+            CEEJitInfo jitInfo{ config, ftn, ILHeader, jitMgr };
+            PBYTE nativeEntry = NULL;
+            uint32_t sizeOfCode = 0;
+
+            ICorJitCompiler* jitCompiler = jitMgr->GetCompiler();
+            CorJitResult res = jitCompiler->compileMethod(
+                &jitInfo,
+                jitInfo.getMethodInfoInternal(),
+                CORJIT_FLAGS::CORJIT_FLAG_CALL_GETJITFLAGS,
+                &nativeEntry,
+                &sizeOfCode);
+
+            if (SUCCEEDED(res) && nativeEntry != NULL)
+            {
+                ret = (PCODE)nativeEntry;
+                sizeOfILCode = jitInfo.getMethodInfoInternal()->ILCodeSize;
+
+#ifdef FEATURE_PORTABLE_ENTRYPOINTS
+                PCODE portableEntryPoint = ftn->GetPortableEntryPoint();
+                _ASSERTE(portableEntryPoint != NULL);
+                PortableEntryPoint::SetInterpreterData(portableEntryPoint, ret);
+                ret = portableEntryPoint;
+#else // !FEATURE_PORTABLE_ENTRYPOINTS
+                {
+                    AllocMemTracker amt;
+                    InterpreterPrecode* pPrecode = Precode::AllocateInterpreterPrecode(ret, ftn->GetLoaderAllocator(), &amt);
+                    amt.SuppressRelease();
+                    ret = PINSTRToPCODE(pPrecode->GetEntryPoint());
+                }
+#endif // FEATURE_PORTABLE_ENTRYPOINTS
+
+                *isInterpreterCode = true;
+                *isTier0 = jitInfo.getJitFlagsInternal()->IsSet(CORJIT_FLAGS::CORJIT_FLAG_TIER0);
+            }
+            else
+            {
+                COMPlusThrow(kInvalidProgramException);
+            }
+        }
+        else
+#endif // FEATURE_INTERPRETER
+        {
+            JumpStubOverflowCheck jsoCheck{};
+            while (true)
+            {
+                CEEJitInfo jitInfo{ config, ftn, ILHeader, jitMgr };
+
+                // Enable the jump stub overflow check
+                jsoCheck.Enable(jitInfo);
 
 #ifdef FEATURE_ON_STACK_REPLACEMENT
-            // If this is an OSR jit request, grab the OSR info so we can pass it to the jit
-            if (jitInfo.getJitFlagsInternal()->IsSet(CORJIT_FLAGS::CORJIT_FLAG_OSR))
-            {
-                unsigned ilOffset = 0;
-                PatchpointInfo* patchpointInfo = nativeCodeVersion.GetOSRInfo(&ilOffset);
-                jitInfo.SetOSRInfo(patchpointInfo, ilOffset);
-            }
+                // If this is an OSR jit request, grab the OSR info so we can pass it to the jit
+                if (jitInfo.getJitFlagsInternal()->IsSet(CORJIT_FLAGS::CORJIT_FLAG_OSR))
+                {
+                    unsigned ilOffset = 0;
+                    PatchpointInfo* patchpointInfo = nativeCodeVersion.GetOSRInfo(&ilOffset);
+                    jitInfo.SetOSRInfo(patchpointInfo, ilOffset);
+                }
 #endif // FEATURE_ON_STACK_REPLACEMENT
 
-            TADDR retMaybe = UnsafeJitFunctionWorker(jitMgr, &jitInfo, nativeCodeVersion, pSizeOfCode);
-            if (!retMaybe)
-                COMPlusThrow(kInvalidProgramException);
+                TADDR retMaybe = UnsafeJitFunctionWorker(jitMgr, &jitInfo, nativeCodeVersion, pSizeOfCode);
+                if (!retMaybe)
+                    COMPlusThrow(kInvalidProgramException);
 
-            // If we detect a jump stub overflow, we need to retry.
-            if (jsoCheck.Detected(jitInfo, jitMgr))
-                continue;
+                // If we detect a jump stub overflow, we need to retry.
+                if (jsoCheck.Detected(jitInfo, jitMgr))
+                    continue;
 
-            ret = PINSTRToPCODE(retMaybe);
-            jitInfo.PublishFinalCodeAddress(ret);
+                ret = PINSTRToPCODE(retMaybe);
+                jitInfo.PublishFinalCodeAddress(ret);
 
-            sizeOfILCode = jitInfo.getMethodInfoInternal()->ILCodeSize;
-            *isTier0 = jitInfo.getJitFlagsInternal()->IsSet(CORJIT_FLAGS::CORJIT_FLAG_TIER0);
+                sizeOfILCode = jitInfo.getMethodInfoInternal()->ILCodeSize;
+                *isTier0 = jitInfo.getJitFlagsInternal()->IsSet(CORJIT_FLAGS::CORJIT_FLAG_TIER0);
 
-            // We are done
-            break;
+                // We are done
+                break;
+            }
         }
     }
 #endif // !FEATURE_DYNAMIC_CODE_COMPILED

@@ -110,6 +110,14 @@ CorJitResult CILInterp::compileMethod(ICorJitInfo*         compHnd,
         return CORJIT_SKIPPED;
     }
 
+    // If InterpOptMethod matches, skip interpretation so the JIT can
+    // optimize and produce interpreter IR instead.
+    if (!InterpConfig.InterpOptMethod().isEmpty() &&
+        InterpConfig.InterpOptMethod().contains(compHnd, methodInfo->ftn, compHnd->getMethodClass(methodInfo->ftn), &methodInfo->args))
+    {
+        return CORJIT_SKIPPED;
+    }
+
     try
     {
         InterpreterRetryData retryData(&arenaAllocator);

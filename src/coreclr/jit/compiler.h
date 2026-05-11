@@ -11910,6 +11910,11 @@ protected:
 #endif
     void compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFlags* compileFlags);
 
+#ifdef FEATURE_INTERPRETER
+    // Generate interpreter IR from optimized LIR instead of native code
+    void generateInterpIR(void** methodCodePtr, uint32_t* methodCodeSize);
+#endif
+
     // Clear annotations produced during optimizations; to be used between iterations when repeating opts.
     void ResetOptAnnotations();
 
