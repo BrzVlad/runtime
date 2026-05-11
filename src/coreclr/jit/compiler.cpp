@@ -5043,6 +5043,20 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
     m_pLowering = new (this, CMK_LSRA) Lowering(this, m_regAlloc); // PHASE_LOWERING
     m_pLowering->Run();
 
+#ifdef FEATURE_INTERPRETER
+    // When the runtime requests interpreter codegen (CORJIT_FLAG_INTERP), translate
+    // the lowered LIR into interpreter IR instead of running register allocation and
+    // native code generation. Lowering has produced the LIR shape and containment
+    // information we rely on, so this is the right place to do it; the remaining
+    // phases (LSRA, block layout, codegen and the native-codegen-only tail of this
+    // method) are not needed.
+    if (opts.jitFlags->IsSet(JitFlags::JIT_FLAG_INTERP))
+    {
+        generateInterpIR(methodCodePtr, methodCodeSize);
+        return;
+    }
+#endif // FEATURE_INTERPRETER
+
     // Set stack levels and analyze throw helper usage.
     StackLevelSetter stackLevelSetter(this);
     stackLevelSetter.Run();

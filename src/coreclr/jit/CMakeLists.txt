@@ -153,6 +153,7 @@ set( JIT_SOURCES
   inline.cpp
   inlinepolicy.cpp
   instr.cpp
+  interpir.cpp
   jitconfig.cpp
   jiteh.cpp
   jithashtable.cpp

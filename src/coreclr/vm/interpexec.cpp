@@ -2059,6 +2059,27 @@ SWITCH_OPCODE:
                 case INTOP_BLT_I4:
                     BR_BINOP(int32_t, <);
                     break;
+                case INTOP_BLT_I4_IMM:
+                    // Combined: safepoint + compare var against immediate + backward branch.
+                    // Format: [opcode] [svar] [imm_i4] [branch_offset]
+                    if (g_TrapReturningThreads)
+                    {
+                        Thread *pThread = GetThread();
+                        if (pThread->IsAbortRequested())
+                        {
+                            CallWithSEHWrapper(
+                            [&pThread]() {
+                                pThread->HandleThreadAbort();
+                                return 0;
+                            });
+                        }
+                        GCX_PREEMP();
+                    }
+                    if (LOCAL_VAR(ip[1], int32_t) < ip[2])
+                        ip += ip[3];
+                    else
+                        ip += 4;
+                    break;
                 case INTOP_BLT_I8:
                     BR_BINOP(int64_t, <);
                     break;
