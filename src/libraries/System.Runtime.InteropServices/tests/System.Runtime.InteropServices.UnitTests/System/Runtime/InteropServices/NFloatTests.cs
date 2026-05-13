@@ -418,6 +418,7 @@ namespace System.Runtime.InteropServices.Tests
         [InlineData(0.0f)]
         [InlineData(4567.0f)]
         [InlineData(4567.89101f)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/116823", typeof(PlatformDetection), nameof(PlatformDetection.IsCoreClrInterpreter))]
         public void NFloatToByte(float value)
         {
             byte result = (byte)new NFloat(value);
@@ -430,6 +431,7 @@ namespace System.Runtime.InteropServices.Tests
         [InlineData(0.0f)]
         [InlineData(4567.0f)]
         [InlineData(4567.89101f)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/116823", typeof(PlatformDetection), nameof(PlatformDetection.IsCoreClrInterpreter))]
         public void NFloatToChar(float value)
         {
             char result = (char)new NFloat(value);
@@ -534,6 +536,7 @@ namespace System.Runtime.InteropServices.Tests
         [InlineData(0.0f)]
         [InlineData(4567.0f)]
         [InlineData(4567.89101f)]
+        [ActiveIssue("https://github.com/dotnet/runtime/issues/116823", typeof(PlatformDetection), nameof(PlatformDetection.IsCoreClrInterpreter))]
         public void NFloatToUInt16(float value)
         {
             ushort result = (ushort)new NFloat(value);
