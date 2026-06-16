@@ -991,6 +991,20 @@ PCODE MethodDesc::JitCompileCodeLocked(PrepareCodeConfig* pConfig, COR_ILMETHOD_
     // code. This also avoid races with profiler overriding ngened code (see
     // matching SetNativeCodeInterlocked done after
     // JITCachedFunctionSearchStarted)
+#ifdef FEATURE_INTERPRETER
+    if (*pIsInterpreterCode)
+    {
+        InterpByteCodeStart* interpreterCode;
+#ifdef FEATURE_PORTABLE_ENTRYPOINTS
+        interpreterCode = (InterpByteCodeStart*)PortableEntryPoint::GetInterpreterData(pCode);
+#else // !FEATURE_PORTABLE_ENTRYPOINTS
+        InterpreterPrecode* pPrecode = InterpreterPrecode::FromEntryPoint(pCode);
+        interpreterCode = dac_cast<InterpByteCodeStart*>(pPrecode->GetData()->ByteCodeAddr);
+#endif // FEATURE_PORTABLE_ENTRYPOINTS
+        pConfig->GetMethodDesc()->SetInterpreterCode(interpreterCode);
+    }
+#endif // FEATURE_INTERPRETER
+
     if (!pConfig->SetNativeCode(pCode, &pOtherCode))
     {
 #ifdef HAVE_GCCOVER
@@ -1002,21 +1016,6 @@ PCODE MethodDesc::JitCompileCodeLocked(PrepareCodeConfig* pConfig, COR_ILMETHOD_
         // Another thread beat us to publishing its copy of the JITted code.
         return pOtherCode;
     }
-
-#ifdef FEATURE_INTERPRETER
-    if (*pIsInterpreterCode)
-    {
-        InterpByteCodeStart* interpreterCode;
-#ifdef FEATURE_PORTABLE_ENTRYPOINTS
-        interpreterCode = (InterpByteCodeStart*)PortableEntryPoint::GetInterpreterData(pCode);
-#else // !FEATURE_PORTABLE_ENTRYPOINTS
-        InterpreterPrecode* pPrecode = InterpreterPrecode::FromEntryPoint(pCode);
-        interpreterCode = dac_cast<InterpByteCodeStart*>(pPrecode->GetData()->ByteCodeAddr);
-#endif // FEATURE_PORTABLE_ENTRYPOINTS
-
-        pConfig->GetMethodDesc()->SetInterpreterCode(interpreterCode);
-    }
-#endif // FEATURE_INTERPRETER
 
 #ifdef FEATURE_CODE_VERSIONING
     pConfig->SetGeneratedOrLoadedNewCode();
