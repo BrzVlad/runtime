@@ -11,8 +11,10 @@ namespace System
     {
         // Returns a Type object which represent this object instance.
         [Intrinsic]
+        [MethodImpl(MethodImplOptions.NoOptimization)]
         public unsafe Type GetType()
         {
+            Debug.Assert(this is not null, "GetType called on null this - GC hole detected");
             MethodTable* pMT = RuntimeHelpers.GetMethodTable(this);
             RuntimeType type = RuntimeTypeHandle.GetRuntimeType(pMT);
             GC.KeepAlive(this);

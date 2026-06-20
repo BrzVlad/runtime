@@ -2844,6 +2844,13 @@ SWITCH_OPCODE:
 
                     _ASSERTE(helperFtn != NULL);
                     LOCAL_VAR(ip[1], void*) = Call_HELPER_FTN_P_PP(helperFtn, helperArg1, helperArg2);
+#ifdef _DEBUG
+                    {
+                        Object* dbgObj = LOCAL_VAR(ip[1], Object*);
+                        if (dbgObj != NULL)
+                            _ASSERTE(dbgObj->ValidateObjectWithPossibleAV());
+                    }
+#endif
                     ip += 5;
                     break;
                 }

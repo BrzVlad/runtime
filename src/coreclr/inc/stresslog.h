@@ -211,6 +211,10 @@ public:
     // This function is defined in the tools\strike\stressLogDump.cpp file
     static HRESULT Dump(ULONG64 logAddr, const char* fileName, struct IDebugDataSpaces* memCallBack);
 
+    // Dump the in-process stress log to a text file.
+    // Callable from lldb via: expr StressLog::DumpToFile("/tmp/stresslog.txt")
+    static void DumpToFile(const char* path);
+
     static BOOL StressLogOn(unsigned facility, unsigned level);
     static BOOL ETWLogOn(unsigned facility, unsigned level);
     static BOOL LogOn(unsigned facility, unsigned level);

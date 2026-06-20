@@ -1792,6 +1792,44 @@ VOID InlinedCallFrame::Init()
 
 TADDR InterpreterFrame::DummyCallerIP = (TADDR)&InterpreterFrame::DummyFuncletCaller;
 
+void InterpreterFrame::GcScanRoots_Impl(promote_func *fn, ScanContext* sc)
+{
+    // Report the continuation object
+    fn(dac_cast<PTR_PTR_Object>(dac_cast<TADDR>(&m_continuation)), sc, 0);
+
+    // Full conservative scan of the interpreter stack owned by this InterpreterFrame.
+    // Walk the frame chain to find the bottom-most frame (lowest pStack address), then scan
+    // from there up to the top frame's pStack + allocaSize.
+    PTR_InterpMethodContextFrame pTopFrame = GetTopInterpMethodContextFrame();
+
+    // Walk to the bottom of the chain to find the lowest stack address
+    PTR_InterpMethodContextFrame pBottomFrame = pTopFrame;
+    while (pBottomFrame->pParent != NULL)
+    {
+        pBottomFrame = pBottomFrame->pParent;
+    }
+
+    int8_t* pScanStart = (int8_t*)pBottomFrame->pStack;
+    // Scan up to the end of the top frame's allocation. This avoids scanning into
+    // stack regions owned by a subsequent InterpreterFrame (interp → JIT → interp).
+    InterpMethod* pTopMethod = pTopFrame->startIp->Method;
+    int8_t* pScanEnd = (int8_t*)pTopFrame->pStack + pTopMethod->allocaSize;
+
+    _ASSERTE(pScanEnd >= pScanStart);
+
+    // Report every pointer-sized slot in the interpreter stack as a conservative GC reference.
+    // Only report during the promotion (mark) phase. During the relocate phase, pinned objects
+    // don't move, so there's nothing to relocate. The GcEnumObject callback normally handles
+    // this check, but since we call fn directly we must do it ourselves.
+    if (sc->promotion)
+    {
+        for (int8_t* pSlot = pScanStart; pSlot + sizeof(void*) <= pScanEnd; pSlot += sizeof(void*))
+        {
+            fn(dac_cast<PTR_PTR_Object>(dac_cast<TADDR>(pSlot)), sc, GC_CALL_INTERIOR | GC_CALL_PINNED);
+        }
+    }
+}
+
 PTR_InterpMethodContextFrame InterpreterFrame::GetTopInterpMethodContextFrame()
 {
     LIMITED_METHOD_CONTRACT;

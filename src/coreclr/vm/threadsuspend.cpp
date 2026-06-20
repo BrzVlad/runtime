@@ -3344,6 +3344,9 @@ void ThreadSuspend::SuspendAllThreads()
 
 void Thread::Hijack()
 {
+    // DEBUG: Disable hijacking to validate GC hole fix
+    return;
+
     if (IsGCSpecial())
     {
         // GC threads can not be forced to run preemptively, so we will not try.
