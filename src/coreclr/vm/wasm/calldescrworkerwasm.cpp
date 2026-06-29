@@ -23,6 +23,10 @@ extern "C" void STDCALL CallDescrWorkerInternal(CallDescrData* pCallDescrData)
     {
         GCX_PREEMP();
         (void)pMethod->DoPrestub(NULL /* MethodTable */, CallerGCMode::Coop);
+        // Acquire fence pairing with the release publication of the interpreter code in
+        // JitCompileCodeLocked. Orders the prepared-state observation made by DoPrestub
+        // before the load below, so we don't read a stale uninitialized value.
+        VolatileLoadBarrier();
         targetIp = pMethod->GetInterpreterCode();
     }
 

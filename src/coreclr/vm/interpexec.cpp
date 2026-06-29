@@ -1314,6 +1314,13 @@ static InterpByteCodeStart* PrepareInterpreterCode(MethodDesc* targetMethod, Int
                 });
         }
     }
+    // Acquire fence pairing with the release publication of the interpreter code in
+    // JitCompileCodeLocked (SetInterpreterCode is a release store sequenced before the interlocked
+    // native code publish). Having concluded the method is prepared (via DoPrestub, or by skipping
+    // it above because ShouldCallPrestub() observed the precode was already backpatched), this
+    // orders that observation before the load below. Without it, on weakly-ordered architectures we
+    // could read a stale uninitialized value and permanently (and wrongly) poison an interpreter method.
+    VolatileLoadBarrier();
     InterpByteCodeStart* targetIp = targetMethod->GetInterpreterCode();
     if (targetIp == NULL)
     {

@@ -1001,6 +1001,12 @@ PCODE MethodDesc::JitCompileCodeLocked(PrepareCodeConfig* pConfig, COR_ILMETHOD_
         InterpreterPrecode* pPrecode = InterpreterPrecode::FromEntryPoint(pCode);
         interpreterCode = dac_cast<InterpByteCodeStart*>(pPrecode->GetData()->ByteCodeAddr);
 #endif // FEATURE_PORTABLE_ENTRYPOINTS
+        // Publish the interpreter code before the native code below. SetInterpreterCode is a
+        // release store and SetNativeCode's interlocked publish acts as a full barrier, so the
+        // interpreter code is guaranteed to be visible to any thread that observes the published
+        // native code. Readers that conclude the method is prepared issue a matching acquire fence
+        // (VolatileLoadBarrier) before reading the interpreter code; see PrepareInterpreterCode and
+        // the Execute*InterpretedMethod* helpers.
         pConfig->GetMethodDesc()->SetInterpreterCode(interpreterCode);
     }
 #endif // FEATURE_INTERPRETER
@@ -2133,6 +2139,10 @@ void ExecuteInterpretedMethodWithArgs_PortableEntryPoint_Complex(PCODE portableE
             {
                 GCX_PREEMP();
                 (void)pMethod->DoPrestub(NULL /* MethodTable */, CallerGCMode::Coop);
+                // Acquire fence pairing with the release publication of the interpreter code in
+                // JitCompileCodeLocked. Orders the prepared-state observation made by DoPrestub
+                // before the load below, so we don't read a stale uninitialized value.
+                VolatileLoadBarrier();
                 targetIp = pMethod->GetInterpreterCode();
             }
 
@@ -2225,6 +2235,10 @@ extern "C" void ExecuteInterpretedMethodFromUnmanaged(MethodDesc* pMD, int8_t* a
     {
         GCX_PREEMP();
         (void)pMD->DoPrestub(NULL /* MethodTable */, CallerGCMode::Coop);
+        // Acquire fence pairing with the release publication of the interpreter code in
+        // JitCompileCodeLocked. Orders the prepared-state observation made by DoPrestub
+        // before the load below, so we don't read a stale uninitialized value.
+        VolatileLoadBarrier();
         targetIp = pMD->GetInterpreterCode();
     }
     (void)ExecuteInterpretedMethodWithArgs((TADDR)targetIp, args, argSize, ret, callerIp);

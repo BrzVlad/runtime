@@ -2519,6 +2519,8 @@ void MethodDesc::Reset()
 {
     WRAPPER_NO_CONTRACT;
 
+    printf ("Reset code entry point for %s, not sure why\n", m_pszDebugMethodName);
+
     // This method is not thread-safe since we are updating
     // different pieces of data non-atomically.
     // Use this only if you can guarantee thread-safety somehow.
@@ -3400,6 +3402,8 @@ void MethodDesc::ResetCodeEntryPoint()
 {
     WRAPPER_NO_CONTRACT;
     _ASSERTE(IsVersionable());
+
+    printf ("Reset code entry point for %s\n", m_pszDebugMethodName);
 
 #ifdef FEATURE_INTERPRETER
     ClearInterpreterCodePointer();

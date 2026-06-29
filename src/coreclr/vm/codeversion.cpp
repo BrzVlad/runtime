@@ -1989,6 +1989,7 @@ HRESULT CodeVersionManager::PublishNativeCodeVersion(MethodDesc* pMethod, Native
 #ifdef FEATURE_INTERPRETER
             // When we hit the Precode that should fixup any issues with an unset interpreter code pointer. This is notably most important in ReJIT scenarios
             pMethod->ClearInterpreterCodePointer();
+            printf ("First publish, reset code entry point for %s\n", pMethod->m_pszDebugMethodName);
 #endif
 #ifdef FEATURE_PORTABLE_ENTRYPOINTS
             pMethod->ResetPortableEntryPoint();
