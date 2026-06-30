@@ -50,5 +50,16 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             NewArrayFixupSignature otherNode = (NewArrayFixupSignature)other;
             return comparer.Compare(_arrayType, otherNode._arrayType);
         }
+
+        protected override DependencyList ComputeNonRelocationBasedDependencies(NodeFactory factory)
+        {
+            DependencyList dependencies = base.ComputeNonRelocationBasedDependencies(factory);
+
+            // Allocating an array makes its generic collection interface methods (implemented through
+            // SZArrayHelper) reachable. Root their discovery so they get compiled rather than interpreted.
+            factory.AddVirtualMethodDiscoveryDependencies(ref dependencies, _arrayType);
+
+            return dependencies;
+        }
     }
 }

@@ -22,6 +22,8 @@ using Internal.ReadyToRunConstants;
 using ILCompiler.ReadyToRun.TypeSystem;
 using ILCompiler.ReadyToRun;
 
+using DependencyList = ILCompiler.DependencyAnalysisFramework.DependencyNodeCore<ILCompiler.DependencyAnalysis.NodeFactory>.DependencyList;
+
 namespace ILCompiler.DependencyAnalysis
 {
     public struct NodeCache<TKey, TValue>
@@ -146,6 +148,48 @@ namespace ILCompiler.DependencyAnalysis
         public InheritedVirtualMethodsNode InheritedVirtualMethods(TypeDesc type)
         {
             return _inheritedVirtualMethods.GetOrAdd(type.ConvertToCanonForm(CanonicalFormKind.Specific));
+        }
+
+        private NodeCache<ArrayType, ArrayInterfaceMethodsNode> _arrayInterfaceMethods;
+
+        public ArrayInterfaceMethodsNode ArrayInterfaceMethods(ArrayType arrayType)
+        {
+            return _arrayInterfaceMethods.GetOrAdd((ArrayType)arrayType.ConvertToCanonForm(CanonicalFormKind.Specific));
+        }
+
+        /// <summary>
+        /// Roots discovery of the virtual/interface method implementations that materializing a handle to
+        /// <paramref name="type"/> makes reachable, so they get compiled rather than interpreted. This is the
+        /// single place that decides which discovery node applies to a given type:
+        ///   - Ordinary types use <see cref="InheritedVirtualMethodsNode"/> to scan inherited virtual/interface methods.
+        ///   - Arrays use <see cref="ArrayInterfaceMethodsNode"/> to discover the generic collection interface
+        ///     methods implemented through SZArrayHelper (e.g. ((ICollection&lt;int&gt;)intArray).Count).
+        /// Callers that materialize a type handle (TypeFixupSignature, GenericLookupSignature,
+        /// NewArrayFixupSignature) route through here so array and non-array handling stay in sync.
+        /// </summary>
+        public void AddVirtualMethodDiscoveryDependencies(ref DependencyList dependencies, TypeDesc type)
+        {
+            if (CompilationCurrentPhase != 0)
+                return;
+
+            // We record the usage of this type, so that virtual method dependency analysis can resolve implementations.
+            // GVMDependenciesNode uses this for generic virtual methods (dynamic dependencies).
+            // InheritedVirtualMethodsNode uses conditional static dependencies for non-GVM virtual methods.
+            if (!type.IsGenericDefinition &&
+                !type.IsInterface &&
+                type.IsDefType &&
+                CompilationModuleGroup.VersionsWithType(type))
+            {
+                dependencies ??= new DependencyList();
+                dependencies.Add(InheritedVirtualMethods(type), "Inherited virtual/interface methods on type");
+            }
+            // Arrays implement the generic collection interfaces through SZArrayHelper. Discover those
+            // implementations so that e.g. ((ICollection<int>)intArray).Count gets compiled rather than interpreted.
+            else if (type.IsSzArray)
+            {
+                dependencies ??= new DependencyList();
+                dependencies.Add(ArrayInterfaceMethods((ArrayType)type), "Array generic interface methods");
+            }
         }
 
         private NodeCache<MethodDesc, GVMDependenciesNode> _gvmDependenciesNode;
@@ -299,6 +343,11 @@ namespace ILCompiler.DependencyAnalysis
             _gvmDependenciesNode = new NodeCache<MethodDesc, GVMDependenciesNode>(method =>
             {
                 return new GVMDependenciesNode(method);
+            });
+
+            _arrayInterfaceMethods = new NodeCache<ArrayType, ArrayInterfaceMethodsNode>(arrayType =>
+            {
+                return new ArrayInterfaceMethodsNode(arrayType);
             });
 
             _virtualMethodUseNodes = new NodeCache<MethodDesc, VirtualMethodUseNode>(method =>

@@ -138,22 +138,14 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             {
                 TypeFixupSignature.AddDependenciesForAsyncStateMachineBox(ref dependencies, factory, _typeArgument);
 
-                // In shared generic code, newobj uses a generic dictionary lookup for the type handle
-                // rather than a direct READYTORUN_FIXUP_TypeHandle (TypeFixupSignature). Mirror the
-                // creation of InheritedVirtualMethodsNode as it is done in TypeFixupSignature, so we
-                // scan the virtual methods on this type for dependency analysis.
+                // In shared generic code, newobj/newarr uses a generic dictionary lookup for the type handle
+                // rather than a direct READYTORUN_FIXUP_TypeHandle (TypeFixupSignature). Mirror the virtual
+                // method discovery done in TypeFixupSignature so both ordinary types and arrays reached only
+                // through a dictionary lookup still get their virtual/interface implementations compiled.
                 if (_typeArgument != null)
                 {
                     TypeDesc canonType = _typeArgument.ConvertToCanonForm(CanonicalFormKind.Specific);
-                    if (!canonType.IsGenericDefinition &&
-                        !canonType.IsInterface &&
-                        canonType.IsDefType &&
-                        (factory.CompilationCurrentPhase == 0) &&
-                        factory.CompilationModuleGroup.VersionsWithType(canonType))
-                    {
-                        dependencies ??= new DependencyList();
-                        dependencies.Add(factory.InheritedVirtualMethods(canonType), "Generic lookup type discovery for virtual dispatch");
-                    }
+                    factory.AddVirtualMethodDiscoveryDependencies(ref dependencies, canonType);
                 }
             }
 
