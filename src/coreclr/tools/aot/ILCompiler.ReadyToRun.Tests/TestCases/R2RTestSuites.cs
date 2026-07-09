@@ -1629,4 +1629,55 @@ public class R2RTestSuites
             Assert.True(R2RAssert.HasCompiledMethod(reader, "TestA`2<__Canon,int>", "TestMethod", out diag), diag);
         }
     }
+
+    [Fact]
+    public void VirtualMethodGenericsArrayInterface()
+    {
+        var arrayInterfaceLib = new CompiledAssembly
+        {
+            AssemblyName = nameof(VirtualMethodGenericsArrayInterface),
+            SourceResourceNames = ["VirtualMethodGenerics/ArrayInterface.cs"],
+        };
+
+        new R2RTestRunner(_output).Run(new R2RTestCase(
+            nameof(VirtualMethodGenericsArrayInterface),
+            [
+                new(nameof(VirtualMethodGenericsArrayInterface), [new CrossgenAssembly(arrayInterfaceLib)])
+                {
+                    // The SZArrayHelper implementations discovered here live in System.Private.CoreLib,
+                    // so ArrayInterfaceMethodsNode only compiles them when CoreLib is part of the
+                    // compilation's version bubble (see ContainsMethodBody gating). The shipping
+                    // framework satisfies this by compiling CoreLib and the rest of the framework as a
+                    // single composite version bubble. We reproduce that lightweight-ly by compiling in
+                    // input-bubble mode (CoreLib joins the bubble as a reference) and asking crossgen2
+                    // to emit the discovered version-bubble generic instantiations into this image.
+                    Options = [Crossgen2Option.InputBubble],
+                    AdditionalArgs = ["--compilebubblegenerics"],
+                    Validate = Validate,
+                },
+            ]));
+
+        static void Validate(ReadyToRunReader reader)
+        {
+            string diag;
+
+            // A generic collection interface call on a value-type array is dispatched to the
+            // matching System.SZArrayHelper<T> method. For a value-type element defined in this
+            // assembly the helper instantiation is non-canonical and must be discovered and
+            // compiled (ArrayInterfaceMethodsNode). Each scenario uses a distinct element type and
+            // exercises exactly one interface slot.
+            Assert.True(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "get_Count", out diag, ["CountElement"]), diag);
+            Assert.True(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "GetEnumerator", out diag, ["EnumElement"]), diag);
+            Assert.True(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "get_Item", out diag, ["ItemElement"]), diag);
+            Assert.True(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "Contains", out diag, ["ContainsElement"]), diag);
+            Assert.True(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "IndexOf", out diag, ["IndexOfElement"]), diag);
+            Assert.True(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "CopyTo", out diag, ["CopyToElement"]), diag);
+
+            // Discovery is conditional per interface slot: the always-throwing write helpers are
+            // never dispatched here, so they must not be compiled for these element types.
+            Assert.False(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "Add", out diag, ["CountElement"]), diag);
+            Assert.False(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "Insert", out diag, ["ItemElement"]), diag);
+            Assert.False(R2RAssert.HasCompiledMethod(reader, "System.SZArrayHelper", "RemoveAt", out diag, ["IndexOfElement"]), diag);
+        }
+    }
 }

@@ -1126,6 +1126,14 @@ internal sealed class SimpleAssemblyResolver : IAssemblyResolver
         if (!File.Exists(candidate))
             candidate = Path.Combine(_paths.RuntimePackDir, simpleName + ".dll");
 
+        // System.Private.CoreLib lives in the runtime pack's native/ dir, and in partial
+        // builds only in the CoreCLR artifacts dir; fall back to those so that images
+        // referencing CoreLib metadata (e.g. input-bubble compiles) can be read.
+        if (!File.Exists(candidate))
+            candidate = Path.Combine(_paths.RuntimePackNativeDir, simpleName + ".dll");
+        if (!File.Exists(candidate))
+            candidate = Path.Combine(_paths.CoreCLRArtifactsDir, simpleName + ".dll");
+
         if (!File.Exists(candidate))
             return null;
 
