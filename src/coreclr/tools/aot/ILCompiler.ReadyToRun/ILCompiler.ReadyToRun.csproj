@@ -52,6 +52,9 @@
     <Compile Include="..\..\Common\TypeSystem\IL\Stubs\AsyncResumptionStub.cs" Link="IL\Stubs\AsyncResumptionStub.cs" />
     <Compile Include="..\..\Common\TypeSystem\IL\Stubs\AsyncResumptionStub.Sorting.cs" Link="IL\Stubs\AsyncResumptionStub.Sorting.cs" />
     <Compile Include="..\..\Common\TypeSystem\IL\Stubs\AsyncResumptionStub.Mangling.cs" Link="IL\Stubs\AsyncResumptionStub.Mangling.cs" />
+    <Compile Include="..\..\Common\TypeSystem\IL\Stubs\UnboxingStub.cs" Link="IL\Stubs\UnboxingStub.cs" />
+    <Compile Include="..\..\Common\TypeSystem\IL\Stubs\UnboxingStub.Sorting.cs" Link="IL\Stubs\UnboxingStub.Sorting.cs" />
+    <Compile Include="..\..\Common\TypeSystem\IL\Stubs\UnboxingStub.Mangling.cs" Link="IL\Stubs\UnboxingStub.Mangling.cs" />
     <Compile Include="..\..\Common\TypeSystem\IL\Stubs\ComparerIntrinsics.cs" Link="IL\Stubs\ComparerIntrinsics.cs" />
     <Compile Include="..\..\Common\TypeSystem\IL\Stubs\InterlockedIntrinsics.cs" Link="IL\Stubs\InterlockedIntrinsics.cs" />
     <Compile Include="..\..\Common\TypeSystem\IL\Stubs\RuntimeHelpersIntrinsics.cs" Link="IL\Stubs\RuntimeHelpersIntrinsics.cs" />
@@ -72,6 +75,7 @@
     <Compile Include="..\..\Common\Compiler\CompilerTypeSystemContext.cs" Link="Compiler\CompilerTypeSystemContext.cs" />
     <Compile Include="..\..\Common\Compiler\CompilerTypeSystemContext.Validation.cs" Link="Compiler\CompilerTypeSystemContext.Validation.cs" />
     <Compile Include="..\..\Common\Compiler\CompilerTypeSystemContext.Async.cs" Link="Compiler\CompilerTypeSystemContext.Async.cs" />
+    <Compile Include="..\..\Common\Compiler\CompilerTypeSystemContext.Unboxing.cs" Link="Compiler\CompilerTypeSystemContext.Unboxing.cs" />
     <Compile Include="..\..\Common\Compiler\CompilerTypeSystemContext.Wasm.cs" Link="Compiler\CompilerTypeSystemContext.Wasm.cs" />
     <Compile Include="..\..\Common\Compiler\NativeAotNameMangler.cs" Link="Compiler\NativeAotNameMangler.cs" />
     <Compile Include="..\..\Common\Compiler\ObjectDataInterner.cs" Link="Compiler\ObjectDataInterner.cs" />

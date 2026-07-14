@@ -56,7 +56,18 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
 
         public static byte[] BuildSignatureForMethodDefinedInModule(MethodDesc method, NodeFactory factory)
         {
-            EcmaMethod typicalMethod = (EcmaMethod)method.GetPrimaryMethodDesc().GetTypicalMethodDefinition();
+            // An unboxing stub shares its target's metadata (token, owning type, name). Encode the
+            // signature for the target method with the unboxing flag set so the runtime matches it
+            // against the unboxing stub MethodDesc via SigMatchesMethodDesc.
+            MethodDesc signatureMethod = method;
+            bool unboxing = false;
+            if (method is UnboxingStub unboxingStub)
+            {
+                signatureMethod = unboxingStub.TargetMethod;
+                unboxing = true;
+            }
+
+            EcmaMethod typicalMethod = (EcmaMethod)signatureMethod.GetPrimaryMethodDesc().GetTypicalMethodDefinition();
 
             ModuleToken moduleToken;
             if (factory.CompilationModuleGroup.VersionsWithMethodBody(typicalMethod))
@@ -73,7 +84,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
 
             ArraySignatureBuilder signatureBuilder = new ArraySignatureBuilder();
             signatureBuilder.EmitMethodSignature(
-                new MethodWithToken(method, moduleToken, constrainedType: null, unboxing: false, genericContextObject: null),
+                new MethodWithToken(signatureMethod, moduleToken, constrainedType: null, unboxing: unboxing, genericContextObject: null),
                 enforceDefEncoding: true,
                 enforceOwningType: moduleToken.Module is EcmaModule ? factory.CompilationModuleGroup.EnforceOwningType((EcmaModule)moduleToken.Module) : true,
                 factory.SignatureContext,
@@ -110,7 +121,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 if (method.Method is AsyncResumptionStub)
                     continue;
 
-                Debug.Assert(method.Method.HasInstantiation || method.Method.OwningType.HasInstantiation || method.Method.IsAsyncVariant());
+                Debug.Assert(method.Method.HasInstantiation || method.Method.OwningType.HasInstantiation || method.Method.IsAsyncVariant() || method.Method is UnboxingStub);
 
                 int methodIndex = factory.RuntimeFunctionsTable.GetIndex(method);
 

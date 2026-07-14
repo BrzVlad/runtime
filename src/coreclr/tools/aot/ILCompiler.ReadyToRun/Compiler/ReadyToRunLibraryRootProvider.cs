@@ -66,6 +66,21 @@ namespace ILCompiler
                     {
                         CheckCanGenerateMethod(methodToRoot);
                         rootProvider.AddCompilationRoot(methodToRoot, rootMinimalDependencies: false, reason: reason);
+
+                        // Value type instance virtual methods (object-method overrides and interface
+                        // implementations) are invoked through an unboxing stub when called on a boxed
+                        // instance. Precompile that stub into the image so the runtime binds to it
+                        // instead of falling back to generating an (interpreted) IL stub.
+                        // Keep this in sync with MethodTableBuilder::NeedsTightlyBoundUnboxingStub.
+                        if (method.OwningType.IsValueType
+                            && !method.Signature.IsStatic
+                            && method.IsVirtual
+                            && !method.HasInstantiation
+                            && !method.OwningType.HasInstantiation)
+                        {
+                            UnboxingStub unboxingStub = ((CompilerTypeSystemContext)method.Context).GetUnboxingStub(method, method.OwningType);
+                            rootProvider.AddCompilationRoot(unboxingStub, rootMinimalDependencies: false, reason: "Unboxing stub");
+                        }
                     }
                 }
                 catch (TypeSystemException)

@@ -2481,7 +2481,21 @@ PCODE MethodDesc::DoPrestub(MethodTable *pDispatchingMT, CallerGCMode callerGCMo
     /**************************   CODE CREATION  *************************/
     if (IsUnboxingStub())
     {
-        pStub = MakeUnboxingStubWorker(this);
+#ifdef FEATURE_READYTORUN
+        // Prefer a precompiled R2R unboxing stub over generating one at runtime.
+        // The stub is stored in the InstanceMethodEntryPoints table and matched via
+        // the READYTORUN_METHOD_SIG_UnboxingStub flag (see GetEntryPoint / SigMatchesMethodDesc).
+        if (GetModule()->IsReadyToRun())
+        {
+            PrepareCodeConfig config(NativeCodeVersion(this), FALSE, TRUE);
+            config.SetCallerGCMode(callerGCMode);
+            pCode = GetPrecompiledR2RCode(&config);
+        }
+#endif // FEATURE_READYTORUN
+        if (pCode == (PCODE)NULL)
+        {
+            pStub = MakeUnboxingStubWorker(this);
+        }
     }
 #if defined(FEATURE_SHARE_GENERIC_CODE)
     else if (IsInstantiatingStub())
