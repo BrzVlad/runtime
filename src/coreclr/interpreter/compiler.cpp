@@ -2331,6 +2331,9 @@ bool InterpCompiler::CompileMethod()
 
     EmitCode();
 
+    printf("\nInterp compiled method: ");
+    PrintMethodName(m_methodHnd);
+
 #ifdef DEBUG
     if (IsInterpDumpActive())
     {
@@ -11926,7 +11929,6 @@ bool InterpreterRetryData::GetOverrideILMergePointStackType(int32_t ilOffset, ui
     }
 }
 
-#ifdef DEBUG
 static void DumpClassName(CORINFO_CLASS_HANDLE cls, COMP_HANDLE compHnd)
 {
     char className[100];
@@ -11963,6 +11965,7 @@ void InterpCompiler::PrintMethodName(CORINFO_METHOD_HANDLE method)
     DumpMethodName(method, m_compHnd);
 }
 
+#ifdef DEBUG
 void InterpCompiler::PrintCode()
 {
     for (InterpBasicBlock *pBB = m_pEntryBB; pBB != NULL; pBB = pBB->pNextBB)

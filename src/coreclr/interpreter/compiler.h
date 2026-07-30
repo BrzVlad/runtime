@@ -1095,9 +1095,9 @@ private:
     uint8_t* getILCode(CORINFO_METHOD_INFO* methodInfo);
     unsigned int getILCodeSize(CORINFO_METHOD_INFO* methodInfo);
 
-#ifdef DEBUG
     void PrintClassName(CORINFO_CLASS_HANDLE cls);
     void PrintMethodName(CORINFO_METHOD_HANDLE method);
+#ifdef DEBUG
     void PrintCode();
     void PrintBBCode(InterpBasicBlock *pBB);
     void PrintIns(InterpInst *ins);
