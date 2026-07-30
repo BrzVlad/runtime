@@ -321,6 +321,9 @@ Compiler::Compiler(ArenaAllocator*       arena,
     }
 #endif // defined(DEBUG) || defined(LATE_DISASM) || DUMP_FLOWGRAPHS
 
+ //   if (!IsReadyToRun())
+ //       printf("Jit compile method %s\n", eeGetMethodFullName(methodHnd));
+
 #ifdef DEBUG
     // Opt-in to jit stress based on method hash ranges.
     //

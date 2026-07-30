@@ -1845,6 +1845,15 @@ public class R2RTestSuites
 
             // Test7: Static virtual generic method
             Assert.True(R2RAssert.HasCompiledMethod(reader, "ITest7`1<int>", "ITest7Base.Test7Method", out diag, ["int"]), diag);
+
+            // Test8: Value-type interface GVM unboxing thunk
+            ReadyToRunMethod unboxingThunk = Assert.Single(
+                R2RAssert.GetAllMethods(reader),
+                method => method.DeclaringType == "Test8" &&
+                    method.Name == "Test8Method" &&
+                    method.InstanceArgs is ["int"] &&
+                    method.SignatureString.Contains("[UNBOX]", StringComparison.Ordinal));
+            Assert.NotEmpty(unboxingThunk.RuntimeFunctions);
         }
     }
 

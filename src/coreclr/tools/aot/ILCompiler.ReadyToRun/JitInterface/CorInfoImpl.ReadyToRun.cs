@@ -1953,6 +1953,9 @@ namespace Internal.JitInterface
             useInstantiatingStub = originalMethod.OwningType.IsArray || originalMethod.GetCanonMethodTarget(CanonicalFormKind.Specific).RequiresInstMethodDescArg();
 
             callerMethod = HandleToObject(callerHandle);
+            MethodDesc versioningCallerMethod = _compilation.TypeSystemContext.IsUnboxingThunk(callerMethod)
+                ? _compilation.TypeSystemContext.GetTargetOfUnboxingThunk(callerMethod)
+                : callerMethod;
 
             if (originalMethod.HasInstantiation && IsGenericTooDeeplyNested(originalMethod.Instantiation))
             {
@@ -1964,8 +1967,8 @@ namespace Internal.JitInterface
                 throw new RequiresRuntimeJitException(callerMethod.ToString() + " -> " + originalMethod.ToString());
             }
 
-            if (!_compilation.NodeFactory.CompilationModuleGroup.VersionsWithMethodBody(callerMethod) &&
-                !_compilation.NodeFactory.CompilationModuleGroup.CrossModuleInlineable(callerMethod))
+            if (!_compilation.NodeFactory.CompilationModuleGroup.VersionsWithMethodBody(versioningCallerMethod) &&
+                !_compilation.NodeFactory.CompilationModuleGroup.CrossModuleInlineable(versioningCallerMethod))
             {
                 // We must abort inline attempts calling from outside of the version bubble being compiled
                 // because we have no way to remap the token relative to the external module to the current version bubble.
@@ -1974,7 +1977,7 @@ namespace Internal.JitInterface
                 throw new RequiresRuntimeJitException(callerMethod.ToString() + " -> " + originalMethod.ToString());
             }
 
-            callerModule = ((EcmaMethod)callerMethod.GetPrimaryMethodDesc().GetTypicalMethodDefinition()).Module;
+            callerModule = ((EcmaMethod)versioningCallerMethod.GetPrimaryMethodDesc().GetTypicalMethodDefinition()).Module;
             bool isCallVirt = (flags & CORINFO_CALLINFO_FLAGS.CORINFO_CALLINFO_CALLVIRT) != 0;
             bool isLdftn = (flags & CORINFO_CALLINFO_FLAGS.CORINFO_CALLINFO_LDFTN) != 0;
             bool isStaticVirtual = (originalMethod.Signature.IsStatic && originalMethod.IsVirtual);
@@ -2773,7 +2776,9 @@ namespace Internal.JitInterface
             if (helperArg is MethodDesc methodDesc)
             {
                 var methodIL = HandleToObject(pResolvedToken.tokenScope);
-                MethodDesc sharedMethod = methodIL.OwningMethod.GetSharedRuntimeFormMethodTarget();
+                MethodDesc sharedMethod = _compilation.TypeSystemContext.IsUnboxingThunk(MethodBeingCompiled)
+                    ? _compilation.TypeSystemContext.GetTargetOfUnboxingThunk(MethodBeingCompiled).GetSharedRuntimeFormMethodTarget()
+                    : methodIL.OwningMethod.GetSharedRuntimeFormMethodTarget();
                 // We shouldn't be needing shared generics in resumption stubs - generics info should all be stored in the continuation
                 Debug.Assert(MethodBeingCompiled is not AsyncResumptionStub);
                 _compilation.NodeFactory.DetectGenericCycles(MethodBeingCompiled, sharedMethod);
