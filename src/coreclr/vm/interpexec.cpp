@@ -11,6 +11,7 @@
 #include "comdelegate.h"
 #include "gchelpers.inl"
 #include "arraynative.inl"
+#include "typestring.h"
 
 #ifdef TARGET_WASM
 extern "C" void SamplingProfiler_OnSamplepoint();
@@ -748,7 +749,7 @@ void* GenericHandleCommon(MethodDesc * pMD, MethodTable * pMT, LPVOID signature)
 }
 
 #ifdef DEBUG
-static void InterpHalt()
+static void InterpHaltDebug()
 {
     // Native debugging aid: INTOP_HALT is injected as the first instruction in methods matching
     // DOTNET_InterpHalt. Set a native breakpoint here to break when the targeted method executes.
@@ -1439,7 +1440,7 @@ SWITCH_OPCODE:
 #endif // !USE_COMPUTED_GOTO
 #ifdef DEBUG
                 INTOP_CASE(INTOP_HALT)
-                    InterpHalt();
+                    InterpHaltDebug();
                     ip++;
                     INTOP_NEXT;
 #endif // DEBUG
@@ -4816,5 +4817,100 @@ RETHROW_RESUME_AFTER_CATCH:
     // Rethrow the exception to let it propagate to the correct resume frame
     ThrowResumeAfterCatchException(resumeSP, resumeIP);
 }
+
+#ifdef DEBUG
+static thread_local char* t_interpStackDumpBuffer = nullptr;
+static thread_local size_t t_interpStackDumpBufferCapacity = 0;
+static thread_local char* t_methodDescDumpBuffer = nullptr;
+static thread_local size_t t_methodDescDumpBufferCapacity = 0;
+static thread_local char* t_methodTableDumpBuffer = nullptr;
+static thread_local size_t t_methodTableDumpBufferCapacity = 0;
+
+static char* CopyInterpDebugString(const SString& value, char*& buffer, size_t& capacity)
+{
+    const char* utf8Value = value.GetUTF8();
+    size_t requiredCapacity = strlen(utf8Value) + 1;
+
+    if (requiredCapacity > capacity)
+    {
+        char* newBuffer = (char*)realloc(buffer, requiredCapacity);
+        if (newBuffer == nullptr)
+        {
+            return nullptr;
+        }
+
+        buffer = newBuffer;
+        capacity = requiredCapacity;
+    }
+
+    memcpy(buffer, utf8Value, requiredCapacity);
+    return buffer;
+}
+
+extern "C" char* InterpDumpStack(void* frameAddress)
+{
+    InterpMethodContextFrame* pFrame = (InterpMethodContextFrame*)frameAddress;
+    StackSString stackDump;
+    int32_t frameIndex = 0;
+
+    while (pFrame != nullptr)
+    {
+        MethodDesc* method = pFrame->startIp->Method->methodHnd;
+        StackSString methodName;
+        TypeString::AppendMethodDebug(methodName, method);
+
+        stackDump.AppendPrintf("%4d) ", frameIndex++);
+        stackDump.Append(methodName);
+
+        if (pFrame->ip != nullptr)
+        {
+            ptrdiff_t irOffset = pFrame->ip - pFrame->startIp->GetByteCodes();
+            stackDump.AppendPrintf(", IR_%04zx", (size_t)irOffset);
+        }
+
+        stackDump.AppendPrintf(" [frame=%p, method=%p]\n", pFrame, method);
+        pFrame = pFrame->pParent;
+    }
+
+    if (frameIndex == 0)
+    {
+        stackDump.AppendASCII("<empty interpreter stack>\n");
+    }
+
+    return CopyInterpDebugString(stackDump, t_interpStackDumpBuffer, t_interpStackDumpBufferCapacity);
+}
+
+extern "C" char* DumpMD(void* methodDescAddress)
+{
+    MethodDesc* md = (MethodDesc*)methodDescAddress;
+    StackSString methodName;
+    if (md == nullptr)
+    {
+        methodName.AppendASCII("<null MethodDesc>");
+    }
+    else
+    {
+        TypeString::AppendMethodDebug(methodName, md);
+    }
+
+    return CopyInterpDebugString(methodName, t_methodDescDumpBuffer, t_methodDescDumpBufferCapacity);
+}
+
+extern "C" char* DumpMT(void* methodTableAddress)
+{
+    MethodTable* mt = (MethodTable*)methodTableAddress;
+    StackSString typeName;
+    if (mt == nullptr)
+    {
+        typeName.AppendASCII("<null MethodTable>");
+    }
+    else
+    {
+        TypeString::AppendType(typeName, TypeHandle(mt), TypeString::FormatNamespace);
+    }
+
+    return CopyInterpDebugString(typeName, t_methodTableDumpBuffer, t_methodTableDumpBufferCapacity);
+}
+#endif
 
 #endif // FEATURE_INTERPRETER

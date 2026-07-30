@@ -772,7 +772,7 @@ int32_t InterpCompiler::CreateVarExplicit(InterpType interpType, CORINFO_CLASS_H
         m_varsCapacity *= 2;
         if (m_varsCapacity < 16)
             m_varsCapacity = 16;
-        
+
         m_pVars = getAllocator(IMK_Var).allocateZeroed<InterpVar>(m_varsCapacity);
         if (oldVars != NULL)
         {
@@ -798,7 +798,7 @@ void InterpCompiler::EnsureStack(int additional)
         m_stackCapacity *= 2;
         if (m_stackCapacity < 4)
             m_stackCapacity = 4;
-        
+
         m_pStackBase = new (getAllocator(IMK_StackInfo)) StackInfo[m_stackCapacity];
         if (oldStackBase != NULL)
         {
@@ -2073,23 +2073,23 @@ InterpMethod* InterpCompiler::FinalizeMethodData(void* baseAddressRW, void* base
     uint32_t currentIntervalMapOffset = intervalMapsOffset;
     const uint32_t asyncSuspendDataSectionEnd = asyncSuspendDataOffset + asyncSuspendDataSectionSize;
     const uint32_t intervalMapsSectionEnd = intervalMapsOffset + intervalMapsSectionSize;
-    
+
     InterpByteCodeStart* pByteCodeStart = (InterpByteCodeStart*)rxBase;
-    
+
     for (int32_t i = 0; i < m_asyncSuspendDataItems.GetSize(); i++)
     {
         assert(currentAsyncOffset + sizeof(InterpAsyncSuspendData) <= asyncSuspendDataSectionEnd);
 
         InterpAsyncSuspendData* srcData = m_asyncSuspendDataItems.Get(i);
         InterpAsyncSuspendData* dstDataRW = (InterpAsyncSuspendData*)(rwBase + currentAsyncOffset);
-        
+
         // Copy the struct
         memcpy(dstDataRW, srcData, sizeof(InterpAsyncSuspendData));
-        
+
         // Fix up the methodStartIP to point to the final bytecode start
         dstDataRW->methodStartIP = pByteCodeStart;
         dstDataRW->resumeInfo.DiagnosticIP += (TARGET_SIZE_T)pByteCodeStart;
-        
+
         // Fix up interval map pointers if they exist
         // Note: The interval maps were allocated via AllocMethodData in the old model,
         // we need to copy them to the new allocation and fix up the pointers
@@ -2102,14 +2102,14 @@ InterpMethod* InterpCompiler::FinalizeMethodData(void* baseAddressRW, void* base
 
             uint32_t mapSize = (uint32_t)count * sizeof(InterpIntervalMapEntry);
             assert(currentIntervalMapOffset + mapSize <= intervalMapsSectionEnd);
-            
+
             InterpIntervalMapEntry* dstMapRW = (InterpIntervalMapEntry*)(rwBase + currentIntervalMapOffset);
             InterpIntervalMapEntry* dstMapRX = (InterpIntervalMapEntry*)(rxBase + currentIntervalMapOffset);
             memcpy(dstMapRW, srcData->liveLocalsIntervals, mapSize);
             dstDataRW->liveLocalsIntervals = dstMapRX;
             currentIntervalMapOffset += mapSize;
         }
-        
+
         if (srcData->zeroedLocalsIntervals != nullptr)
         {
             // Count entries
@@ -2119,7 +2119,7 @@ InterpMethod* InterpCompiler::FinalizeMethodData(void* baseAddressRW, void* base
 
             uint32_t mapSize = (uint32_t)count * sizeof(InterpIntervalMapEntry);
             assert(currentIntervalMapOffset + mapSize <= intervalMapsSectionEnd);
-            
+
             InterpIntervalMapEntry* dstMapRW = (InterpIntervalMapEntry*)(rwBase + currentIntervalMapOffset);
             InterpIntervalMapEntry* dstMapRX = (InterpIntervalMapEntry*)(rxBase + currentIntervalMapOffset);
             memcpy(dstMapRW, srcData->zeroedLocalsIntervals, mapSize);
@@ -2168,7 +2168,7 @@ InterpMethod* InterpCompiler::FinalizeMethodData(void* baseAddressRW, void* base
         {
             DataItemAsyncSuspendRef ref = m_dataItemAsyncSuspendRefs.Get(i);
             // Calculate the final address of this async suspend data in the RX allocation
-            InterpAsyncSuspendData* finalAddr = (InterpAsyncSuspendData*)(rxBase + asyncSuspendDataOffset + 
+            InterpAsyncSuspendData* finalAddr = (InterpAsyncSuspendData*)(rxBase + asyncSuspendDataOffset +
                                                                           ref.asyncSuspendDataIndex * sizeof(InterpAsyncSuspendData));
             pDataItemsRW[ref.dataItemIndex] = finalAddr;
         }
@@ -4496,7 +4496,7 @@ void InterpCompiler::EmitCalli(bool isTailCall, void* calliCookie, int callIFunc
     {
         if (m_compHnd->pInvokeMarshalingRequired(NULL, callSiteSig))
         {
-            // If we remove this restriction, we should handle the track transitions scenario by forcing a 
+            // If we remove this restriction, we should handle the track transitions scenario by forcing a
             // p/invoke marshaling calli stub even when not needed.
             BADCODE("PInvoke marshalling for calli is not supported in interpreted code");
         }
@@ -5501,14 +5501,6 @@ void InterpCompiler::EmitCall(CORINFO_RESOLVED_TOKEN* pConstrainedToken, bool re
             else if (isCalli)
             {
                 EmitCalli(tailcall, calliCookie, callIFunctionPointerVar, &callInfo.sig);
-                if (((m_pLastNewIns->data[1] & (int32_t)CalliFlags::PInvoke) != 0)
-                    && m_pVars[dVar].interpType == InterpTypeVT)
-                {
-                    // Ensure that the dvar does not overlap with the svars; it is incorrect for it to overlap because
-                    // some native ABI's such as the SysV ABI on Linux/x64 and the ARM64 abi assume the return buffer returns are non-aliasing
-                    // with the call arguments. The managed calling convention does not have this restriction.
-                    m_pVars[dVar].noCallArgs = true;
-                }
             }
             else
             {
@@ -5537,14 +5529,6 @@ void InterpCompiler::EmitCall(CORINFO_RESOLVED_TOKEN* pConstrainedToken, bool re
                 else
                 {
                     opcode = (isPInvoke && !isMarshaledPInvoke) ? INTOP_CALL_PINVOKE : INTOP_CALL;
-
-                    if (opcode == INTOP_CALL_PINVOKE && m_pVars[dVar].interpType == InterpTypeVT)
-                    {
-                        // Ensure that the dvar does not overlap with the svars; it is incorrect for it to overlap because
-                        // some native ABI's such as the SysV ABI on Linux/x64 and the ARM64 abi assume the return buffer returns are non-aliasing
-                        // with the call arguments. The managed calling convention does not have this restriction.
-                        m_pVars[dVar].noCallArgs = true;
-                    }
                 }
 
                 if (callInfo.nullInstanceCheck)
@@ -5703,6 +5687,13 @@ void InterpCompiler::EmitCall(CORINFO_RESOLVED_TOKEN* pConstrainedToken, bool re
         m_pLastNewIns->flags |= INTERP_INST_FLAG_DBG_CALL_INSTRUCTION;
     m_pLastNewIns->info.pCallInfo = new (getAllocator(IMK_CallInfo)) InterpCallInfo();
     m_pLastNewIns->info.pCallInfo->pCallArgs = callArgs;
+
+    // Keep value type return buffers separate from call arguments. Compiled code can copy a byref
+    // value type argument directly to the return buffer and does not support overlapping buffers.
+    if (m_pVars[dVar].interpType == InterpTypeVT)
+    {
+        m_pVars[dVar].noCallArgs = true;
+    }
 
     if (injectRet)
     {
@@ -6192,7 +6183,7 @@ void InterpCompiler::EmitSuspend(CorInfoType callRetType, ContinuationContextHan
         }
         InterpType interpType = m_pVars[var].interpType;
         CORINFO_CLASS_HANDLE clsHnd = m_pVars[var].clsHnd;
-        
+
         int32_t alignUNUSED;
         int32_t size = GetInterpTypeStackSize(clsHnd, interpType, &alignUNUSED);
 
@@ -6239,7 +6230,7 @@ void InterpCompiler::EmitSuspend(CorInfoType callRetType, ContinuationContextHan
                 SetSlotToTrue(objRefSlots, currentOffset + slotInfo.m_offsetBytes);
             }
         }
-        
+
         currentOffset += size;
     }
 
@@ -6280,7 +6271,7 @@ void InterpCompiler::EmitSuspend(CorInfoType callRetType, ContinuationContextHan
     suspendData->suspensionPointIndex = suspensionPointIndex;
     CORINFO_ASYNC_INFO asyncInfo;
     m_compHnd->getAsyncInfo(&asyncInfo);
-    
+
     GetDataForHelperFtn(CORINFO_HELP_ALLOC_CONTINUATION);
     suspendData->continuationTypeHnd = continuationTypeHnd;
     AllocateIntervalMapData_ForVars(&suspendData->liveLocalsIntervals, liveVars);
@@ -6413,13 +6404,13 @@ void InterpCompiler::EmitSuspend(CorInfoType callRetType, ContinuationContextHan
 
     AddIns(handleContinuationOpcode);
     int32_t suspendDataIndex = GetDataItemIndex(suspendData);
-    
+
     // Track this data item -> async suspend data reference for fixup during finalization
     DataItemAsyncSuspendRef ref;
     ref.dataItemIndex = suspendDataIndex;
     ref.asyncSuspendDataIndex = m_asyncSuspendDataItems.GetSize() - 1;  // suspendData was just added
     m_dataItemAsyncSuspendRefs.Add(ref);
-    
+
     m_pLastNewIns->data[0] = suspendDataIndex;
     m_pLastNewIns->data[1] = GetDataForHelperFtn(helperFuncForAllocatingContinuation);
     PushInterpType(InterpTypeO, NULL);
@@ -6460,7 +6451,7 @@ void InterpCompiler::EmitSuspend(CorInfoType callRetType, ContinuationContextHan
     // Add location to resume to. The implementation of this opcode will:
     // - restore the data captured
     // - If there is an exception, throw it
-    // - if there is a captured exec context, call the restoration function. 
+    // - if there is a captured exec context, call the restoration function.
     AddIns(INTOP_HANDLE_CONTINUATION_RESUME);
     m_pLastNewIns->data[0] = suspendDataIndex;
 
@@ -7088,8 +7079,8 @@ static OpcodePeepElement peepStLdLoc_S[] = {
 
 static OpcodePeepElement peepStLdLoc[] = {
     { 0, CEE_STLOC },
-    { 5, CEE_LDLOC },
-    { 10, CEE_ILLEGAL } // End marker
+    { 4, CEE_LDLOC },
+    { 8, CEE_ILLEGAL } // End marker
 };
 
 static OpcodePeepElement peepBoxUnboxOpcodes[] = {
@@ -7843,7 +7834,7 @@ bool InterpCompiler::IsStoreLoadPeep(const uint8_t* ip, OpcodePeepElement* patte
         case CEE_STLOC_2: localVar = 2; break;
         case CEE_STLOC_3: localVar = 3; break;
         case CEE_STLOC_S: localVar = ip[1]; break;
-        case CEE_STLOC: localVar = getU2LittleEndian(ip + 1); break;
+        case CEE_STLOC: localVar = getU2LittleEndian(ip + 2); break;
         default:
             assert(!"Unexpected opcode in store/load peep");
             return false;
@@ -7858,7 +7849,7 @@ bool InterpCompiler::IsStoreLoadPeep(const uint8_t* ip, OpcodePeepElement* patte
         case CEE_LDLOC_2: secondLocalVar = 2; break;
         case CEE_LDLOC_3: secondLocalVar = 3; break;
         case CEE_LDLOC_S: secondLocalVar = ip[pattern[1].offsetIntoPeep + 1]; break;
-        case CEE_LDLOC: secondLocalVar = getU2LittleEndian(ip + pattern[1].offsetIntoPeep + 1); break;
+        case CEE_LDLOC: secondLocalVar = getU2LittleEndian(ip + pattern[1].offsetIntoPeep + 2); break;
         default:
             assert(!"Unexpected opcode in store/load peep");
             return false;
@@ -10194,7 +10185,7 @@ retry_emit:
                 // a normal call in this case.
                 bool isTailCall = !m_isAsyncVersionOfSyncMethod;
                 EmitCall(m_pConstrainedToken, readonly, isTailCall /* tailcall */, false /*newObj*/, false /*isCalli*/);
-                EmitRet(methodInfo); // The tail-call infrastructure in the interpreter is not 100% guaranteed to do a 
+                EmitRet(methodInfo); // The tail-call infrastructure in the interpreter is not 100% guaranteed to do a
                            // tail-call, so inject the ret logic here to cover that case.
                 linkBBlocks = false;
                 break;
@@ -11635,6 +11626,93 @@ bool InterpreterRetryData::GetOverrideILMergePointStackType(int32_t ilOffset, ui
 }
 
 #ifdef DEBUG
+static thread_local char* t_interpDumpBuffer = nullptr;
+static thread_local size_t t_interpDumpBufferLength = 0;
+static thread_local size_t t_interpDumpBufferCapacity = 0;
+static thread_local bool t_interpDumpToString = false;
+
+static bool EnsureInterpDumpBufferCapacity(size_t requiredCapacity)
+{
+    if (requiredCapacity <= t_interpDumpBufferCapacity)
+    {
+        return true;
+    }
+
+    size_t newCapacity = t_interpDumpBufferCapacity == 0 ? 4096 : t_interpDumpBufferCapacity;
+    while (newCapacity < requiredCapacity)
+    {
+        if (newCapacity > SIZE_MAX / 2)
+        {
+            newCapacity = requiredCapacity;
+            break;
+        }
+
+        newCapacity *= 2;
+    }
+
+    char* newBuffer = (char*)realloc(t_interpDumpBuffer, newCapacity);
+    if (newBuffer == nullptr)
+    {
+        return false;
+    }
+
+    t_interpDumpBuffer = newBuffer;
+    t_interpDumpBufferCapacity = newCapacity;
+    return true;
+}
+
+static int InterpDumpPrintf(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    if (!t_interpDumpToString)
+    {
+        int result = vprintf(format, args);
+        va_end(args);
+        return result;
+    }
+
+    int result;
+    while (true)
+    {
+        if (!EnsureInterpDumpBufferCapacity(t_interpDumpBufferLength + 1))
+        {
+            va_end(args);
+            return -1;
+        }
+
+        size_t available = t_interpDumpBufferCapacity - t_interpDumpBufferLength;
+        va_list argsCopy;
+        va_copy(argsCopy, args);
+        result = vsnprintf(t_interpDumpBuffer + t_interpDumpBufferLength, available, format, argsCopy);
+        va_end(argsCopy);
+
+        if (result < 0)
+        {
+            t_interpDumpBuffer[t_interpDumpBufferLength] = '\0';
+            break;
+        }
+
+        if ((size_t)result < available)
+        {
+            t_interpDumpBufferLength += result;
+            break;
+        }
+
+        if (!EnsureInterpDumpBufferCapacity(t_interpDumpBufferLength + (size_t)result + 1))
+        {
+            result = -1;
+            break;
+        }
+    }
+
+    va_end(args);
+    return result;
+}
+
+#define printf InterpDumpPrintf
+
 static void DumpClassName(CORINFO_CLASS_HANDLE cls, COMP_HANDLE compHnd)
 {
     char className[100];
@@ -12119,14 +12197,28 @@ void InterpCompiler::PrintCompiledCode()
                      m_pointerToNameMap.GetValue(), m_compHnd);
 }
 
-extern "C" void InterpDumpIR(const InterpByteCodeStart *startIp)
+extern "C" const char* InterpDumpIR(const InterpByteCodeStart *startIp)
 {
     InterpMethod *pMethod = startIp->Method;
     const int32_t *code = startIp->GetByteCodes();
 
+    if (!EnsureInterpDumpBufferCapacity(1))
+    {
+        return nullptr;
+    }
+
+    t_interpDumpBufferLength = 0;
+    t_interpDumpBuffer[0] = '\0';
+    t_interpDumpToString = true;
+
     printf("Dumping interpreter IR at %p (method %p)\n", startIp, pMethod->methodHnd);
     DumpCompiledCode(code, pMethod->codeSize, pMethod->pDataItems);
+
+    t_interpDumpToString = false;
+    return t_interpDumpBuffer;
 }
+
+#undef printf
 #endif
 
 extern "C" void assertAbort(const char* why, const char* file, unsigned line)
