@@ -51,7 +51,9 @@ if (FEATURE_PERFTRACING AND FEATURE_PERFTRACING_DISABLE_THREADS)
   target_compile_definitions(clrinterpreter_objects PRIVATE PERFTRACING_DISABLE_THREADS)
 endif()
 
-if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+if (CLR_CMAKE_HOST_ARCH_WASM AND FEATURE_DYNAMIC_CODE_COMPILED)
+  set_target_properties(clrinterpreter_objects PROPERTIES EXCLUDE_FROM_ALL TRUE)
+elseif (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
   set_target_properties(clrinterpreter_objects PROPERTIES EXCLUDE_FROM_ALL $<NOT:${FEATURE_INTERPRETER}>)
 endif()
 
@@ -63,7 +65,9 @@ endif()
 
 target_include_directories(clrinterpreter INTERFACE "interpreter/inc")
 
-if (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+if (CLR_CMAKE_HOST_ARCH_WASM AND FEATURE_DYNAMIC_CODE_COMPILED)
+  set_target_properties(clrinterpreter PROPERTIES EXCLUDE_FROM_ALL TRUE)
+elseif (NOT CMAKE_GENERATOR MATCHES "Visual Studio")
   set_target_properties(clrinterpreter PROPERTIES EXCLUDE_FROM_ALL $<NOT:${FEATURE_INTERPRETER}>)
 endif()
 

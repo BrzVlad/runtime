@@ -84,6 +84,13 @@ public:
 
     void Set(JitFlag flag)
     {
+#ifdef RUNTIME_ONLY_JIT
+        if ((flag == JIT_FLAG_AOT) || (flag == JIT_FLAG_BBINSTR) || (flag == JIT_FLAG_BBINSTR_IF_LOOPS) ||
+            (flag == JIT_FLAG_BBOPT))
+        {
+            return;
+        }
+#endif
         m_jitFlags |= 1ULL << (uint64_t)flag;
     }
 
@@ -94,6 +101,13 @@ public:
 
     bool IsSet(JitFlag flag) const
     {
+#ifdef RUNTIME_ONLY_JIT
+        if ((flag == JIT_FLAG_AOT) || (flag == JIT_FLAG_BBINSTR) || (flag == JIT_FLAG_BBINSTR_IF_LOOPS) ||
+            (flag == JIT_FLAG_BBOPT))
+        {
+            return false;
+        }
+#endif
         return (m_jitFlags & (1ULL << (uint64_t)flag)) != 0;
     }
 
@@ -108,6 +122,13 @@ public:
         // values defined in this type.
         m_jitFlags            = flags.GetFlagsRaw();
         m_instructionSetFlags = flags.GetInstructionSetFlags();
+
+#ifdef RUNTIME_ONLY_JIT
+        Clear(JIT_FLAG_AOT);
+        Clear(JIT_FLAG_BBINSTR);
+        Clear(JIT_FLAG_BBINSTR_IF_LOOPS);
+        Clear(JIT_FLAG_BBOPT);
+#endif
 
         static_assert(sizeof(JitFlags) == sizeof(CORJIT_FLAGS));
 

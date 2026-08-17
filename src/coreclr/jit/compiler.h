@@ -9715,7 +9715,11 @@ public:
 
     bool IsTargetAbi(CORINFO_RUNTIME_ABI abi)
     {
+#ifdef RUNTIME_ONLY_JIT
+        return abi == CORINFO_CORECLR_ABI;
+#else
         return eeGetEEInfo()->targetAbi == abi;
+#endif
     }
 
     bool BlockNonDeterministicIntrinsics(bool mustExpand)

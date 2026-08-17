@@ -3813,8 +3813,10 @@ void Compiler::fgCreateThrowHelperBlockCode(AddCodeDsc* add)
         GenTree* const firstNode = range.FirstNode();
         GenTree* const lastNode  = range.LastNode();
         LIR::AsRange(block).InsertAtEnd(std::move(range));
+#ifndef INTERPRETER_ONLY_JIT
         LIR::ReadOnlyRange blockRange(firstNode, lastNode);
         m_pLowering->LowerRange(block, blockRange);
+#endif
     }
 }
 

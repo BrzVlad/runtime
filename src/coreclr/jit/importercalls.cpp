@@ -3325,6 +3325,14 @@ GenTree* Compiler::impIntrinsic(CORINFO_CLASS_HANDLE    clsHnd,
                                 NamedIntrinsic* pIntrinsicName,
                                 bool*           isSpecialIntrinsic)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    *pIntrinsicName = NI_Illegal;
+    if (isSpecialIntrinsic != nullptr)
+    {
+        *isSpecialIntrinsic = false;
+    }
+    return nullptr;
+#else
     bool       mustExpand  = false;
     bool       isSpecial   = false;
     const bool isIntrinsic = (methodFlags & CORINFO_FLG_INTRINSIC) != 0;
@@ -5894,6 +5902,7 @@ GenTree* Compiler::impIntrinsic(CORINFO_CLASS_HANDLE    clsHnd,
     }
 
     return retNode;
+#endif
 }
 
 GenTree* Compiler::impSRCSUnsafeIntrinsic(NamedIntrinsic          intrinsic,

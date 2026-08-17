@@ -1518,8 +1518,10 @@ bool Compiler::fgOptimizeEmptyBlock(BasicBlock* block)
                         if (block->IsLIR())
                         {
                             LIR::AsRange(block).InsertAtEnd(nop);
+#ifndef INTERPRETER_ONLY_JIT
                             LIR::ReadOnlyRange range(nop, nop);
                             m_pLowering->LowerRange(block, range);
+#endif
                         }
                         else
                         {
@@ -1824,8 +1826,10 @@ bool Compiler::fgOptimizeSwitchBranches(BasicBlock* block)
         if (block->IsLIR())
         {
             blockRange->InsertAfter(switchVal, zeroConstNode, condNode);
+#ifndef INTERPRETER_ONLY_JIT
             LIR::ReadOnlyRange range(zeroConstNode, switchTree);
             m_pLowering->LowerRange(block, range);
+#endif
         }
         else if (fgNodeThreading != NodeThreading::None)
         {

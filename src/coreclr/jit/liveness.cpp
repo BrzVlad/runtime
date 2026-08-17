@@ -2371,7 +2371,9 @@ void Liveness<TLiveness>::ComputeLifeLIR(VARSET_TP& life, BasicBlock* block, VAR
 
                                 if (data->isIndir())
                                 {
+#ifndef INTERPRETER_ONLY_JIT
                                     Lowering::TransformUnusedIndirection(data->AsIndir(), m_compiler, block);
+#endif
                                 }
                                 else if (data->OperIs(GT_LCL_VAR, GT_LCL_FLD))
                                 {
@@ -2419,7 +2421,9 @@ void Liveness<TLiveness>::ComputeLifeLIR(VARSET_TP& life, BasicBlock* block, VAR
 
                     if (value->isIndir())
                     {
+#ifndef INTERPRETER_ONLY_JIT
                         Lowering::TransformUnusedIndirection(value->AsIndir(), m_compiler, block);
+#endif
                     }
                 }
                 break;
@@ -2535,7 +2539,9 @@ void Liveness<TLiveness>::ComputeLifeLIR(VARSET_TP& life, BasicBlock* block, VAR
                 {
                     // IR doesn't expect dummy uses of `GT_BLK`.
                     JITDUMP("Transform an unused BLK node [%06d]\n", Compiler::dspTreeID(node));
+#ifndef INTERPRETER_ONLY_JIT
                     Lowering::TransformUnusedIndirection(node->AsIndir(), m_compiler, block);
+#endif
                 }
             }
             break;
