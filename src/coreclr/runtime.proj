@@ -58,6 +58,7 @@
       <_CoreClrBuildArg Condition="'$(FeatureXplatEventSource)' == 'false'" Include="-cmakeargs &quot;-DFEATURE_EVENTSOURCE_XPLAT=0&quot;" />
       <_CoreClrBuildArg Condition="'$(FeatureInterpreter)' == 'true'" Include="-cmakeargs &quot;-DFEATURE_INTERPRETER=1&quot;" />
       <_CoreClrBuildArg Condition="'$(FeatureDynamicCodeCompiled)' == 'true' or '$(FeatureDynamicCodeCompiled)' == ''" Include="-cmakeargs &quot;-DFEATURE_DYNAMIC_CODE_COMPILED=1&quot;" />
+      <_CoreClrBuildArg Condition="'$(FeatureDynamicCodeCompiled)' == 'false'" Include="-cmakeargs &quot;-DFEATURE_DYNAMIC_CODE_COMPILED=0&quot;" />
       <_CoreClrBuildArg Include="-cmakeargs &quot;-DCLI_CMAKE_COMMIT_HASH=$([MSBuild]::ValueOrDefault('$(SourceRevisionId)', 'N/A'))&quot;" />
     </ItemGroup>
 

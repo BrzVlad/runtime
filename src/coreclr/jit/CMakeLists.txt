@@ -25,6 +25,10 @@ if (CLR_CMAKE_HOST_UNIX OR CLR_CMAKE_HOST_WASI)
   add_compile_options(-Wunused-function -Wtautological-compare -Wunused-value)
 endif()
 
+if (CLR_CMAKE_HOST_ARCH_WASM)
+  add_compile_options(-Wno-unused-template)
+endif()
+
 function(create_standalone_jit)
 
   set(oneValueArgs TARGET OS ARCH)
@@ -95,6 +99,11 @@ if (CLR_CMAKE_TARGET_ARCH_AMD64 OR CLR_CMAKE_TARGET_ARCH_ARM64 OR CLR_CMAKE_TARG
   add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:FEATURE_HW_INTRINSICS>)
   add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:FEATURE_MASKED_HW_INTRINSICS>)
 endif ()
+
+if (CLR_CMAKE_TARGET_ARCH_WASM)
+  add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:FEATURE_SIMD>)
+  add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:FEATURE_HW_INTRINSICS>)
+endif()
 
 # JIT_BUILD disables certain PAL_TRY debugging features
 add_definitions(-DJIT_BUILD)
@@ -712,6 +721,10 @@ set(JIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Creates a static library "clrjit_static" to link into the VM.
 add_subdirectory(static)
+
+if (CLR_CMAKE_HOST_ARCH_WASM)
+  return()
+endif()
 
 if (CLR_CMAKE_TARGET_APPLE)
   set(TARGET_OS_NAME unix_osx)

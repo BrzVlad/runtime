@@ -360,7 +360,7 @@ if (CLR_CMAKE_BUILD_TOOLS)
 endif(CLR_CMAKE_BUILD_TOOLS)
 add_subdirectory(gcinfo)
 
-if (NOT CLR_CMAKE_TARGET_ARCH_WASM)
+if (NOT CLR_CMAKE_TARGET_ARCH_WASM OR FEATURE_DYNAMIC_CODE_COMPILED)
   add_subdirectory(jit)
 endif()
 

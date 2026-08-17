@@ -125,6 +125,25 @@
 #if defined(HOST_LOONGARCH64)
 #error Cannot define both HOST_RISCV64 and HOST_LOONGARCH64
 #endif
+#elif defined(HOST_WASM)
+#if defined(HOST_X86)
+#error Cannot define both HOST_WASM and HOST_X86
+#endif
+#if defined(HOST_AMD64)
+#error Cannot define both HOST_WASM and HOST_AMD64
+#endif
+#if defined(HOST_ARM)
+#error Cannot define both HOST_WASM and HOST_ARM
+#endif
+#if defined(HOST_ARM64)
+#error Cannot define both HOST_WASM and HOST_ARM64
+#endif
+#if defined(HOST_LOONGARCH64)
+#error Cannot define both HOST_WASM and HOST_LOONGARCH64
+#endif
+#if defined(HOST_RISCV64)
+#error Cannot define both HOST_WASM and HOST_RISCV64
+#endif
 #else
 #error Unsupported or unset host architecture
 #endif

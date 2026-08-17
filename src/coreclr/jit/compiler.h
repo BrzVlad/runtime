@@ -132,6 +132,9 @@ void* operator new[](size_t n, Compiler* context, CompMemKind cmk);
 
 unsigned genLog2(unsigned value);
 unsigned genLog2(uint64_t value);
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(HOST_WASM)
+unsigned genLog2(size_t value);
+#endif
 
 unsigned ReinterpretHexAsDecimal(unsigned in);
 
