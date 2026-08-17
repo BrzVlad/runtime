@@ -70,6 +70,12 @@ function(create_standalone_jit)
     clr_unknown_arch()
   endif()
 
+  if(TARGETDETAILS_TARGET STREQUAL "clrjit")
+    set(JIT_ARCH_SOURCES)
+    set(JIT_ARCH_HEADERS)
+    set(JIT_ARCH_LINK_LIBRARIES)
+  endif()
+
   add_jit(${TARGETDETAILS_TARGET})
 
   set_target_definitions_to_custom_os_and_arch(${ARGN})
@@ -649,12 +655,18 @@ function(add_jit jitName)
 
     set_source_files_properties(${JIT_EXPORTS_FILE} PROPERTIES GENERATED TRUE)
 
+    set(JIT_TARGET_SOURCES ${JIT_SOURCES})
+    if("${jitName}" STREQUAL "clrjit")
+      list(FILTER JIT_TARGET_SOURCES EXCLUDE REGEX
+        "/(assertionprop|async|asyncanalysis|boundscheckcoalesce|codegencommon|codegenlinear|copyprop|earlyprop|emit|fgprofile|fgprofilesynthesis|forwardsub|gcdecode|gcencode|gcinfo|hwintrinsic|ifconversion|importervectorization|indirectcalltransformer|inductionvariableopts|inline|inlinepolicy|loopcloning|lower|objectalloc|optcse|optimizebools|optimizemaskconversions|optimizer|promotion|promotiondecomposition|promotionliveness|rangecheck|rangecheckcloning|redundantbranchopts|regalloc|regset|scev|scopeinfo|ssabuilder|ssarenamestate|stacklevelsetter|switchrecognition|treelifeupdater|valuenum)\\.cpp$")
+    endif()
+
     if (CLR_CMAKE_TARGET_WIN32)
       # If generating for Visual Studio then include headers for a better
       # IDE experience.
       add_library_clr(${jitName}
           SHARED
-          ${JIT_SOURCES}
+          ${JIT_TARGET_SOURCES}
           ${JITSHARED_SOURCES}
           ${JIT_ARCH_SOURCES}
           ${JIT_HEADERS}
@@ -666,7 +678,7 @@ function(add_jit jitName)
     else()
       add_library_clr(${jitName}
           SHARED
-          ${JIT_SOURCES}
+          ${JIT_TARGET_SOURCES}
           ${JITSHARED_SOURCES}
           ${JIT_ARCH_SOURCES}
           ${JIT_RESOURCES}
@@ -724,15 +736,16 @@ endif()
 create_standalone_jit(TARGET clrjit OS ${TARGET_OS_NAME} ARCH ${ARCH_TARGET_NAME})
 install_clr(TARGETS clrjit DESTINATIONS . COMPONENT jit)
 
+target_compile_definitions(clrjit PRIVATE INTERPRETER_ONLY_JIT RUNTIME_ONLY_JIT)
+target_compile_options(clrjit PRIVATE -Oz -flto)
+target_link_options(clrjit PRIVATE -flto)
+
 if (NOT CLR_CROSS_COMPONENTS_BUILD)
     # Install the clrjit into the sharedframework dir only when we're not doing a cross-components build.
     # We never want to ship the cross-component JIT (it would never be used).
     install_clr(TARGETS clrjit DESTINATIONS sharedFramework COMPONENT jit)
     install_clr(TARGETS clrjit DESTINATIONS sharedFramework COMPONENT alljits)
 endif()
-
-# Enable profile guided optimization
-add_pgo(clrjit)
 
 if (CLR_CMAKE_TARGET_ARCH_ARM64 OR CLR_CMAKE_TARGET_ARCH_AMD64)
   create_standalone_jit(TARGET clrjit_universal_arm64_${ARCH_HOST_NAME} OS universal ARCH arm64)

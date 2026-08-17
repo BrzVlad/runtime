@@ -373,7 +373,9 @@ Compiler::Compiler(ArenaAllocator*       arena,
 
     if (!compIsForInlining())
     {
+#ifndef INTERPRETER_ONLY_JIT
         codeGen = getCodeGenerator(this);
+#endif
         hashBv::Init(this);
 
         //
@@ -3764,6 +3766,7 @@ _SetMinOpts:
 
     if (!compIsForInlining())
     {
+#ifndef INTERPRETER_ONLY_JIT
         codeGen->setFramePointerRequired(false);
         codeGen->setFrameRequired(false);
 
@@ -3793,6 +3796,7 @@ _SetMinOpts:
         {
             codeGen->SetAlignLoops(JitConfig.JitAlignLoops() == 1);
         }
+#endif
 
 #ifdef DEBUG
         const char* tieringName = compGetTieringName(true);
@@ -4358,6 +4362,38 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
 
         return;
     }
+
+#ifdef INTERPRETER_ONLY_JIT
+    {
+        DoPhase(this, PHASE_POST_IMPORT, &Compiler::fgPostImportationCleanup);
+        DoPhase(this, PHASE_MORPH_INIT, &Compiler::fgMorphInit);
+
+        lvaRefCountState = RCS_EARLY;
+        DoPhase(this, PHASE_LOCAL_MORPH, &Compiler::fgLocalMorph);
+
+        lvaRefCountState = RCS_INVALID;
+        DoPhase(this, PHASE_MORPH_GLOBAL, &Compiler::fgMorphBlocks);
+
+        lvaRefCountState       = RCS_INVALID;
+        fgLocalVarLivenessDone = false;
+        activePhaseChecks |= PhaseChecks::CHECK_IR;
+
+        DoPhase(this, PHASE_MARK_LOCAL_VARS, &Compiler::lvaMarkLocalVars);
+        DoPhase(this, PHASE_FIND_OPER_ORDER, &Compiler::fgFindOperOrder);
+        DoPhase(this, PHASE_SET_BLOCK_ORDER, &Compiler::fgSetBlockOrder);
+
+        fgNodeThreading = NodeThreading::AllTrees;
+
+        Rationalizer rat(this);
+        rat.Run();
+
+        fgNodeThreading = NodeThreading::LIR;
+
+        InterpBackend interpBackend(this);
+        interpBackend.CompileMethod(methodCodePtr, methodCodeSize);
+        return;
+    }
+#endif // INTERPRETER_ONLY_JIT
 
     DoPhase(this, PHASE_EARLY_QMARK_EXPANSION, [this]() {
         return fgExpandQmarkNodes(/*early*/ true);
@@ -4990,7 +5026,11 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
     //
     DoPhase(this, PHASE_GS_COOKIE, &Compiler::gsPhase);
 
-#ifdef FEATURE_INTERPRETER
+#if defined(INTERPRETER_ONLY_JIT)
+    InterpBackend interpBackend(this);
+    interpBackend.CompileMethod(methodCodePtr, methodCodeSize);
+    return;
+#elif defined(FEATURE_INTERPRETER)
     if (opts.jitFlags->IsSet(JitFlags::JIT_FLAG_INTERP))
     {
         InterpBackend interpBackend(this);
@@ -6356,9 +6396,10 @@ int Compiler::compCompileAfterInit(CORINFO_MODULE_HANDLE classPtr,
             goto DoneCleanUp;
         }
 
-        /* Tell the emitter that we're done with this function */
-
+#ifndef INTERPRETER_ONLY_JIT
+        // Tell the emitter that we're done with this function.
         GetEmitter()->emitEndCG();
+#endif
 
     DoneCleanUp:
         compDone();
@@ -6774,12 +6815,13 @@ int Compiler::compCompileHelper(CORINFO_MODULE_HANDLE classPtr,
     info.compXcptnsCount = methodInfo->EHcount;
     info.compMaxStack    = methodInfo->maxStack;
 
-    /* Initialize emitter */
-
+#ifndef INTERPRETER_ONLY_JIT
+    // Initialize emitter.
     if (!compIsForInlining())
     {
         codeGen->GetEmitter()->emitBegCG(this, compHnd);
     }
+#endif
 
     info.compIsStatic = (info.compFlags & CORINFO_FLG_STATIC) != 0;
 

@@ -14589,6 +14589,10 @@ void Compiler::fgMergeBlockReturn(BasicBlock* block)
 
 void Compiler::fgSetOptions()
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return;
+#endif
+
 #if defined(TARGET_WASM)
     // Wasm requires GC polls, and only supports partially interruptible GC reporting.
     optMethodFlags |= OMF_NEEDS_GCPOLLS;
