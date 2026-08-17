@@ -909,7 +909,7 @@ void CallArgs::ArgsComplete(Compiler* comp, GenTreeCall* call)
                     prevArg.m_needPlace = true;
                 }
 #endif // FEATURE_ARG_SPLIT
-#endif
+            #endif // INTERPRETER_ONLY_JIT
             }
         }
         else if ((argx->gtFlags & GTF_EXCEPT) != 0)
@@ -11705,6 +11705,9 @@ GenTree* Compiler::fgMorphHWIntrinsic(GenTreeHWIntrinsic* tree)
 //
 GenTree* Compiler::fgMorphHWIntrinsicRequired(GenTreeHWIntrinsic* tree)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    unreached();
+#else
     NamedIntrinsic intrinsic    = tree->GetHWIntrinsicId();
     var_types      retType      = tree->TypeGet();
     var_types      simdBaseType = tree->GetSimdBaseType();
@@ -12096,6 +12099,7 @@ GenTree* Compiler::fgMorphHWIntrinsicRequired(GenTreeHWIntrinsic* tree)
         return fgOptimizeHWIntrinsic(tree);
     }
     return tree;
+#endif
 }
 
 //------------------------------------------------------------------------

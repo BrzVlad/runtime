@@ -564,7 +564,7 @@ var_types Compiler::impImportCall(OPCODE                  opcode,
                     // No tailcalls allowed for these yet...
                     canTailCall             = false;
                     szCanTailCallFailReason = "VirtualCall with runtime lookup";
-#endif
+                #endif // INTERPRETER_ONLY_JIT
                 }
                 else
                 {
@@ -1376,7 +1376,7 @@ DONE:
                         call->AsCall()->gtCallDebugFlags |= GTF_CALL_MD_STRESS_TAILCALL;
                         JITDUMP("\nGTF_CALL_MD_STRESS_TAILCALL set for call [%06u]\n", dspTreeID(call));
                     }
-#endif
+                #endif // INTERPRETER_ONLY_JIT
                 }
                 else
                 {
@@ -5902,7 +5902,7 @@ GenTree* Compiler::impIntrinsic(CORINFO_CLASS_HANDLE    clsHnd,
     }
 
     return retNode;
-#endif
+#endif // INTERPRETER_ONLY_JIT
 }
 
 GenTree* Compiler::impSRCSUnsafeIntrinsic(NamedIntrinsic          intrinsic,
@@ -8560,6 +8560,9 @@ void Compiler::considerGuardedDevirtualization(GenTreeCall*            call,
                                                CORINFO_CLASS_HANDLE    baseClass,
                                                CORINFO_CONTEXT_HANDLE* pContextHandle)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return;
+#else
     JITDUMP("Considering guarded devirtualization at IL offset %u (0x%x)\n", ilOffset, ilOffset);
 
     if (call->IsGenericVirtual(this))
@@ -8828,6 +8831,7 @@ void Compiler::considerGuardedDevirtualization(GenTreeCall*            call,
                                             likelyClassAttribs, likelihood, pInstParamLookup, baseMethod,
                                             pResolvedToken, pUnboxedResolvedToken);
     }
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -9024,6 +9028,9 @@ void Compiler::impMarkInlineCandidate(GenTree*               callNode,
                                       CORINFO_CALL_INFO*     callInfo,
                                       InlineContext*         inlinersContext)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return;
+#else
     if (!opts.OptEnabled(CLFLG_INLINING))
     {
         assert(!compIsForInlining());
@@ -9088,6 +9095,7 @@ void Compiler::impMarkInlineCandidate(GenTree*               callNode,
             dspTreeID(call));
 
     call->ClearInlineInfo();
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -11329,6 +11337,9 @@ GenTree* Compiler::impMathIntrinsic(CORINFO_METHOD_HANDLE method,
 //
 NamedIntrinsic Compiler::lookupNamedIntrinsic(CORINFO_METHOD_HANDLE method)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return NI_Illegal;
+#else
     const char* className              = nullptr;
     const char* namespaceName          = nullptr;
     const char* enclosingClassNames[2] = {nullptr};
@@ -12545,6 +12556,7 @@ NamedIntrinsic Compiler::lookupNamedIntrinsic(CORINFO_METHOD_HANDLE method)
         JITDUMP("Recognized\n");
     }
     return result;
+#endif
 }
 
 //------------------------------------------------------------------------

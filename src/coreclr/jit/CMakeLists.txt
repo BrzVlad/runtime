@@ -658,7 +658,7 @@ function(add_jit jitName)
     set(JIT_TARGET_SOURCES ${JIT_SOURCES})
     if("${jitName}" STREQUAL "clrjit")
       list(FILTER JIT_TARGET_SOURCES EXCLUDE REGEX
-        "/(assertionprop|async|asyncanalysis|boundscheckcoalesce|codegencommon|codegenlinear|copyprop|earlyprop|emit|fgprofile|fgprofilesynthesis|forwardsub|gcdecode|gcencode|gcinfo|hwintrinsic|ifconversion|importervectorization|indirectcalltransformer|inductionvariableopts|inline|inlinepolicy|loopcloning|lower|objectalloc|optcse|optimizebools|optimizemaskconversions|optimizer|promotion|promotiondecomposition|promotionliveness|rangecheck|rangecheckcloning|redundantbranchopts|regalloc|regset|scev|scopeinfo|ssabuilder|ssarenamestate|stacklevelsetter|switchrecognition|treelifeupdater|valuenum)\\.cpp$")
+        "/(assertionprop|async|asyncanalysis|boundscheckcoalesce|codegencommon|codegenlinear|copyprop|earlyprop|emit|fginline|fgprofile|fgprofilesynthesis|forwardsub|gcdecode|gcencode|gcinfo|hwintrinsic|ifconversion|importervectorization|indirectcalltransformer|inductionvariableopts|inline|inlinepolicy|loopcloning|lower|objectalloc|optcse|optimizebools|optimizemaskconversions|optimizer|promotion|promotiondecomposition|promotionliveness|rangecheck|rangecheckcloning|redundantbranchopts|regalloc|regset|scev|scopeinfo|ssabuilder|ssarenamestate|stacklevelsetter|switchrecognition|treelifeupdater|valuenum)\\.cpp$")
     endif()
 
     if (CLR_CMAKE_TARGET_WIN32)
@@ -737,7 +737,7 @@ create_standalone_jit(TARGET clrjit OS ${TARGET_OS_NAME} ARCH ${ARCH_TARGET_NAME
 install_clr(TARGETS clrjit DESTINATIONS . COMPONENT jit)
 
 target_compile_definitions(clrjit PRIVATE INTERPRETER_ONLY_JIT RUNTIME_ONLY_JIT)
-target_compile_options(clrjit PRIVATE -Oz -flto)
+target_compile_options(clrjit PRIVATE -Oz -flto -fomit-frame-pointer -fno-stack-protector)
 target_link_options(clrjit PRIVATE -flto)
 
 if (NOT CLR_CROSS_COMPONENTS_BUILD)

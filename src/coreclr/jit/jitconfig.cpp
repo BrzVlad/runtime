@@ -197,6 +197,15 @@ void JitConfigValues::initialize(ICorJitHost* host)
 {
     assert(!m_isInitialized);
 
+#ifdef INTERPRETER_ONLY_JIT
+#define RELEASE_CONFIG_INTEGER(name, key, defaultValue) m_##name = defaultValue;
+#define RELEASE_CONFIG_STRING(name, key)                m_##name = nullptr;
+#define RELEASE_CONFIG_METHODSET(name, key)
+
+#include "jitconfigvalues.h"
+
+    m_isInitialized = true;
+#else
 #define RELEASE_CONFIG_INTEGER(name, key, defaultValue) m_##name = host->getIntConfigValue(key, defaultValue);
 #define RELEASE_CONFIG_STRING(name, key)                m_##name = host->getStringConfigValue(key);
 #define RELEASE_CONFIG_METHODSET(name, key)                                                                            \
@@ -206,6 +215,7 @@ void JitConfigValues::initialize(ICorJitHost* host)
 #include "jitconfigvalues.h"
 
     m_isInitialized = true;
+#endif // INTERPRETER_ONLY_JIT
 }
 
 void JitConfigValues::destroy(ICorJitHost* host)
@@ -215,11 +225,13 @@ void JitConfigValues::destroy(ICorJitHost* host)
         return;
     }
 
+#ifndef INTERPRETER_ONLY_JIT
 #define RELEASE_CONFIG_INTEGER(name, key, defaultValue)
 #define RELEASE_CONFIG_STRING(name, key)    host->freeStringConfigValue(m_##name);
 #define RELEASE_CONFIG_METHODSET(name, key) m_##name.destroy(host);
 
 #include "jitconfigvalues.h"
+#endif // !INTERPRETER_ONLY_JIT
 
     m_isInitialized = false;
 }
