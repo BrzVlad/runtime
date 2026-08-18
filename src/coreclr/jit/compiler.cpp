@@ -4363,38 +4363,6 @@ void Compiler::compCompile(void** methodCodePtr, uint32_t* methodCodeSize, JitFl
         return;
     }
 
-#ifdef INTERPRETER_ONLY_JIT
-    {
-        DoPhase(this, PHASE_POST_IMPORT, &Compiler::fgPostImportationCleanup);
-        DoPhase(this, PHASE_MORPH_INIT, &Compiler::fgMorphInit);
-
-        lvaRefCountState = RCS_EARLY;
-        DoPhase(this, PHASE_LOCAL_MORPH, &Compiler::fgLocalMorph);
-
-        lvaRefCountState = RCS_INVALID;
-        DoPhase(this, PHASE_MORPH_GLOBAL, &Compiler::fgMorphBlocks);
-
-        lvaRefCountState       = RCS_INVALID;
-        fgLocalVarLivenessDone = false;
-        activePhaseChecks |= PhaseChecks::CHECK_IR;
-
-        DoPhase(this, PHASE_MARK_LOCAL_VARS, &Compiler::lvaMarkLocalVars);
-        DoPhase(this, PHASE_FIND_OPER_ORDER, &Compiler::fgFindOperOrder);
-        DoPhase(this, PHASE_SET_BLOCK_ORDER, &Compiler::fgSetBlockOrder);
-
-        fgNodeThreading = NodeThreading::AllTrees;
-
-        Rationalizer rat(this);
-        rat.Run();
-
-        fgNodeThreading = NodeThreading::LIR;
-
-        InterpBackend interpBackend(this);
-        interpBackend.CompileMethod(methodCodePtr, methodCodeSize);
-        return;
-    }
-#endif // INTERPRETER_ONLY_JIT
-
     DoPhase(this, PHASE_EARLY_QMARK_EXPANSION, [this]() {
         return fgExpandQmarkNodes(/*early*/ true);
     });
