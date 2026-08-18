@@ -24,6 +24,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #define DLLEXPORT
 #endif // !DLLEXPORT
 
+#ifndef INTERPRETER_ONLY_JIT
 // Data item in class profile histogram
 //
 struct LikelyClassMethodHistogramEntry
@@ -307,6 +308,7 @@ static unsigned getLikelyClassesOrMethods(LikelyClassMethodRecord*              
     //
     return 0;
 }
+#endif // !INTERPRETER_ONLY_JIT
 
 //------------------------------------------------------------------------
 // getLikelyClasses: find class profile data for an IL offset, and return the most likely classes
@@ -344,8 +346,12 @@ extern "C" DLLEXPORT UINT32 WINAPI getLikelyClasses(LikelyClassMethodRecord*    
                                                     BYTE*                                  pInstrumentationData,
                                                     int32_t                                ilOffset)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return 0;
+#else
     return getLikelyClassesOrMethods(pLikelyClasses, maxLikelyClasses, schema, countSchemaItems, pInstrumentationData,
                                      ilOffset, true);
+#endif // INTERPRETER_ONLY_JIT
 }
 
 //------------------------------------------------------------------------
@@ -360,8 +366,12 @@ extern "C" DLLEXPORT UINT32 WINAPI getLikelyMethods(LikelyClassMethodRecord*    
                                                     BYTE*                                  pInstrumentationData,
                                                     int32_t                                ilOffset)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return 0;
+#else
     return getLikelyClassesOrMethods(pLikelyMethods, maxLikelyMethods, schema, countSchemaItems, pInstrumentationData,
                                      ilOffset, false);
+#endif // INTERPRETER_ONLY_JIT
 }
 
 //------------------------------------------------------------------------
@@ -388,6 +398,9 @@ extern "C" DLLEXPORT UINT32 WINAPI getLikelyValues(LikelyValueRecord*           
                                                    BYTE*                                  pInstrumentationData,
                                                    int32_t                                ilOffset)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return 0;
+#else
     if ((maxLikelyValues == 0) || (schema == nullptr))
     {
         return 0;
@@ -455,4 +468,5 @@ extern "C" DLLEXPORT UINT32 WINAPI getLikelyValues(LikelyValueRecord*           
         }
     }
     return 0;
+#endif // INTERPRETER_ONLY_JIT
 }

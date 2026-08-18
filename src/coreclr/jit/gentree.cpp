@@ -35164,6 +35164,9 @@ bool GenTree::CanDivOrModPossiblyOverflow(Compiler* comp) const
 #if defined(FEATURE_HW_INTRINSICS)
 GenTree* Compiler::gtFoldExprHWIntrinsic(GenTreeHWIntrinsic* tree)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    unreached();
+#else
     assert(!optValnumCSE_phase);
     assert(opts.Tier0OptimizationEnabled());
 
@@ -37195,6 +37198,7 @@ GenTree* Compiler::gtFoldExprHWIntrinsic(GenTreeHWIntrinsic* tree)
         }
     }
     return resultNode;
+#endif
 }
 
 #if defined(FEATURE_MASKED_HW_INTRINSICS)

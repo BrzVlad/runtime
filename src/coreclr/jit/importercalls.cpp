@@ -8560,6 +8560,9 @@ void Compiler::considerGuardedDevirtualization(GenTreeCall*            call,
                                                CORINFO_CLASS_HANDLE    baseClass,
                                                CORINFO_CONTEXT_HANDLE* pContextHandle)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return;
+#else
     JITDUMP("Considering guarded devirtualization at IL offset %u (0x%x)\n", ilOffset, ilOffset);
 
     if (call->IsGenericVirtual(this))
@@ -8828,6 +8831,7 @@ void Compiler::considerGuardedDevirtualization(GenTreeCall*            call,
                                             likelyClassAttribs, likelihood, pInstParamLookup, baseMethod,
                                             pResolvedToken, pUnboxedResolvedToken);
     }
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -11329,6 +11333,9 @@ GenTree* Compiler::impMathIntrinsic(CORINFO_METHOD_HANDLE method,
 //
 NamedIntrinsic Compiler::lookupNamedIntrinsic(CORINFO_METHOD_HANDLE method)
 {
+#ifdef INTERPRETER_ONLY_JIT
+    return NI_Illegal;
+#else
     const char* className              = nullptr;
     const char* namespaceName          = nullptr;
     const char* enclosingClassNames[2] = {nullptr};
@@ -12545,6 +12552,7 @@ NamedIntrinsic Compiler::lookupNamedIntrinsic(CORINFO_METHOD_HANDLE method)
         JITDUMP("Recognized\n");
     }
     return result;
+#endif
 }
 
 //------------------------------------------------------------------------

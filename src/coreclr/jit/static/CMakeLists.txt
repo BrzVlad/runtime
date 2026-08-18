@@ -31,5 +31,5 @@ target_precompile_headers(clrjit_static PRIVATE [["jitpch.h"]])
 
 if(CLR_CMAKE_HOST_ARCH_WASM)
     target_compile_definitions(clrjit_static PRIVATE INTERPRETER_ONLY_JIT RUNTIME_ONLY_JIT)
-    target_compile_options(clrjit_static PRIVATE -Oz -flto)
+    target_compile_options(clrjit_static PRIVATE -Oz -flto -fomit-frame-pointer -fno-stack-protector)
 endif()
