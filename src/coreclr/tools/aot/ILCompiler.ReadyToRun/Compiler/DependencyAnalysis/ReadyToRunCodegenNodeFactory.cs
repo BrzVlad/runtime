@@ -128,12 +128,18 @@ namespace ILCompiler.DependencyAnalysis
         }
 
         private NodeCache<MethodDesc, MethodWithGCInfo> _localMethodCache;
+        private NodeCache<MethodDesc, UnboxingStub> _unboxingStubs;
 
         public MethodWithGCInfo CompiledMethodNode(MethodDesc method)
         {
             Debug.Assert(CompilationModuleGroup.ContainsMethodBody(method, false));
             Debug.Assert(method == method.GetCanonMethodTarget(CanonicalFormKind.Specific));
             return _localMethodCache.GetOrAdd(method);
+        }
+
+        public MethodWithGCInfo UnboxingStub(MethodDesc targetMethod)
+        {
+            return CompiledMethodNode(_unboxingStubs.GetOrAdd(targetMethod));
         }
 
         private NodeCache<TypeDesc, AllMethodsOnTypeNode> _allMethodsOnType;
@@ -404,6 +410,11 @@ namespace ILCompiler.DependencyAnalysis
             _localMethodCache = new NodeCache<MethodDesc, MethodWithGCInfo>(key =>
             {
                 return new MethodWithGCInfo(key);
+            });
+
+            _unboxingStubs = new NodeCache<MethodDesc, UnboxingStub>(targetMethod =>
+            {
+                return new UnboxingStub(targetMethod);
             });
 
             _methodSignatures = new NodeCache<MethodFixupKey, MethodFixupSignature>(key =>
