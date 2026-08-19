@@ -72,10 +72,11 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
             }
 
             bool isUnboxStub = method is UnboxingStub;
+            MethodDesc signatureMethod = isUnboxStub ? ((UnboxingStub)method).TargetMethod : method;
 
             ArraySignatureBuilder signatureBuilder = new ArraySignatureBuilder();
             signatureBuilder.EmitMethodSignature(
-                new MethodWithToken(method, moduleToken, constrainedType: null, unboxing: isUnboxStub, genericContextObject: null),
+                new MethodWithToken(signatureMethod, moduleToken, constrainedType: null, unboxing: isUnboxStub, genericContextObject: null),
                 enforceDefEncoding: true,
                 enforceOwningType: moduleToken.Module is EcmaModule ? factory.CompilationModuleGroup.EnforceOwningType((EcmaModule)moduleToken.Module) : true,
                 factory.SignatureContext,

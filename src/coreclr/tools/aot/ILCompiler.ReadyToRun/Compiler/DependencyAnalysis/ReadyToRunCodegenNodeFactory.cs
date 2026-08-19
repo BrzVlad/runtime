@@ -128,6 +128,7 @@ namespace ILCompiler.DependencyAnalysis
         }
 
         private NodeCache<MethodDesc, MethodWithGCInfo> _localMethodCache;
+        private NodeCache<MetadataType, BoxedValueType> _boxedValueTypes;
         private NodeCache<MethodDesc, UnboxingStub> _unboxingStubs;
 
         public MethodWithGCInfo CompiledMethodNode(MethodDesc method)
@@ -139,7 +140,8 @@ namespace ILCompiler.DependencyAnalysis
 
         public MethodWithGCInfo UnboxingStub(MethodDesc targetMethod)
         {
-            return CompiledMethodNode(_unboxingStubs.GetOrAdd(targetMethod));
+            Debug.Assert(CompilationModuleGroup.ContainsMethodBody(targetMethod, false));
+            return _localMethodCache.GetOrAdd(_unboxingStubs.GetOrAdd(targetMethod));
         }
 
         private NodeCache<TypeDesc, AllMethodsOnTypeNode> _allMethodsOnType;
@@ -412,9 +414,23 @@ namespace ILCompiler.DependencyAnalysis
                 return new MethodWithGCInfo(key);
             });
 
+            _boxedValueTypes = new NodeCache<MetadataType, BoxedValueType>(valueType =>
+            {
+                return new BoxedValueType(valueType);
+            });
+
             _unboxingStubs = new NodeCache<MethodDesc, UnboxingStub>(targetMethod =>
             {
-                return new UnboxingStub(targetMethod);
+                MetadataType valueTypeDefinition = (MetadataType)targetMethod.OwningType.GetTypeDefinition();
+                BoxedValueType boxedTypeDefinition = _boxedValueTypes.GetOrAdd(valueTypeDefinition);
+                TypeDesc owningType = boxedTypeDefinition;
+
+                if (targetMethod.OwningType.HasInstantiation)
+                {
+                    owningType = boxedTypeDefinition.MakeInstantiatedType(targetMethod.OwningType.Instantiation);
+                }
+
+                return new UnboxingStub(targetMethod, owningType);
             });
 
             _methodSignatures = new NodeCache<MethodFixupKey, MethodFixupSignature>(key =>
