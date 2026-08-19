@@ -129,11 +129,11 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                                 if (implNode is not null)
                                 {
                                     result.Add(new CombinedDependencyListEntry(implNode, factory.VirtualMethodUse(interfaceMethod), "Interface method"));
-                                    if (canonImpl.OwningType.IsValueType)
+                                    if (canonImpl.OwningType.IsValueType && !canonImpl.OwningType.HasInstantiation)
                                     {
                                         // Virtual method on a valuetype, reachable through an interface call.
                                         // We will need an unbox stub for this method.
-                                        result.Add(new CombinedDependencyListEntry(factory.UnboxingStub(implMethod), factory.VirtualMethodUse(interfaceMethod), "Unbox for interface method on VT"));
+                                        result.Add(new CombinedDependencyListEntry(factory.UnboxingStub(canonImpl), factory.VirtualMethodUse(interfaceMethod), "Unbox for interface method on VT"));
                                     }
                                 }
                             }

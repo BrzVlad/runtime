@@ -57,7 +57,8 @@ namespace ILCompiler
             ILCodeStream codeStream = emitter.NewCodeStream();
 
             codeStream.EmitLdArg(0);
-            codeStream.Emit(ILOpcode.ldflda, emitter.NewToken(Context.SystemModule.GetKnownType("System.Runtime.CompilerServices"u8, "RawData"u8).GetField("Data"u8)));
+            codeStream.Emit(ILOpcode.unbox, emitter.NewToken(_targetMethod.OwningType));
+            //codeStream.Emit(ILOpcode.ldflda, emitter.NewToken(Context.SystemModule.GetKnownType("System.Runtime.CompilerServices"u8, "RawData"u8).GetField("Data"u8)));
 
 
             for (int i = 0; i < _targetMethod.Signature.Length; i++)
