@@ -136,6 +136,20 @@ namespace ILCompiler.DependencyAnalysis
             return _localMethodCache.GetOrAdd(method);
         }
 
+        public MethodWithGCInfo UnboxingStub(MethodDesc targetMethod)
+        {
+            Debug.Assert(CompilationModuleGroup.ContainsMethodBody(targetMethod, false));
+            // A shared generic method takes its generic context in a hidden MethodDesc argument supplied
+            // by an instantiating stub the runtime creates per exact instantiation. A precompiled thunk
+            // is shared across instantiations and cannot name that stub, so it must not be generated.
+            Debug.Assert(!targetMethod.RequiresInstMethodDescArg());
+            ModuleDesc ownerModule = ((MetadataType)targetMethod.GetTypicalMethodDefinition().OwningType).Module;
+            MethodDesc thunk = targetMethod.IsSharedByGenericInstantiations && !targetMethod.HasInstantiation
+                ? TypeSystemContext.GetSpecialUnboxingThunk(targetMethod, ownerModule)
+                : TypeSystemContext.GetUnboxingThunk(targetMethod, ownerModule);
+            return _localMethodCache.GetOrAdd(thunk);
+        }
+
         private NodeCache<TypeDesc, AllMethodsOnTypeNode> _allMethodsOnType;
 
         public AllMethodsOnTypeNode AllMethodsOnType(TypeDesc type)
