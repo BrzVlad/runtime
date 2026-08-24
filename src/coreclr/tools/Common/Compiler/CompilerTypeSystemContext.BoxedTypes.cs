@@ -4,9 +4,7 @@
 using System;
 using System.Collections.Generic;
 
-#if !READYTORUN
 using Internal;
-#endif
 using Internal.Text;
 using Internal.TypeSystem;
 using Internal.IL;
@@ -284,12 +282,7 @@ namespace ILCompiler
             protected override MethodImplRecord[] ComputeVirtualMethodImplsForType() => Array.Empty<MethodImplRecord>();
             public override MethodImplRecord[] FindMethodsImplWithMatchingDeclName(Utf8Span name) => Array.Empty<MethodImplRecord>();
 
-            public override int GetHashCode() =>
-#if READYTORUN
-                ValueTypeRepresented.GetHashCode();
-#else
-                VersionResilientHashCode.NameHashCode(Namespace, Name);
-#endif
+            public override int GetHashCode() => VersionResilientHashCode.NameHashCode(Namespace, Name);
 
             protected override TypeFlags ComputeTypeFlags(TypeFlags mask)
             {
