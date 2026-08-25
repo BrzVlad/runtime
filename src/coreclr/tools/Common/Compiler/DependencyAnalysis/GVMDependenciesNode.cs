@@ -163,13 +163,9 @@ namespace ILCompiler.DependencyAnalysis
                                 MethodDesc canonImpl = implementingMethodInstantiation.GetCanonMethodTarget(CanonicalFormKind.Specific);
 
 #if READYTORUN
-                                // A shared generic method receives its generic context in a hidden MethodDesc
-                                // argument supplied by an instantiating stub that the runtime materializes per
-                                // exact instantiation. A precompiled unboxing thunk is shared across
-                                // instantiations, so it cannot name that stub; leave those to the runtime.
                                 if (!implementingMethodInstantiation.Signature.IsStatic
                                     && canonImpl.OwningType.IsValueType
-                                    && !canonImpl.RequiresInstMethodDescArg())
+                                    && NodeFactory.CanPrecompileUnboxingStub(canonImpl))
                                 {
                                     dynamicDependencies.Add(new CombinedDependencyListEntry(factory.UnboxingStub(canonImpl), null, "Unboxing thunk for interface GVM"));
                                 }

@@ -62,7 +62,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                     continue;
 
                 MethodDesc canonImpl = impl.GetCanonMethodTarget(CanonicalFormKind.Specific);
-                if (canonImpl.OwningType.IsValueType)
+                if (canonImpl.OwningType.IsValueType && NodeFactory.CanPrecompileUnboxingStub(canonImpl))
                 {
                     result.Add(new CombinedDependencyListEntry(factory.UnboxingStub(canonImpl), factory.VirtualMethodUse(decl), "Unbox for virtual method on VT"));
                 }
@@ -123,7 +123,10 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                             if (implMethod.OwningType.IsValueType)
                             {
                                 MethodDesc canonImpl = implMethod.GetCanonMethodTarget(CanonicalFormKind.Specific);
-                                result.Add(new CombinedDependencyListEntry(factory.UnboxingStub(canonImpl), factory.VirtualMethodUse(interfaceMethod), "Unbox for interface method on VT"));
+                                if (NodeFactory.CanPrecompileUnboxingStub(canonImpl))
+                                {
+                                    result.Add(new CombinedDependencyListEntry(factory.UnboxingStub(canonImpl), factory.VirtualMethodUse(interfaceMethod), "Unbox for interface method on VT"));
+                                }
                             }
 
                             if (implMethod.IsVirtual && !implMethod.IsFinal && !implMethod.OwningType.IsInterface)

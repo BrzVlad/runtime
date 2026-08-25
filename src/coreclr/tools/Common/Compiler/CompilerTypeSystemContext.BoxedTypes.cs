@@ -538,6 +538,7 @@ namespace ILCompiler
                         Array.Empty<object>());
                 }
 
+#if !READYTORUN
                 // TODO: mirror what was done in the commit that introduced this comment. Not doing it in that
                 // commit since this can't be tested in dotnet/runtime repo main right now.
                 if (_targetMethod.IsAsyncCall())
@@ -548,6 +549,7 @@ namespace ILCompiler
                     c.EmitCallThrowHelper(e, Context.GetCoreLibEntryPoint("System.Runtime"u8, "InternalCalls"u8, "RhpFallbackFailFast"u8, null));
                     return e.Link(this);
                 }
+#endif
 
                 // Generate the unboxing stub. This loosely corresponds to following C#:
                 // return BoxedValue.InstanceMethod([rest of parameters])

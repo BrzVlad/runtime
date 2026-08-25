@@ -136,13 +136,24 @@ namespace ILCompiler.DependencyAnalysis
             return _localMethodCache.GetOrAdd(method);
         }
 
+        public static bool CanPrecompileUnboxingStub(MethodDesc targetMethod)
+        {
+            // Runtime generated generic unbox stubs are not shared. Using the shared version
+            // produced by R2R seems to require more work.
+            if (targetMethod.RequiresInstMethodDescArg())
+                return false;
+
+            // TODO See comment in UnboxingThunk.EmitIL
+            if (targetMethod.IsAsyncCall())
+                return false;
+
+            return true;
+        }
+
         public MethodWithGCInfo UnboxingStub(MethodDesc targetMethod)
         {
             Debug.Assert(CompilationModuleGroup.ContainsMethodBody(targetMethod, false));
-            // A shared generic method takes its generic context in a hidden MethodDesc argument supplied
-            // by an instantiating stub the runtime creates per exact instantiation. A precompiled thunk
-            // is shared across instantiations and cannot name that stub, so it must not be generated.
-            Debug.Assert(!targetMethod.RequiresInstMethodDescArg());
+            Debug.Assert(CanPrecompileUnboxingStub(targetMethod));
             ModuleDesc ownerModule = ((MetadataType)targetMethod.GetTypicalMethodDefinition().OwningType).Module;
             MethodDesc thunk = targetMethod.IsSharedByGenericInstantiations && !targetMethod.HasInstantiation
                 ? TypeSystemContext.GetSpecialUnboxingThunk(targetMethod, ownerModule)
