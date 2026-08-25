@@ -2481,7 +2481,22 @@ PCODE MethodDesc::DoPrestub(MethodTable *pDispatchingMT, CallerGCMode callerGCMo
     /**************************   CODE CREATION  *************************/
     if (IsUnboxingStub())
     {
-        pStub = MakeUnboxingStubWorker(this);
+#ifdef FEATURE_READYTORUN
+        // Crossgen2 can emit the body of an unboxing stub into the R2R image. Prefer it over
+        // generating one here, which without a JIT means creating and interpreting an IL stub.
+        PrepareCodeConfig config(NativeCodeVersion(this), FALSE, TRUE);
+        pStub = GetPrecompiledR2RCode(&config);
+        if (pStub != (PCODE)NULL)
+        {
+            LOG((LF_ZAP, LL_INFO10000,
+                 "ZAP: Using R2R precompiled unboxing stub" FMT_ADDR " for %s.%s (token %x).\n",
+                 DBG_ADDR(pStub), m_pszDebugClassName, m_pszDebugMethodName, GetMemberDef()));
+        }
+#endif // FEATURE_READYTORUN
+        if (pStub == (PCODE)NULL)
+        {
+            pStub = MakeUnboxingStubWorker(this);
+        }
     }
 #if defined(FEATURE_SHARE_GENERIC_CODE)
     else if (IsInstantiatingStub())
