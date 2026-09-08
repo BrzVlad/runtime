@@ -118,6 +118,7 @@ else()
                 list(APPEND CORERUN_BROWSER_LINK_OPTIONS -sNODERAWFS=1 -lnodefs.js)
             endif()
             list(APPEND CORERUN_BROWSER_LINK_OPTIONS
+                --profiling-funcs
                 -sINITIAL_MEMORY=134217728
                 -sMAXIMUM_MEMORY=4294967296
                 -sALLOW_MEMORY_GROWTH=1
