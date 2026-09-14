@@ -1565,11 +1565,13 @@ namespace Internal.JitInterface
     {
         private ulong _corJitFlags;
         public InstructionSetFlags InstructionSetFlags;
+        public InstructionSetFlags UnstableInstructionSetFlags;
 
         public void Reset()
         {
             _corJitFlags = 0;
             InstructionSetFlags = default(InstructionSetFlags);
+            UnstableInstructionSetFlags = default(InstructionSetFlags);
         }
 
         public void Set(CorJitFlag flag)

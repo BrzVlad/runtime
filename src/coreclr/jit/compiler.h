@@ -21,6 +21,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 #define _COMPILER_H_
 /*****************************************************************************/
 
+#include <initializer_list>
 #include <minipal/types.h>
 #include "jit.h"
 #include "opcode.h"
@@ -9720,6 +9721,24 @@ public:
                 implReadyToRunUnsupported();
             }
             return true;
+        }
+        return false;
+    }
+
+    bool BlockNonDeterministicIntrinsics(bool mustExpand, std::initializer_list<CORINFO_InstructionSet> dependencies)
+    {
+        if (IsReadyToRun())
+        {
+            CORINFO_InstructionSetFlags unstableInstructionSets = opts.jitFlags->GetUnstableInstructionSetFlags();
+            for (CORINFO_InstructionSet isa : dependencies)
+            {
+                if (unstableInstructionSets.HasInstructionSet(isa))
+                {
+                    JITDUMP("Blocking non-deterministic intrinsic: %s support is not fixed.\n",
+                            InstructionSetToString(isa));
+                    return BlockNonDeterministicIntrinsics(mustExpand);
+                }
+            }
         }
         return false;
     }

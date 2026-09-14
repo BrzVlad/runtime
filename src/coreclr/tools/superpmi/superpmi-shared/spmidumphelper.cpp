@@ -202,7 +202,19 @@ std::string SpmiDumpHelper::DumpCorInfoFlag(CorInfoFlag flags)
 
 std::string SpmiDumpHelper::DumpJitFlags(CORJIT_FLAGS corJitFlags)
 {
-    return DumpJitFlags(corJitFlags.GetFlagsRaw());
+    std::string result = DumpJitFlags(corJitFlags.GetFlagsRaw());
+    CORINFO_InstructionSetFlags unstable = corJitFlags.GetUnstableInstructionSetFlags();
+    if (!unstable.IsEmpty())
+    {
+        result += " Unstable ISA Flags";
+        for (int i = unstable.GetInstructionFlagsFieldCount() - 1; i >= 0; i--)
+        {
+            char buffer[18];
+            sprintf_s(buffer, sizeof(buffer), " %016" PRIX64 "", unstable.GetFlagsRaw()[i]);
+            result += buffer;
+        }
+    }
+    return result;
 }
 
 std::string SpmiDumpHelper::DumpJitFlags(unsigned long long flags)
@@ -283,4 +295,3 @@ std::string SpmiDumpHelper::DumpJitFlags(unsigned long long flags)
 
     return s;
 }
-

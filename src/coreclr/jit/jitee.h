@@ -80,6 +80,11 @@ public:
         m_instructionSetFlags = instructionSetFlags;
     }
 
+    CORINFO_InstructionSetFlags GetUnstableInstructionSetFlags() const
+    {
+        return m_unstableInstructionSetFlags;
+    }
+
     void Set(JitFlag flag)
     {
         m_jitFlags |= 1ULL << (uint64_t)flag;
@@ -104,8 +109,9 @@ public:
     {
         // We don't want to have to check every one, so we assume it is exactly the same values as the JitFlag
         // values defined in this type.
-        m_jitFlags            = flags.GetFlagsRaw();
-        m_instructionSetFlags = flags.GetInstructionSetFlags();
+        m_jitFlags                    = flags.GetFlagsRaw();
+        m_instructionSetFlags         = flags.GetInstructionSetFlags();
+        m_unstableInstructionSetFlags = flags.GetUnstableInstructionSetFlags();
 
         static_assert(sizeof(JitFlags) == sizeof(CORJIT_FLAGS));
 
@@ -153,4 +159,5 @@ public:
 private:
     uint64_t                    m_jitFlags;
     CORINFO_InstructionSetFlags m_instructionSetFlags;
+    CORINFO_InstructionSetFlags m_unstableInstructionSetFlags;
 };

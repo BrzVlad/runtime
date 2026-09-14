@@ -476,6 +476,7 @@ namespace Internal.JitInterface
         private const CORINFO_RUNTIME_ABI TargetABI = CORINFO_RUNTIME_ABI.CORINFO_CORECLR_ABI;
 
         private readonly ReadyToRunCodegenCompilation _compilation;
+        private readonly InstructionSetFlags _unstableInstructionSetFlags;
         private MethodWithGCInfo _methodCodeNode;
         private MethodColdCodeNode _methodColdCodeNode;
         private OffsetMapping[] _debugLocInfos;
@@ -492,6 +493,21 @@ namespace Internal.JitInterface
             : this()
         {
             _compilation = compilation;
+
+            if (((ReadyToRunCompilerContext)compilation.TypeSystemContext).TargetAllowsRuntimeCodeGeneration)
+            {
+                InstructionSetSupport support = compilation.InstructionSetSupport;
+                TargetArchitecture architecture = compilation.TypeSystemContext.Target.Architecture;
+                foreach (InstructionSetFlags.InstructionSetInfo instructionSet in InstructionSetFlags.ArchitectureToValidInstructionSets(architecture))
+                {
+                    InstructionSet dependency = InstructionSetFlags.ConvertToImpliedInstructionSetForVectorInstructionSets(architecture, instructionSet.InstructionSet);
+                    if (!support.IsInstructionSetSupported(dependency) && !support.IsInstructionSetExplicitlyUnsupported(dependency))
+                    {
+                        _unstableInstructionSetFlags.AddInstructionSet(instructionSet.InstructionSet);
+                    }
+                }
+                _unstableInstructionSetFlags.Set64BitInstructionSetVariants(architecture);
+            }
         }
 
         private void AddPrecodeFixup(ISymbolNode node)

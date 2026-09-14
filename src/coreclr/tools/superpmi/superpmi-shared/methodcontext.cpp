@@ -1263,6 +1263,16 @@ void MethodContext::dmpGetJitFlags(DWORD key, DD value)
         printf("%016" PRIX64 "", raw[i]);
     }
 
+    if (value.B >= sizeof(CORJIT_FLAGS))
+    {
+        CORINFO_InstructionSetFlags unstable = jitflags->GetUnstableInstructionSetFlags();
+        printf(" unstableInstructionSetFlags-");
+        for (int i = flagsFieldCount - 1; i >= 0; i--)
+        {
+            printf("%016" PRIX64 "", unstable.GetFlagsRaw()[i]);
+        }
+    }
+
     // Print text string for the flags
     printf(" (");
 
@@ -7523,6 +7533,20 @@ int MethodContext::dumpMethodIdentityInfoToBuffer(char* buff, int len, bool igno
         t = sprintf_s(buff, len, " %016" PRIX64 "", raw[i]);
         buff += t;
         len -= t;
+    }
+
+    CORINFO_InstructionSetFlags unstable = corJitFlags.GetUnstableInstructionSetFlags();
+    if (!unstable.IsEmpty())
+    {
+        t = sprintf_s(buff, len, " Unstable ISA Flags");
+        buff += t;
+        len -= t;
+        for (int i = flagsFieldCount - 1; i >= 0; i--)
+        {
+            t = sprintf_s(buff, len, " %016" PRIX64 "", unstable.GetFlagsRaw()[i]);
+            buff += t;
+            len -= t;
+        }
     }
 
     // Hash the IL Code for this method and append it to the ID info

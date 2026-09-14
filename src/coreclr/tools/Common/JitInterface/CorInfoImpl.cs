@@ -4802,6 +4802,9 @@ namespace Internal.JitInterface
                 flags.Set(flag);
 
             flags.InstructionSetFlags.Add(_compilation.InstructionSetSupport.OptimisticFlags);
+#if READYTORUN
+            flags.UnstableInstructionSetFlags = _unstableInstructionSetFlags;
+#endif
 
             // Set the rest of the flags that don't make sense to expose publicly.
             flags.Set(CorJitFlag.CORJIT_FLAG_AOT);

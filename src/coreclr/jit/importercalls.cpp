@@ -9696,6 +9696,9 @@ bool Compiler::IsTargetIntrinsic(NamedIntrinsic intrinsicName)
         case NI_System_Math_MaxNative:
         case NI_System_Math_Min:
         case NI_System_Math_MinNative:
+        case NI_System_Math_MultiplyAddEstimate:
+        case NI_System_Math_ReciprocalEstimate:
+        case NI_System_Math_ReciprocalSqrtEstimate:
         case NI_System_Math_Round:
         case NI_System_Math_Sqrt:
         case NI_System_Math_Truncate:
@@ -11151,10 +11154,14 @@ GenTree* Compiler::impEstimateIntrinsic(CORINFO_METHOD_HANDLE method,
     var_types callType = JITtype2varType(callJitType);
     assert(varTypeIsFloating(callType));
 
-    if (BlockNonDeterministicIntrinsics(mustExpand))
+#if defined(TARGET_XARCH)
+    CORINFO_InstructionSet dependency =
+        (intrinsicName == NI_System_Math_MultiplyAddEstimate) ? InstructionSet_AVX2 : InstructionSet_AVX512;
+    if (BlockNonDeterministicIntrinsics(mustExpand, {dependency}))
     {
         return nullptr;
     }
+#endif // TARGET_XARCH
 
     if (IsIntrinsicImplementedByUserCall(intrinsicName))
     {

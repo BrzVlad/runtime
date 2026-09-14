@@ -83,12 +83,14 @@ public:
     {
         corJitFlags = other.corJitFlags;
         instructionSetFlags = other.instructionSetFlags;
+        unstableInstructionSetFlags = other.unstableInstructionSetFlags;
     }
 
     void Reset()
     {
         corJitFlags = 0;
         instructionSetFlags.Reset();
+        unstableInstructionSetFlags.Reset();
     }
 
     void Set(CORINFO_InstructionSet instructionSet)
@@ -130,11 +132,12 @@ public:
     {
         corJitFlags |= other.corJitFlags;
         instructionSetFlags.Add(other.instructionSetFlags);
+        unstableInstructionSetFlags.Add(other.unstableInstructionSetFlags);
     }
 
     bool IsEmpty() const
     {
-        return corJitFlags == 0 && instructionSetFlags.IsEmpty();
+        return corJitFlags == 0 && instructionSetFlags.IsEmpty() && unstableInstructionSetFlags.IsEmpty();
     }
 
     void EnsureValidInstructionSetSupport()
@@ -159,6 +162,11 @@ public:
         return instructionSetFlags;
     }
 
+    CORINFO_InstructionSetFlags GetUnstableInstructionSetFlags() const
+    {
+        return unstableInstructionSetFlags;
+    }
+
     const int GetInstructionFlagsFieldCount()
     {
         return instructionSetFlags.GetInstructionFlagsFieldCount();
@@ -168,6 +176,9 @@ private:
 
     uint64_t corJitFlags;
     CORINFO_InstructionSetFlags instructionSetFlags;
+    // Availability of these ISAs may differ at execution time. This is not an allowed-ISA set.
+    // Empty for runtime JIT, NativeAOT, and ReadyToRun targets with fixed ISA support.
+    CORINFO_InstructionSetFlags unstableInstructionSetFlags;
 };
 
 
