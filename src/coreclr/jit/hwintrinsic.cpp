@@ -1227,8 +1227,8 @@ NamedIntrinsic HWIntrinsicInfo::resolveId(Compiler*              comp,
 
     bool isShuffleNative = (id == NI_Vector_ShuffleNative) || (id == NI_Vector_ShuffleNativeFallback);
 
-    bool     isHWIntrinsicEnabled      = (JitConfig.EnableHWIntrinsic() != 0);
-    bool     isIsaSupported            = isHWIntrinsicEnabled && comp->compSupportsHWIntrinsic(isa, isShuffleNative);
+    bool isHWIntrinsicEnabled = (JitConfig.EnableHWIntrinsic() != 0);
+    bool isIsaSupported       = isHWIntrinsicEnabled && comp->compSupportsHWIntrinsic(isa, isShuffleNative);
 
     bool     isHardwareAcceleratedProp = (id == NI_IsHardwareAccelerated);
     bool     isSupportedProp           = (id == NI_IsSupported);
@@ -3019,10 +3019,9 @@ GenTree* Compiler::impXplatIntrinsic(NamedIntrinsic        intrinsic,
             }
         }
 
-        bool isShuffleNative =
-            (intrinsic == NI_Vector_ShuffleNative) || (intrinsic == NI_Vector_ShuffleNativeFallback);
+        bool isShuffleNative = (intrinsic == NI_Vector_ShuffleNative) || (intrinsic == NI_Vector_ShuffleNativeFallback);
 
-        if (potentiallyNotSupported && !compShuffleDependsOn(InstructionSet_AVX2, isShuffleNative))
+        if (potentiallyNotSupported && !compOpportunisticallyDependsOn(InstructionSet_AVX2, isShuffleNative))
         {
             return nullptr;
         }
@@ -3649,7 +3648,7 @@ GenTree* Compiler::impXplatIntrinsic(NamedIntrinsic        intrinsic,
             assert(simdBaseType == TYP_DOUBLE);
 
 #if defined(TARGET_XARCH)
-            if (!compOpportunisticallyDependsOn(InstructionSet_AVX512))
+            if (!compOpportunisticallyDependsOn(InstructionSet_AVX512, true))
             {
                 break;
             }
