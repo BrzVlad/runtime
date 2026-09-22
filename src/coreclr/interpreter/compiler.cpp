@@ -3614,25 +3614,6 @@ bool InterpCompiler::EmitNamedIntrinsicCall(NamedIntrinsic ni, bool nonVirtualCa
     if (!mustExpand && (ni == NI_Illegal))
         return false;
 
-    if (!mustExpand)
-    {
-        // We don't inline non-deterministic intrinsics since we always have to pick the
-        // r2r/jit implementation for consistentcy, if there is one.
-        switch (ni)
-        {
-            case NI_PRIMITIVE_ConvertToIntegerNative:
-            case NI_System_Math_MaxNative:
-            case NI_System_Math_MinNative:
-            case NI_System_Math_MultiplyAddEstimate:
-            case NI_System_Math_ReciprocalEstimate:
-            case NI_System_Math_ReciprocalSqrtEstimate:
-                return false;
-
-            default:
-                break;
-        }
-    }
-
     switch (ni)
     {
         case NI_System_Runtime_CompilerServices_AsyncHelpers_Await:
@@ -3761,6 +3742,8 @@ bool InterpCompiler::EmitNamedIntrinsicCall(NamedIntrinsic ni, bool nonVirtualCa
                 goto FAIL_TO_EXPAND_INTRINSIC;
             }
             InterpType type = GetInterpType(elementType);
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[-2], g_stackTypeFromInterpType[type]);
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[-1], g_stackTypeFromInterpType[type]);
 
             int32_t left = m_pStackPointer[-2].var;
             int32_t right = m_pStackPointer[-1].var;
@@ -3789,6 +3772,9 @@ bool InterpCompiler::EmitNamedIntrinsicCall(NamedIntrinsic ni, bool nonVirtualCa
             {
                 goto FAIL_TO_EXPAND_INTRINSIC;
             }
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[-1], g_stackTypeFromInterpType[estimateType]);
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[-2], g_stackTypeFromInterpType[estimateType]);
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[-3], g_stackTypeFromInterpType[estimateType]);
 
             int32_t mulA = m_pStackPointer[-3].var;
             int32_t mulB = m_pStackPointer[-2].var;
@@ -3817,10 +3803,7 @@ bool InterpCompiler::EmitNamedIntrinsicCall(NamedIntrinsic ni, bool nonVirtualCa
             CHECK_STACK(1);
             m_pStackPointer--;
             InterpType estimateType = GetInterpType(sig.retType);
-            if (ni == NI_System_Math_Sqrt)
-            {
-                ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[0], g_stackTypeFromInterpType[estimateType]);
-            }
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[0], g_stackTypeFromInterpType[estimateType]);
 
             int32_t argumentVar = m_pStackPointer[0].var;
             AddIns(estimateType == InterpTypeR4 ? INTOP_SQRT_R4 : INTOP_SQRT_R8);
@@ -3844,6 +3827,7 @@ bool InterpCompiler::EmitNamedIntrinsicCall(NamedIntrinsic ni, bool nonVirtualCa
             CHECK_STACK(1);
             m_pStackPointer--;
             InterpType estimateType = GetInterpType(sig.retType);
+            ConvertFloatingPointStackEntryToStackType(&m_pStackPointer[0], g_stackTypeFromInterpType[estimateType]);
             int32_t argumentVar = m_pStackPointer[0].var;
 
             if (estimateType == InterpTypeR4)
