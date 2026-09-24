@@ -4518,7 +4518,6 @@ unsigned Compiler::gtSetMultiOpOrder(GenTreeMultiOp* multiOp)
 
                     case NI_Vector_Shuffle:
                     case NI_Vector_ShuffleNative:
-                    case NI_Vector_ShuffleNativeFallback:
                     case NI_Vector_CreateGeometricSequence:
                     {
                         // These are likely becoming calls
@@ -20708,9 +20707,10 @@ bool Compiler::IsValidForShuffle(
     }
     else if (simdSize == 64)
     {
-        if (varTypeIsByte(simdBaseType) && !compOpportunisticallyDependsOn(InstructionSet_AVX512v2, isShuffleNative))
+        if (varTypeIsByte(simdBaseType) && !compOpportunisticallyDependsOn(InstructionSet_AVX512v2, isShuffleNative) &&
+            !isShuffleNative)
         {
-            // TYP_BYTE, TYP_UBYTE need AVX512v2.
+            // TYP_BYTE and TYP_UBYTE Shuffle need AVX512v2. ShuffleNative has an AVX2 fallback.
             return false;
         }
     }
@@ -28764,7 +28764,7 @@ GenTree* Compiler::gtNewSimdRoundNode(var_types type, GenTree* op1, var_types si
 
 //------------------------------------------------------------------------
 // gtNewSimdShuffleVariableNode: Creates a new simd shuffle node (with variable indices, or a case isn't handled in
-// gtNewSimdShuffleNode for ShuffleUnsafe with out of bounds indices) - this is a helper function for
+// gtNewSimdShuffleNode for ShuffleNative with out of bounds indices) - this is a helper function for
 // gtNewSimdShuffleNode & should just be invoked by it indirectly, instead of other callers using it
 //
 // Arguments:
@@ -28823,7 +28823,61 @@ GenTree* Compiler::gtNewSimdShuffleVariableNode(
     // TODO-XARCH-CQ: If we have known set/unset bits for the indices, we could further optimise many cases
     // below.
 
-    if (simdSize == 64)
+    if ((simdSize == 64) && (elementSize == 1) &&
+        !compOpportunisticallyDependsOn(InstructionSet_AVX512v2, isShuffleNative))
+    {
+        assert(isShuffleNative);
+        assert(compIsaSupportedDebugOnly(InstructionSet_AVX512));
+
+        var_types halfType     = TYP_SIMD32;
+        unsigned  halfSimdSize = simdSize / 2;
+
+        // AVX2 byte shuffles select from a 32-byte source. Shuffle each source half using the low five
+        // index bits, then use bit five to select which source half supplies each result element.
+
+        GenTree* op1Value    = fgMakeMultiUse(&op1);
+        GenTree* lowerSource = gtNewSimdGetLowerNode(halfType, op1Value, simdBaseType, simdSize);
+        GenTree* upperSource = gtNewSimdGetUpperNode(halfType, gtCloneExpr(op1Value), simdBaseType, simdSize);
+
+        GenTree* lowerSourceDup = fgMakeMultiUse(&lowerSource);
+        GenTree* upperSourceDup = fgMakeMultiUse(&upperSource);
+
+        GenTree* op2Value     = fgMakeMultiUse(&op2);
+        GenTree* lowerIndices = gtNewSimdGetLowerNode(halfType, op2Value, simdBaseType, simdSize);
+        GenTree* upperIndices = gtNewSimdGetUpperNode(halfType, gtCloneExpr(op2Value), simdBaseType, simdSize);
+
+        auto shuffleHalf = [&](GenTree* indices, GenTree* lower, GenTree* upper) -> GenTree* {
+            GenTree* indicesForShuffle = fgMakeMultiUse(&indices);
+
+            GenTree* indexMask = gtNewSimdCreateBroadcastNode(halfType, gtNewIconNode(0x1F), TYP_UBYTE, halfSimdSize);
+            GenTree* normalizedIndices =
+                gtNewSimdBinOpNode(GT_AND, halfType, indicesForShuffle, indexMask, TYP_UBYTE, halfSimdSize);
+            GenTree* normalizedIndicesDup = fgMakeMultiUse(&normalizedIndices);
+
+            GenTree* lowerResult =
+                gtNewSimdShuffleVariableNode(halfType, lower, normalizedIndices, simdBaseType, halfSimdSize, true);
+            GenTree* upperResult =
+                gtNewSimdShuffleVariableNode(halfType, upper, normalizedIndicesDup, simdBaseType, halfSimdSize, true);
+
+            GenTree* sourceMask = gtNewSimdCreateBroadcastNode(halfType, gtNewIconNode(0x20), TYP_UBYTE, halfSimdSize);
+            GenTree* sourceSelector =
+                gtNewSimdBinOpNode(GT_AND, halfType, indices, sourceMask, TYP_UBYTE, halfSimdSize);
+            GenTree* selectLower = gtNewSimdCmpOpNode(GT_EQ, halfType, sourceSelector, gtNewZeroConNode(halfType),
+                                                      TYP_UBYTE, halfSimdSize);
+
+            return gtNewSimdCndSelNode(halfType, selectLower, lowerResult, upperResult, simdBaseType, halfSimdSize);
+        };
+
+        GenTree* lowerResult = shuffleHalf(lowerIndices, lowerSource, upperSource);
+        GenTree* upperResult = shuffleHalf(upperIndices, lowerSourceDup, upperSourceDup);
+
+        GenTree* result =
+            gtNewSimdHWIntrinsicNode(type, lowerResult, NI_Vector_ToVector512Unsafe, simdBaseType, halfSimdSize);
+        result = gtNewSimdWithUpperNode(type, result, upperResult, simdBaseType, simdSize);
+        result = gtWrapWithSideEffects(result, op2, GTF_ALL_EFFECT);
+        return gtWrapWithSideEffects(result, op1, GTF_ALL_EFFECT);
+    }
+    else if (simdSize == 64)
     {
         if (elementSize == 1)
         {
@@ -29891,7 +29945,12 @@ GenTree* Compiler::gtNewSimdShuffleNode(
         }
         else if (elementSize == 1)
         {
-            assert(compIsaSupportedDebugOnly(InstructionSet_AVX512v2));
+            if (!compOpportunisticallyDependsOn(InstructionSet_AVX512v2, isShuffleNative))
+            {
+                assert(isShuffleNative);
+                return gtNewSimdShuffleVariableNode(type, op1, op2, simdBaseType, simdSize, isShuffleNative);
+            }
+
             op2                        = gtNewVconNode(type);
             op2->AsVecCon()->gtSimdVal = vecCns;
 
@@ -34089,7 +34148,6 @@ bool GenTreeHWIntrinsic::ShouldConstantProp(GenTree* operand, GenTreeVecCon* vec
 
         case NI_Vector_Shuffle:
         case NI_Vector_ShuffleNative:
-        case NI_Vector_ShuffleNativeFallback:
         {
             // The shuffle indices ideally are constant so we can get the best
             // codegen possible. There are also some case/s where it would have
