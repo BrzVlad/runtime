@@ -4,7 +4,9 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.RemoteExecutor;
 using Xunit;
 
 namespace BasicEventSourceTests
@@ -66,6 +68,46 @@ namespace BasicEventSourceTests
             }
 
             Assert.True(finalListener.ReceivedEvent, "A new runtime-provider subscription received no events.");
+        }
+
+        [ConditionalFact(typeof(RemoteExecutor), nameof(RemoteExecutor.IsSupported))]
+        public void RuntimeProviderSessions_ConcurrentEnableDisable()
+        {
+            RemoteExecutor.Invoke(static () =>
+            {
+                // EventListeners share a session; use the internal API to stop independent sessions concurrently.
+                Assembly coreLib = typeof(EventSource).Assembly;
+                Type eventPipe = coreLib.GetType("System.Diagnostics.Tracing.EventPipeInternal", throwOnError: true);
+                Type configuration = coreLib.GetType("System.Diagnostics.Tracing.EventPipeProviderConfiguration", throwOnError: true);
+                Type format = coreLib.GetType("System.Diagnostics.Tracing.EventPipeSerializationFormat", throwOnError: true);
+                Array providers = Array.CreateInstance(configuration, 1);
+                providers.SetValue(Activator.CreateInstance(configuration, BindingFlags.NonPublic | BindingFlags.Instance, null,
+                    new object[] { "Microsoft-Windows-DotNETRuntime", 1UL, (uint)EventLevel.Informational, null }, null), 0);
+                MethodInfo enable = eventPipe.GetMethod("Enable", BindingFlags.NonPublic | BindingFlags.Static, null,
+                    new[] { typeof(string), format, typeof(uint), providers.GetType() }, null);
+                Action<ulong> disable = eventPipe.GetMethod("Disable", BindingFlags.NonPublic | BindingFlags.Static).CreateDelegate<Action<ulong>>();
+
+                const int WorkerCount = 2;
+                const int Iterations = 1000;
+                using var barrier = new Barrier(WorkerCount);
+                Task[] tasks = new Task[WorkerCount];
+                for (int worker = 0; worker < tasks.Length; worker++)
+                {
+                    tasks[worker] = Task.Factory.StartNew(() =>
+                    {
+                        object[] arguments = { null, Enum.Parse(format, "NetTrace"), 1u, providers };
+                        barrier.SignalAndWait();
+                        for (int iteration = 0; iteration < Iterations; iteration++)
+                        {
+                            ulong sessionID = (ulong)enable.Invoke(null, arguments);
+                            Assert.NotEqual(0UL, sessionID);
+                            disable(sessionID);
+                        }
+                    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                }
+
+                Task.WaitAll(tasks);
+            }).Dispose();
         }
 
         private sealed class RuntimeProviderListener : EventListener

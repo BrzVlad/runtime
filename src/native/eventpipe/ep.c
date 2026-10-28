@@ -891,8 +891,20 @@ stop_session (EventPipeSessionID id)
 		ep_provider_callback_data_queue_fini (provider_callback_data_queue);
 
 #ifdef EP_CHECKED_BUILD
-		if (ep_volatile_load_number_of_sessions () == 0 && ep_volatile_load_eventpipe_state () != EP_STATE_SHUTTING_DOWN)
-			EP_ASSERT (ep_rt_providers_validate_all_disabled ());
+		EP_LOCK_ENTER (section3)
+			if (ep_volatile_load_number_of_sessions () == 0 && ep_volatile_load_eventpipe_state () != EP_STATE_SHUTTING_DOWN) {
+				// Other sessions can still have provider callbacks in flight after releasing the config lock.
+				bool callbacks_pending = false;
+				DN_LIST_FOREACH_BEGIN (EventPipeProvider *, provider, ep_config_get ()->provider_list) {
+					if (provider->callbacks_pending != 0) {
+						callbacks_pending = true;
+						break;
+					}
+				} DN_LIST_FOREACH_END;
+				if (!callbacks_pending)
+					EP_ASSERT (ep_rt_providers_validate_all_disabled ());
+			}
+		EP_LOCK_EXIT (section3)
 #endif
 
 	EP_GCX_PREEMP_EXIT
