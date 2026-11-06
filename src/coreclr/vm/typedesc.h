@@ -391,7 +391,8 @@ public:
 #endif
 
 protected:
-    BOOL ConstrainedAsObjRefHelper();
+    BOOL ConstrainedAsObjRefHelper(TypeHandleList* pVisitedVars);
+    BOOL ConstrainedAsValueTypeHelper(TypeHandleList* pVisitedVars);
 
     // Module containing the generic definition, also the loader module for this type desc
     PTR_Module m_pModule;

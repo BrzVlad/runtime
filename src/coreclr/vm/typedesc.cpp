@@ -999,44 +999,47 @@ BOOL TypeVarTypeDesc::ConstrainedAsObjRef()
 {
     CONTRACTL
     {
-        NOTHROW;
-        GC_NOTRIGGER;
+        THROWS;
+        GC_TRIGGERS;
         MODE_ANY;
-        PRECONDITION(ConstraintsLoaded(WhichConstraintsToLoad::TypeOrMethodVarsAndNonInterfacesOnly));
     }
     CONTRACTL_END;
-
-    IMDInternalImport* pInternalImport = GetModule()->GetMDImport();
-    mdGenericParam genericParamToken = GetToken();
-    DWORD flags;
-    if (FAILED(pInternalImport->GetGenericParamProps(genericParamToken, NULL, &flags, NULL, NULL, NULL)))
-    {
-        return FALSE;
-    }
-    DWORD specialConstraints = flags & gpSpecialConstraintMask;
-
-    if ((specialConstraints & gpReferenceTypeConstraint) != 0)
-        return TRUE;
-
-    return ConstrainedAsObjRefHelper();
+    return ConstrainedAsObjRefHelper(nullptr);
 }
 
 // A recursive helper that helps determine whether this variable is constrained as ObjRef.
 // Please note that we do not check the gpReferenceTypeConstraint special constraint here
 // because this property does not propagate up the constraining hierarchy.
 // (e.g. "class A<S, T> where S : T, where T : class" does not guarantee that S is ObjRef)
-BOOL TypeVarTypeDesc::ConstrainedAsObjRefHelper()
+BOOL TypeVarTypeDesc::ConstrainedAsObjRefHelper(TypeHandleList* pVisitedVars)
 {
     CONTRACTL
     {
-        NOTHROW;
-        GC_NOTRIGGER;
+        THROWS;
+        GC_TRIGGERS;
         MODE_ANY;
     }
     CONTRACTL_END;
 
+    TypeHandle thThis(this);
+    if (TypeHandleList::Exists(pVisitedVars, thThis))
+        return FALSE;
+
+    TypeHandleList newVisitedVars(thThis, pVisitedVars);
+
+    IMDInternalImport* pInternalImport = GetModule()->GetMDImport();
+    mdGenericParam genericParamToken = GetToken();
+    DWORD flags;
+    if (FAILED(pInternalImport->GetGenericParamProps(genericParamToken, NULL, &flags, NULL, NULL, NULL)))
+        return FALSE;
+
+    DWORD specialConstraints = flags & gpSpecialConstraintMask;
+    if (pVisitedVars == nullptr && (specialConstraints & gpReferenceTypeConstraint) != 0)
+        return TRUE;
+
+    // Constraint chains can contain cycles and nested type variables may not have been loaded by the caller.
     DWORD dwNumConstraints = 0;
-    TypeHandle* constraints = GetCachedConstraints(&dwNumConstraints, WhichConstraintsToLoad::TypeOrMethodVarsAndNonInterfacesOnly);
+    TypeHandle* constraints = GetConstraints(&dwNumConstraints, CLASS_DEPENDENCIES_LOADED, WhichConstraintsToLoad::TypeOrMethodVarsAndNonInterfacesOnly);
 
     for (DWORD i = 0; i < dwNumConstraints; i++)
     {
@@ -1047,7 +1050,7 @@ BOOL TypeVarTypeDesc::ConstrainedAsObjRefHelper()
         if (constraint.IsNull())
             continue;
 
-        if (constraint.IsGenericVariable() && constraint.AsGenericVariable()->ConstrainedAsObjRefHelper())
+        if (constraint.IsGenericVariable() && constraint.AsGenericVariable()->ConstrainedAsObjRefHelper(&newVisitedVars))
             return TRUE;
 
         if (!constraint.IsInterface() && CorTypeInfo::IsObjRef_NoThrow(constraint.GetInternalCorElementType()))
@@ -1071,27 +1074,42 @@ BOOL TypeVarTypeDesc::ConstrainedAsValueType()
 {
     CONTRACTL
     {
-        NOTHROW;
-        GC_NOTRIGGER;
+        THROWS;
+        GC_TRIGGERS;
         MODE_ANY;
-        PRECONDITION(ConstraintsLoaded(WhichConstraintsToLoad::TypeOrMethodVarsAndNonInterfacesOnly));
     }
     CONTRACTL_END;
+    return ConstrainedAsValueTypeHelper(nullptr);
+}
+
+BOOL TypeVarTypeDesc::ConstrainedAsValueTypeHelper(TypeHandleList* pVisitedVars)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_TRIGGERS;
+        MODE_ANY;
+    }
+    CONTRACTL_END;
+
+    TypeHandle thThis(this);
+    if (TypeHandleList::Exists(pVisitedVars, thThis))
+        return FALSE;
+
+    TypeHandleList newVisitedVars(thThis, pVisitedVars);
 
     IMDInternalImport* pInternalImport = GetModule()->GetMDImport();
     mdGenericParam genericParamToken = GetToken();
     DWORD flags;
     if (FAILED(pInternalImport->GetGenericParamProps(genericParamToken, NULL, &flags, NULL, NULL, NULL)))
-    {
         return FALSE;
-    }
-    DWORD specialConstraints = flags & gpSpecialConstraintMask;
 
+    DWORD specialConstraints = flags & gpSpecialConstraintMask;
     if ((specialConstraints & gpNotNullableValueTypeConstraint) != 0)
         return TRUE;
 
     DWORD dwNumConstraints = 0;
-    TypeHandle* constraints = GetCachedConstraints(&dwNumConstraints, WhichConstraintsToLoad::TypeOrMethodVarsAndNonInterfacesOnly);
+    TypeHandle* constraints = GetConstraints(&dwNumConstraints, CLASS_DEPENDENCIES_LOADED, WhichConstraintsToLoad::TypeOrMethodVarsAndNonInterfacesOnly);
 
     for (DWORD i = 0; i < dwNumConstraints; i++)
     {
@@ -1103,7 +1121,7 @@ BOOL TypeVarTypeDesc::ConstrainedAsValueType()
 
         if (constraint.IsGenericVariable())
         {
-            if (constraint.AsGenericVariable()->ConstrainedAsValueType())
+            if (constraint.AsGenericVariable()->ConstrainedAsValueTypeHelper(&newVisitedVars))
                 return TRUE;
         }
         else
