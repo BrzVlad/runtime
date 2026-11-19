@@ -2391,6 +2391,19 @@ StackWalkAction StackFrameIterator::NextRaw(void)
 
                         m_pvResumableFrameTargetSP = (LPVOID)m_crawl.GetCallerSp();
                     }
+
+#ifdef FEATURE_INTERPRETER
+                    if (m_crawl.codeInfo.IsInterpretedCode())
+                    {
+                        // A resumable frame can restore an interpreted context. Skip its owning
+                        // InterpreterFrame so we don't walk the same interpreted frames again.
+                        PTR_InterpreterFrame pOwningInterpFrame =
+                            dac_cast<PTR_InterpreterFrame>((TADDR)GetFirstArgReg(m_crawl.pRD->pCurrentContext));
+                        _ASSERTE(pOwningInterpFrame != NULL);
+                        _ASSERTE(pOwningInterpFrame->GetFrameIdentifier() == FrameIdentifier::InterpreterFrame);
+                        m_crawl.pFrame = dac_cast<PTR_Frame>(pOwningInterpFrame);
+                    }
+#endif // FEATURE_INTERPRETER
                 }
             }
         }
